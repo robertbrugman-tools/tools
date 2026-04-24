@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<script type="application/json" id="cowork-artifact-meta">
+{
+  "name": "Daglicht Ritme Amsterdam",
+  "schemaVersion": 1,
+  "description": "Interactieve animatie van het dagelijkse verschil in daglichtduur voor Amsterdam 2026, met play/pause, snelheidscontrole en handmatige slider."
+}
+</script>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Daglicht Ritme — Amsterdam 2026</title>
+<style>
+:root { color-scheme: light; }
+*,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: #f6f9ff;
+  color: #0f172a;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ── Header ── */
+.header {
+  padding: 13px 20px 10px;
+  background: #fff;
+  border-bottom: 1px solid #e8edf5;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.header h1 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: 0.01em;
+}
+.header .sub {
+  font-size: 0.68rem;
+  color: #94a3b8;
+}
+
+/* ── Chart ── */
+.chart-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+}
+#chart { display:block; width:100%; height:100%; }
+
+/* ── Info bar ── */
+.info-bar {
+  display: flex;
+  background: #fff;
+  border-top: 1px solid #e8edf5;
+  border-bottom: 1px solid #e8edf5;
+  flex-shrink: 0;
+}
+.stat {
+  flex: 1;
+  text-align: center;
+  padding: 7px 2px;
+  border-right: 1px solid #f1f5f9;
+}
+.stat:last-child { border-right: none; }
+.stat-label {
+  font-size: 0.58rem;
+  color: #94a3b8;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.stat-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.1;
+}
+.stat-value.pos  { color: #16a34a; }
+.stat-value.neg  { color: #dc2626; }
+.stat-value.neut { color: #64748b; }
+.stat-value.sm   { font-size: 0.72rem; font-weight: 500; color: #475569; }
+
+/* ── Controls ── */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  background: #fff;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.btn {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  border-radius: 6px;
+  padding: 5px 12px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-family: inherit;
+  font-weight: 500;
+  transition: background 0.12s, border-color 0.12s;
+  white-space: nowrap;
+}
+.btn:hover { background: #e2e8f0; }
+.btn.playing { background: #fef9c3; border-color: #fde047; color: #854d0e; }
+
+.ctrl-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 110px;
+}
+.ctrl-label { font-size: 0.63rem; color: #94a3b8; white-space: nowrap; }
+.ctrl-val   { font-size: 0.63rem; color: #64748b; min-width: 52px; text-align: right; white-space: nowrap; }
+
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 3px;
+  border-radius: 2px;
+  background: #e2e8f0;
+  outline: none;
+  flex: 1;
+  cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  background: #3b82f6;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,.18);
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>☀ Daglicht Ritme — Amsterdam 2026</h1>
+  <span class="sub">minuten verschil in daglicht per dag t.o.v. de vorige dag</span>
+</div>
+
+<div class="chart-wrap"><canvas id="chart"></canvas></div>
+
+<div class="info-bar">
+  <div class="stat">
+    <div class="stat-label">Datum</div>
+    <div class="stat-value" id="iDate">1 jan</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Dag</div>
+    <div class="stat-value" id="iDayNum">1 / 365</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Daglicht</div>
+    <div class="stat-value" id="iDaylight">—</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Verschil</div>
+    <div class="stat-value neut" id="iDelta">—</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Trend</div>
+    <div class="stat-value sm" id="iTrend">—</div>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="btn" id="btnPlay">▶ Afspelen</button>
+  <button class="btn" id="btnReset" style="padding:5px 9px;" title="Reset">↺</button>
+
+  <div class="ctrl-group">
+    <span class="ctrl-label">Dag:</span>
+    <input type="range" id="daySlider" min="0" max="364" value="0">
+    <span class="ctrl-val" id="dayVal">1 jan</span>
+  </div>
+
+  <div class="ctrl-group" style="max-width:195px;">
+    <span class="ctrl-label">Snelheid:</span>
+    <input type="range" id="speedSlider" min="0" max="5" step="1" value="2">
+    <span class="ctrl-val" id="speedVal">normaal</span>
+  </div>
+</div>
+
+<script>
+/* ── Astronomy ── */
+const LAT  = 52.3676;
+const YEAR = 2026;
+const isLeap = (YEAR%4===0&&YEAR%100!==0)||(YEAR%400===0);
+const N = isLeap ? 366 : 365;
+
+const MNAMES  = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+const MDAYS   = isLeap
+  ? [31,29,31,30,31,30,31,31,30,31,30,31]
+  : [31,28,31,30,31,30,31,31,30,31,30,31];
+const MSTARTS = (() => { const s=[0]; for(let i=0;i<11;i++) s.push(s[i]+MDAYS[i]); return s; })();
+
+function daylightMins(d) { /* d = 1-based */
+  const lr   = LAT * Math.PI / 180;
+  const decl = -23.45 * Math.cos(2*Math.PI*(d+10)/N) * Math.PI/180;
+  const cos  = -Math.tan(lr) * Math.tan(decl);
+  if (cos <= -1) return 1440;
+  if (cos >=  1) return 0;
+  return 8 * Math.acos(cos) * 180/Math.PI;
+}
+
+function fmtDate(d0) { /* 0-indexed */
+  let r = d0+1;
+  for (let m=0;m<12;m++) {
+    if (r<=MDAYS[m]) return `${r} ${MNAMES[m]}`;
+    r -= MDAYS[m];
+  }
+  return '—';
+}
+function fmtMins(m) {
+  const h=Math.floor(m/60), mn=Math.round(m%60);
+  return `${h}u ${String(mn).padStart(2,'0')}m`;
+}
+
+/* ── Precompute ── */
+const daylight = Array.from({length:N}, (_,i) => daylightMins(i+1));
+const delta    = daylight.map((v,i) => i===0 ? 0 : v - daylight[i-1]);
+const maxAbs   = Math.max(...delta.map(Math.abs));
+const YMAX     = Math.ceil(maxAbs) + 0.5;
+
+/* ── Events ── */
+function findEvents() {
+  const evs = [];
+  /* Summer solstice: delta crosses pos→neg */
+  for (let i=100; i<N; i++) {
+    if (delta[i-1]>0 && delta[i]<=0) {
+      evs.push({day:i, short:'ZZ', label:'Zomerzonnewende', col:'#f59e0b'}); break;
+    }
+  }
+  /* Winter solstice: delta crosses neg→pos near year end */
+  for (let i=300; i<N; i++) {
+    if (delta[i-1]<0 && delta[i]>=0) {
+      evs.push({day:i, short:'WZ', label:'Winterzonnewende', col:'#3b82f6'}); break;
+    }
+  }
+  /* Spring equinox: max delta in first half */
+  let maxV=0, maxI=1;
+  for (let i=1; i<Math.floor(N/2); i++) { if(delta[i]>maxV){maxV=delta[i];maxI=i;} }
+  evs.push({day:maxI, short:'LE', label:'Lenteequinox', col:'#22c55e'});
+  /* Autumn equinox: min delta in second half */
+  let minV=0, minI=Math.floor(N/2)+1;
+  for (let i=Math.floor(N/2); i<N; i++) { if(delta[i]<minV){minV=delta[i];minI=i;} }
+  evs.push({day:minI, short:'HE', label:'Herfstequinox', col:'#f97316'});
+  evs.sort((a,b) => a.day-b.day);
+  return evs;
+}
+const events = findEvents();
+
+/* ── Canvas ── */
+const canvas = document.getElementById('chart');
+const ctx    = canvas.getContext('2d');
+const PAD    = {t:32, r:16, b:36, l:50};
+let cW,cH,cX0,cY0,cCW,cCH;
+
+function resize() {
+  const dpr  = window.devicePixelRatio||1;
+  const wrap = canvas.parentElement;
+  const w=wrap.clientWidth, h=wrap.clientHeight;
+  canvas.width  = Math.round(w*dpr);
+  canvas.height = Math.round(h*dpr);
+  canvas.style.width  = w+'px';
+  canvas.style.height = h+'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  cW=w; cH=h;
+  cX0=PAD.l; cY0=PAD.t;
+  cCW=w-PAD.l-PAD.r;
+  cCH=h-PAD.t-PAD.b;
+}
+
+function xOf(d) { return cX0 + (d/(N-1))*cCW; }
+function yOf(v) { return cY0 + cCH/2 - (v/YMAX)*(cCH/2 - 6); }
+
+/* ── Animation state ── */
+let curDay=0, playing=false, speedIdx=2, lastTs=null, rafId=null;
+const SPEEDS = [6, 15, 30, 70, 150, 365];
+const SLBLS  = ['langzaam','rustig','normaal','snel','heel snel','max'];
+
+function draw() {
+  ctx.clearRect(0,0,cW,cH);
+  const midY = yOf(0);
+  const barW = Math.max(1, cCW/N);
+
+  /* Grid lines */
+  ctx.textAlign = 'right';
+  ctx.font = '10px Segoe UI,system-ui,sans-serif';
+  for (let v=-Math.floor(YMAX); v<=Math.floor(YMAX); v++) {
+    const y=yOf(v);
+    ctx.beginPath(); ctx.moveTo(cX0,y); ctx.lineTo(cX0+cCW,y);
+    if (v===0) { ctx.strokeStyle='#cbd5e1'; ctx.lineWidth=1.5; }
+    else       { ctx.strokeStyle='#f1f5f9'; ctx.lineWidth=1; }
+    ctx.stroke();
+    /* Y labels */
+    ctx.fillStyle = v===0 ? '#94a3b8' : '#cbd5e1';
+    ctx.fillText((v>0?'+':'')+v+'m', cX0-5, y+3.5);
+  }
+
+  /* Event dashed lines */
+  ctx.setLineDash([3,4]);
+  for (const ev of events) {
+    const x=xOf(ev.day);
+    ctx.strokeStyle = ev.col+'50';
+    ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(x,cY0); ctx.lineTo(x,cY0+cCH); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  /* Ghost bars — full year at very low opacity */
+  for (let d=0; d<N; d++) {
+    const v=delta[d], x=xOf(d);
+    const y0b=midY, yv=yOf(v);
+    const bh=Math.max(1, Math.abs(yv-y0b));
+    ctx.fillStyle = v>=0 ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)';
+    ctx.fillRect(x-barW/2, Math.min(yv,y0b), barW, bh);
+  }
+
+  /* Revealed bars */
+  const revD = Math.floor(curDay);
+  for (let d=0; d<=Math.min(revD,N-1); d++) {
+    const v=delta[d], x=xOf(d);
+    const y0b=midY, yv=yOf(v);
+    const bh=Math.max(1, Math.abs(yv-y0b));
+    let alpha = 1;
+    if (d===revD) alpha = Math.max(0.1, curDay-revD);
+    /* Gradient fill */
+    const top=Math.min(yv,y0b), bot=Math.max(yv,y0b);
+    const grd = ctx.createLinearGradient(0,top,0,bot);
+    if (v>=0) {
+      grd.addColorStop(0, `rgba(34,197,94,${alpha})`);
+      grd.addColorStop(1, `rgba(21,128,61,${alpha*0.65})`);
+    } else {
+      grd.addColorStop(0, `rgba(248,113,113,${alpha*0.65})`);
+      grd.addColorStop(1, `rgba(239,68,68,${alpha})`);
+    }
+    ctx.fillStyle = grd;
+    ctx.fillRect(x-barW/2, top, barW, bh);
+  }
+
+  /* Left axis */
+  ctx.strokeStyle='#e2e8f0'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(cX0,cY0); ctx.lineTo(cX0,cY0+cCH); ctx.stroke();
+
+  /* Month labels + ticks */
+  ctx.textAlign='center';
+  ctx.fillStyle='#94a3b8';
+  ctx.font='10px Segoe UI,system-ui,sans-serif';
+  for (let m=0; m<12; m++) {
+    const midD = MSTARTS[m] + MDAYS[m]/2;
+    ctx.fillText(MNAMES[m], xOf(midD), cY0+cCH+22);
+    const tx=xOf(MSTARTS[m]);
+    ctx.strokeStyle='#e2e8f0'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(tx,cY0+cCH); ctx.lineTo(tx,cY0+cCH+5); ctx.stroke();
+  }
+
+  /* Event labels top */
+  ctx.font='bold 8px Segoe UI,system-ui,sans-serif';
+  for (const ev of events) {
+    const x=xOf(ev.day);
+    ctx.fillStyle=ev.col+'cc';
+    ctx.textAlign='center';
+    ctx.fillText(ev.short, x, cY0-12);
+    /* small dot on x-axis */
+    ctx.fillStyle=ev.col+'80';
+    ctx.beginPath(); ctx.arc(x, cY0+cCH+2, 3,0,Math.PI*2); ctx.fill();
+  }
+
+  /* ── Sun cursor ── */
+  const cx = xOf(revD);
+  /* Glow */
+  const glow=ctx.createRadialGradient(cx,midY,0,cx,midY,32);
+  glow.addColorStop(0,'rgba(245,158,11,0.18)');
+  glow.addColorStop(1,'rgba(245,158,11,0)');
+  ctx.fillStyle=glow;
+  ctx.fillRect(cx-32,cY0,64,cCH);
+  /* Line */
+  ctx.strokeStyle='rgba(245,158,11,0.55)'; ctx.lineWidth=1.5;
+  ctx.setLineDash([4,3]);
+  ctx.beginPath(); ctx.moveTo(cx,cY0); ctx.lineTo(cx,cY0+cCH); ctx.stroke();
+  ctx.setLineDash([]);
+  /* Sun dot */
+  ctx.shadowColor='#f59e0b'; ctx.shadowBlur=12;
+  ctx.fillStyle='#fbbf24';
+  ctx.beginPath(); ctx.arc(cx, cY0+9, 6, 0, Math.PI*2); ctx.fill();
+  /* Ray spikes */
+  ctx.strokeStyle='#fbbf24'; ctx.lineWidth=1.2;
+  for (let a=0; a<8; a++) {
+    const angle = a*(Math.PI/4);
+    const r1=8, r2=11;
+    ctx.beginPath();
+    ctx.moveTo(cx+Math.cos(angle)*r1, cY0+9+Math.sin(angle)*r1);
+    ctx.lineTo(cx+Math.cos(angle)*r2, cY0+9+Math.sin(angle)*r2);
+    ctx.stroke();
+  }
+  ctx.shadowBlur=0;
+
+  /* ── Info panel ── */
+  const d  = revD;
+  const dv = delta[d];
+  document.getElementById('iDate').textContent    = fmtDate(d);
+  document.getElementById('iDayNum').textContent  = `${d+1} / ${N}`;
+  document.getElementById('iDaylight').textContent= fmtMins(daylight[d]);
+
+  const iD=document.getElementById('iDelta');
+  if      (dv> 0.05){ iD.textContent=`+${dv.toFixed(1)} min`; iD.className='stat-value pos';  }
+  else if (dv<-0.05){ iD.textContent=`${dv.toFixed(1)} min`;  iD.className='stat-value neg';  }
+  else               { iD.textContent='≈ 0 min';               iD.className='stat-value neut'; }
+
+  const trend = dv>0.1 ? '↑ Langer wordend' : dv<-0.1 ? '↓ Korter wordend' : '— Keerpunt';
+  document.getElementById('iTrend').textContent = trend;
+
+  /* Slider sync */
+  document.getElementById('daySlider').value = d;
+  document.getElementById('dayVal').textContent = fmtDate(d);
+}
+
+/* ── Loop ── */
+function loop(ts) {
+  if (!playing) return;
+  if (lastTs===null) lastTs=ts;
+  const dt = Math.min((ts-lastTs)/1000, 0.1);
+  lastTs=ts;
+  curDay += SPEEDS[speedIdx]*dt;
+  if (curDay>=N) curDay=0;
+  draw();
+  rafId=requestAnimationFrame(loop);
+}
+
+function setPlaying(v) {
+  playing=v;
+  const btn=document.getElementById('btnPlay');
+  if (v) {
+    lastTs=null;
+    btn.textContent='⏸ Pauzeer';
+    btn.classList.add('playing');
+    rafId=requestAnimationFrame(loop);
+  } else {
+    if (rafId) cancelAnimationFrame(rafId);
+    btn.textContent='▶ Afspelen';
+    btn.classList.remove('playing');
+  }
+}
+
+/* ── Controls ── */
+document.getElementById('btnPlay').addEventListener('click', ()=>setPlaying(!playing));
+document.getElementById('btnReset').addEventListener('click', ()=>{
+  setPlaying(false); curDay=0; draw();
+});
+document.getElementById('daySlider').addEventListener('input', e=>{
+  setPlaying(false); curDay=parseInt(e.target.value); draw();
+});
+document.getElementById('speedSlider').addEventListener('input', e=>{
+  speedIdx=parseInt(e.target.value);
+  document.getElementById('speedVal').textContent=SLBLS[speedIdx];
+});
+window.addEventListener('resize', ()=>{ resize(); draw(); });
+
+/* ── Init ── */
+resize();
+draw();
+setTimeout(()=>setPlaying(true), 500);
+</script>
+</body>
+</html>
