@@ -4,12 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tools</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    *, *::before, *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -24,18 +21,8 @@
       margin: 0 auto 48px;
     }
 
-    header h1 {
-      font-size: 1.5rem;
-      font-weight: 600;
-      letter-spacing: -0.02em;
-      color: #1a1a1a;
-    }
-
-    header p {
-      margin-top: 6px;
-      font-size: 0.9rem;
-      color: #777;
-    }
+    header h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em; }
+    header p { margin-top: 6px; font-size: 0.9rem; color: #777; }
 
     .grid {
       max-width: 760px;
@@ -58,46 +45,147 @@
       transition: box-shadow 0.15s, transform 0.15s;
     }
 
-    .card:hover {
-      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-      transform: translateY(-2px);
-    }
+    .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); transform: translateY(-2px); }
+    .card.placeholder { opacity: 0.4; cursor: default; pointer-events: none; border-style: dashed; }
 
-    .card.placeholder {
-      opacity: 0.4;
-      cursor: default;
-      pointer-events: none;
-      border-style: dashed;
-    }
+    .card-icon { font-size: 1.6rem; line-height: 1; }
+    .card-title { font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; }
+    .card-desc { font-size: 0.82rem; color: #777; line-height: 1.5; }
+    .card-tag { margin-top: auto; font-size: 0.72rem; color: #4a7c59; text-transform: uppercase; letter-spacing: 0.04em; }
+    .card.placeholder .card-tag { color: #aaa; }
 
-    .card-icon {
-      font-size: 1.6rem;
-      line-height: 1;
-    }
-
-    .card-title {
-      font-size: 1rem;
-      font-weight: 600;
-      letter-spacing: -0.01em;
-    }
-
-    .card-desc {
-      font-size: 0.82rem;
-      color: #777;
-      line-height: 1.5;
-    }
-
-    .card-tag {
+    .card-btn {
       margin-top: auto;
-      font-size: 0.72rem;
-      color: #aaa;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
+      background: #1a1a1a;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 14px;
+      font-size: 0.84rem;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.15s;
     }
 
-    .card:not(.placeholder) .card-tag {
-      color: #4a7c59;
+    .card-btn:hover { background: #333; }
+
+    /* ── Modal ─────────────────────────────────── */
+    .backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
     }
+
+    .backdrop.open { display: flex; }
+
+    .modal {
+      background: #fff;
+      border-radius: 16px;
+      padding: 32px;
+      width: 100%;
+      max-width: 420px;
+      position: relative;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      background: none;
+      border: none;
+      font-size: 1.1rem;
+      cursor: pointer;
+      color: #999;
+    }
+
+    .modal-close:hover { color: #333; }
+
+    .modal h2 { font-size: 1.05rem; font-weight: 600; margin-bottom: 22px; }
+
+    /* ── Form elements ─────────────────────────── */
+    .fg { margin-bottom: 14px; }
+
+    .fg label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: #555;
+      margin-bottom: 5px;
+    }
+
+    .fg label span { color: #bbb; font-weight: 400; }
+
+    select, input[type="date"], input[type="number"],
+    input[type="email"], input[type="password"], input[type="text"] {
+      width: 100%;
+      padding: 9px 11px;
+      border: 1px solid #e0ddd8;
+      border-radius: 8px;
+      font-size: 0.87rem;
+      background: #fafaf8;
+      color: #1a1a1a;
+      outline: none;
+      transition: border-color 0.15s, background 0.15s;
+      appearance: auto;
+    }
+
+    select:focus, input:focus {
+      border-color: #1a1a1a;
+      background: #fff;
+    }
+
+    select:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .quick-btns { display: flex; gap: 6px; margin-top: 8px; }
+
+    .qbtn {
+      flex: 1;
+      background: #f0ede8;
+      border: none;
+      border-radius: 7px;
+      padding: 7px 0;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .qbtn:hover { background: #e0ddd8; }
+
+    .submit-btn {
+      width: 100%;
+      padding: 11px;
+      background: #1a1a1a;
+      color: #fff;
+      border: none;
+      border-radius: 9px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: background 0.15s;
+    }
+
+    .submit-btn:hover { background: #333; }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .msg {
+      font-size: 0.82rem;
+      text-align: center;
+      margin-top: 10px;
+      min-height: 1.2em;
+    }
+
+    .msg.ok { color: #4a7c59; }
+    .msg.err { color: #c0392b; }
   </style>
 </head>
 <body>
@@ -116,11 +204,11 @@
       <div class="card-tag">Beschikbaar</div>
     </a>
 
-    <div class="card placeholder">
-      <div class="card-icon">🔧</div>
-      <div class="card-title">Volgende tool</div>
-      <div class="card-desc">Hier komt een nieuwe tool.</div>
-      <div class="card-tag">Binnenkort</div>
+    <div class="card">
+      <div class="card-icon">⏱️</div>
+      <div class="card-title">Uren schrijven</div>
+      <div class="card-desc">Snel uren registreren in SoloFlow.</div>
+      <button class="card-btn" onclick="openModal()">+ Uren invoeren</button>
     </div>
 
     <div class="card placeholder">
@@ -131,6 +219,270 @@
     </div>
 
   </div>
+
+
+  <!-- ── Modal ─────────────────────────────────── -->
+  <div class="backdrop" id="backdrop" onclick="onBackdropClick(event)">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+
+      <!-- Login -->
+      <div id="vLogin">
+        <h2>Inloggen bij SoloFlow</h2>
+        <div class="fg">
+          <label>E-mailadres</label>
+          <input type="email" id="loginEmail" placeholder="jouw@email.nl" onkeydown="if(event.key==='Enter') doLogin()">
+        </div>
+        <div class="fg">
+          <label>Wachtwoord</label>
+          <input type="password" id="loginPw" placeholder="••••••••" onkeydown="if(event.key==='Enter') doLogin()">
+        </div>
+        <button class="submit-btn" id="btnLogin" onclick="doLogin()">Inloggen</button>
+        <p class="msg" id="loginMsg"></p>
+      </div>
+
+      <!-- Entry -->
+      <div id="vEntry" style="display:none">
+        <h2>Uren invoeren</h2>
+
+        <div class="fg">
+          <label>Datum</label>
+          <input type="date" id="eDate">
+        </div>
+
+        <div class="fg">
+          <label>Opdrachtgever</label>
+          <select id="eClient" onchange="loadProjects()">
+            <option value="">— kies opdrachtgever —</option>
+          </select>
+        </div>
+
+        <div class="fg">
+          <label>Project</label>
+          <select id="eProject" onchange="loadActivities()" disabled>
+            <option value="">— kies project —</option>
+          </select>
+        </div>
+
+        <div class="fg">
+          <label>Activiteit <span>(optioneel)</span></label>
+          <select id="eActivity" disabled>
+            <option value="">— geen —</option>
+          </select>
+        </div>
+
+        <div class="fg">
+          <label>Uren</label>
+          <input type="number" id="eHours" min="0" step="0.25" placeholder="0">
+          <div class="quick-btns">
+            <button class="qbtn" onclick="addH(0.25)">+¼u</button>
+            <button class="qbtn" onclick="addH(0.5)">+½u</button>
+            <button class="qbtn" onclick="addH(1)">+1u</button>
+            <button class="qbtn" onclick="addH(2)">+2u</button>
+          </div>
+        </div>
+
+        <div class="fg">
+          <label>Omschrijving <span>(optioneel)</span></label>
+          <input type="text" id="eDesc" placeholder="Wat heb je gedaan?">
+        </div>
+
+        <button class="submit-btn" id="btnSubmit" onclick="submitEntry()">Vastleggen</button>
+        <p class="msg" id="entryMsg"></p>
+      </div>
+
+    </div>
+  </div>
+
+
+  <script>
+    const SUPA_URL = 'https://mnsqyclmihxypccmapmj.supabase.co'
+    const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1uc3F5Y2xtaWh4eXBjY21hcG1qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2OTcwODQsImV4cCI6MjA4MzI3MzA4NH0.wCi1NJdroTEo8SDdSPmWZ7_SR4r4VP2DANs_D4-WJUk'
+    const sb = supabase.createClient(SUPA_URL, SUPA_KEY)
+
+    // Set today's date
+    document.getElementById('eDate').value = new Date().toISOString().slice(0, 10)
+
+    async function openModal() {
+      document.getElementById('backdrop').classList.add('open')
+      const { data: { session } } = await sb.auth.getSession()
+      if (session) {
+        showEntry()
+        loadClients()
+      } else {
+        showLogin()
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('backdrop').classList.remove('open')
+      clearMsg()
+    }
+
+    function onBackdropClick(e) {
+      if (e.target === document.getElementById('backdrop')) closeModal()
+    }
+
+    function showLogin() {
+      document.getElementById('vLogin').style.display = 'block'
+      document.getElementById('vEntry').style.display = 'none'
+    }
+
+    function showEntry() {
+      document.getElementById('vLogin').style.display = 'none'
+      document.getElementById('vEntry').style.display = 'block'
+    }
+
+    function clearMsg() {
+      document.getElementById('loginMsg').textContent = ''
+      document.getElementById('entryMsg').textContent = ''
+    }
+
+    async function doLogin() {
+      const email = document.getElementById('loginEmail').value.trim()
+      const pw    = document.getElementById('loginPw').value
+      const btn   = document.getElementById('btnLogin')
+      const msg   = document.getElementById('loginMsg')
+
+      if (!email || !pw) { setMsg(msg, 'Vul e-mail en wachtwoord in.', false); return }
+
+      btn.disabled = true
+      btn.textContent = 'Bezig...'
+      msg.textContent = ''
+
+      const { error } = await sb.auth.signInWithPassword({ email, password: pw })
+
+      btn.disabled = false
+      btn.textContent = 'Inloggen'
+
+      if (error) {
+        setMsg(msg, 'Inloggen mislukt. Controleer je gegevens.', false)
+      } else {
+        showEntry()
+        loadClients()
+      }
+    }
+
+    async function loadClients() {
+      const { data } = await sb.from('clients')
+        .select('id, name')
+        .eq('status', 'active')
+        .order('name')
+
+      const sel = document.getElementById('eClient')
+      sel.innerHTML = '<option value="">— kies opdrachtgever —</option>'
+      ;(data || []).forEach(c => {
+        sel.innerHTML += `<option value="${c.id}">${c.name}</option>`
+      })
+    }
+
+    async function loadProjects() {
+      const clientId = document.getElementById('eClient').value
+      const pSel = document.getElementById('eProject')
+      const aSel = document.getElementById('eActivity')
+
+      pSel.innerHTML = '<option value="">— kies project —</option>'
+      pSel.disabled = true
+      aSel.innerHTML = '<option value="">— geen —</option>'
+      aSel.disabled = true
+
+      if (!clientId) return
+
+      const { data } = await sb.from('projects')
+        .select('id, name')
+        .eq('client_id', clientId)
+        .eq('status', 'active')
+        .order('name')
+
+      ;(data || []).forEach(p => {
+        pSel.innerHTML += `<option value="${p.id}">${p.name}</option>`
+      })
+      pSel.disabled = false
+    }
+
+    async function loadActivities() {
+      const projectId = document.getElementById('eProject').value
+      const aSel = document.getElementById('eActivity')
+
+      aSel.innerHTML = '<option value="">— geen —</option>'
+      aSel.disabled = true
+
+      if (!projectId) return
+
+      const { data } = await sb.from('activities')
+        .select('id, name')
+        .eq('project_id', projectId)
+        .order('name')
+
+      ;(data || []).forEach(a => {
+        aSel.innerHTML += `<option value="${a.id}">${a.name}</option>`
+      })
+      aSel.disabled = false
+    }
+
+    function addH(h) {
+      const inp = document.getElementById('eHours')
+      inp.value = Math.round((parseFloat(inp.value || 0) + h) * 4) / 4
+    }
+
+    async function submitEntry() {
+      const clientId  = document.getElementById('eClient').value
+      const projectId = document.getElementById('eProject').value
+      const actId     = document.getElementById('eActivity').value || null
+      const date      = document.getElementById('eDate').value
+      const hours     = parseFloat(document.getElementById('eHours').value)
+      const desc      = document.getElementById('eDesc').value.trim() || null
+      const msg       = document.getElementById('entryMsg')
+      const btn       = document.getElementById('btnSubmit')
+
+      if (!clientId || !projectId || !date || !hours || hours <= 0) {
+        setMsg(msg, 'Vul opdrachtgever, project, datum en uren in.', false)
+        return
+      }
+
+      btn.disabled = true
+      btn.textContent = 'Bezig...'
+      msg.textContent = ''
+
+      const { data: { user } } = await sb.auth.getUser()
+
+      const { error } = await sb.from('time_entries').insert({
+        user_id:     user.id,
+        client_id:  clientId,
+        project_id: projectId,
+        activity_id: actId,
+        date,
+        hours,
+        description: desc
+      })
+
+      btn.disabled = false
+      btn.textContent = 'Vastleggen'
+
+      if (error) {
+        setMsg(msg, 'Fout bij opslaan: ' + error.message, false)
+      } else {
+        setMsg(msg, `✓ ${hours} uur vastgelegd`, true)
+        resetForm()
+      }
+    }
+
+    function resetForm() {
+      document.getElementById('eClient').value = ''
+      document.getElementById('eProject').innerHTML = '<option value="">— kies project —</option>'
+      document.getElementById('eProject').disabled = true
+      document.getElementById('eActivity').innerHTML = '<option value="">— geen —</option>'
+      document.getElementById('eActivity').disabled = true
+      document.getElementById('eHours').value = ''
+      document.getElementById('eDesc').value = ''
+      document.getElementById('eDate').value = new Date().toISOString().slice(0, 10)
+    }
+
+    function setMsg(el, text, ok) {
+      el.textContent = text
+      el.className = 'msg ' + (ok ? 'ok' : 'err')
+    }
+  </script>
 
 </body>
 </html>
