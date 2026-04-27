@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tools</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f4f0;
+      color: #1a1a1a;
+      min-height: 100vh;
+      padding: 48px 24px;
+    }
+
+    header {
+      max-width: 760px;
+      margin: 0 auto 48px;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: #1a1a1a;
+    }
+
+    header p {
+      margin-top: 6px;
+      font-size: 0.9rem;
+      color: #777;
+    }
+
+    .grid {
+      max-width: 760px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid #e8e6e1;
+      border-radius: 12px;
+      padding: 24px;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: box-shadow 0.15s, transform 0.15s;
+    }
+
+    .card:hover {
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      transform: translateY(-2px);
+    }
+
+    .card.placeholder {
+      opacity: 0.4;
+      cursor: default;
+      pointer-events: none;
+      border-style: dashed;
+    }
+
+    .card-icon {
+      font-size: 1.6rem;
+      line-height: 1;
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .card-desc {
+      font-size: 0.82rem;
+      color: #777;
+      line-height: 1.5;
+    }
+
+    .card-tag {
+      margin-top: auto;
+      font-size: 0.72rem;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .card:not(.placeholder) .card-tag {
+      color: #4a7c59;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Tools</h1>
+    <p>Persoonlijke toolbox van Robert</p>
+  </header>
+
+  <div class="grid">
+
+    <a href="/daglicht/" class="card">
+      <div class="card-icon">☀️</div>
+      <div class="card-title">Daglicht</div>
+      <div class="card-desc">Bekijk hoeveel daglicht er vandaag en de komende dagen is.</div>
+      <div class="card-tag">Beschikbaar</div>
+    </a>
+
+    <div class="card placeholder">
+      <div class="card-icon">🔧</div>
+      <div class="card-title">Volgende tool</div>
+      <div class="card-desc">Hier komt een nieuwe tool.</div>
+      <div class="card-tag">Binnenkort</div>
+    </div>
+
+    <div class="card placeholder">
+      <div class="card-icon">🔧</div>
+      <div class="card-title">Volgende tool</div>
+      <div class="card-desc">Hier komt een nieuwe tool.</div>
+      <div class="card-tag">Binnenkort</div>
+    </div>
+
+  </div>
+
+</body>
+</html>
