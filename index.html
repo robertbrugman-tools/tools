@@ -440,6 +440,42 @@
     .msg { font-size: 0.82rem; text-align: center; margin-top: 10px; min-height: 1.2em; }
     .msg.ok  { color: #4a7c59; }
     .msg.err { color: #c0392b; }
+
+    /* ── Mic input ─────────────────────────────────────── */
+    .input-mic-row {
+      display: flex;
+      gap: 8px;
+      align-items: stretch;
+    }
+
+    .input-mic-row input { flex: 1; }
+
+    .mic-btn {
+      width: 42px;
+      flex-shrink: 0;
+      background: #f0ede8;
+      border: 1px solid #e0ddd8;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.1s, border-color 0.1s;
+    }
+
+    .mic-btn:hover { background: #e0ddd8; }
+
+    .mic-btn.recording {
+      background: #fff0f0;
+      border-color: #e74c3c;
+      animation: mic-pulse 1s ease-in-out infinite;
+    }
+
+    @keyframes mic-pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.55; }
+    }
   </style>
 </head>
 <body>
@@ -488,8 +524,11 @@
       <button class="modal-close" onclick="closeQuickAdd()">✕</button>
       <h2>Taak toevoegen</h2>
       <div class="fg">
-        <input type="text" id="quickAddInput" placeholder="Wat moet je doen?"
-          maxlength="200" onkeydown="if(event.key==='Enter')submitQuickAdd()">
+        <div class="input-mic-row">
+          <input type="text" id="quickAddInput" placeholder="Wat moet je doen?"
+            maxlength="200" onkeydown="if(event.key==='Enter')submitQuickAdd()">
+          <button class="mic-btn" id="micBtn" onclick="toggleVoice()" title="Inspreken (zeg EINDE om op te slaan)">🎤</button>
+        </div>
       </div>
       <button class="submit-btn" onclick="submitQuickAdd()">Toevoegen</button>
       <p class="msg" id="quickAddMsg"></p>
@@ -850,11 +889,72 @@
       document.getElementById('quickAddInput').value = ''
       document.getElementById('quickAddMsg').textContent = ''
       document.getElementById('quickAddBackdrop').classList.add('open')
-      setTimeout(() => document.getElementById('quickAddInput').focus(), 60)
+      setTimeout(() => {
+        const inp = document.getElementById('quickAddInput')
+        inp.focus()
+        inp.select()
+      }, 120)
     }
 
     function closeQuickAdd() {
+      stopVoice()
       document.getElementById('quickAddBackdrop').classList.remove('open')
+    }
+
+    // ── Voice input ────────────────────────────────────
+    let recognition  = null
+    let isRecording  = false
+
+    function toggleVoice() {
+      isRecording ? stopVoice() : startVoice()
+    }
+
+    function startVoice() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+      if (!SR) {
+        setMsg(document.getElementById('quickAddMsg'), 'Spraakherkenning niet beschikbaar in deze browser.', false)
+        return
+      }
+      recognition = new SR()
+      recognition.lang = 'nl-NL'
+      recognition.continuous = true
+      recognition.interimResults = true
+
+      recognition.onstart = () => {
+        isRecording = true
+        document.getElementById('micBtn').classList.add('recording')
+        document.getElementById('quickAddInput').placeholder = 'Zeg je taak... eindig met EINDE'
+        document.getElementById('quickAddInput').value = ''
+      }
+
+      recognition.onresult = (e) => {
+        let text = ''
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          text += e.results[i][0].transcript
+        }
+        const lower = text.toLowerCase()
+        if (lower.includes('einde')) {
+          const clean = text.replace(/einde/gi, '').trim()
+          document.getElementById('quickAddInput').value = clean
+          stopVoice()
+          if (clean) submitQuickAdd()
+        } else {
+          document.getElementById('quickAddInput').value = text
+        }
+      }
+
+      recognition.onerror = () => stopVoice()
+      recognition.onend   = () => { if (isRecording) recognition.start() }
+      recognition.start()
+    }
+
+    function stopVoice() {
+      isRecording = false
+      if (recognition) { recognition.onend = null; recognition.stop(); recognition = null }
+      const btn = document.getElementById('micBtn')
+      if (btn) btn.classList.remove('recording')
+      const inp = document.getElementById('quickAddInput')
+      if (inp) inp.placeholder = 'Wat moet je doen?'
     }
 
     async function submitQuickAdd() {
