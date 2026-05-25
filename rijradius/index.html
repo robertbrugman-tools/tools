@@ -30,7 +30,7 @@
 
     header h1 { font-size: 1.05rem; font-weight: 600; letter-spacing: 0.02em; }
 
-    /* ── Controls panel ── */
+    /* Controls panel */
     .controls {
       background: #fff;
       padding: 12px 20px;
@@ -54,6 +54,9 @@
       color: #555;
       text-transform: uppercase;
       letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .field input {
@@ -73,9 +76,92 @@
       background: #fff;
     }
 
+    /* Autocomplete wrapper */
+    .autocomplete-wrapper {
+      position: relative;
+    }
+
     #locatie-input { width: 240px; }
 
-    /* ── Mode toggle ── */
+    .autocomplete-list {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      width: 300px;
+      background: #fff;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+      z-index: 1000;
+      overflow: hidden;
+      display: none;
+    }
+
+    .autocomplete-list.open { display: block; }
+
+    .autocomplete-item {
+      padding: 9px 13px;
+      font-size: 0.88rem;
+      cursor: pointer;
+      color: #1a1a2e;
+      border-bottom: 1px solid #f0f0f0;
+      line-height: 1.35;
+    }
+
+    .autocomplete-item:last-child { border-bottom: none; }
+
+    .autocomplete-item:hover,
+    .autocomplete-item.focused {
+      background: #f0f3ff;
+      color: #4f6ef7;
+    }
+
+    .autocomplete-item .item-sub {
+      font-size: 0.76rem;
+      color: #999;
+      margin-top: 1px;
+    }
+
+    /* Standaard-badge in label */
+    .default-badge {
+      background: #e8edff;
+      color: #4f6ef7;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* Standaard-knop */
+    .default-btn {
+      height: 36px;
+      padding: 0 12px;
+      background: #fafafa;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      color: #777;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      align-self: flex-end;
+    }
+
+    .default-btn:hover {
+      background: #e8edff;
+      color: #4f6ef7;
+      border-color: #4f6ef7;
+    }
+
+    .default-btn.saved {
+      color: #4f6ef7;
+      border-color: #4f6ef7;
+      background: #e8edff;
+    }
+
+    /* Mode toggle */
     .mode-toggle {
       display: flex;
       border: 1.5px solid #ddd;
@@ -98,7 +184,7 @@
     .mode-btn + .mode-btn { border-left: 1.5px solid #ddd; }
     .mode-btn.active { background: #4f6ef7; color: #fff; font-weight: 600; }
 
-    /* ── Value inputs ── */
+    /* Value inputs */
     .value-group {
       display: flex;
       gap: 8px;
@@ -136,10 +222,10 @@
     #status-bar.error { color: #c0392b; }
     #status-bar.ok    { color: #27ae60; }
 
-    /* ── Map ── */
+    /* Map */
     #map { flex: 1; width: 100%; }
 
-    /* ── Leaflet popup ── */
+    /* Leaflet popup */
     .info-popup { font-size: 0.87rem; line-height: 1.5; }
     .info-popup strong { color: #1a1a2e; }
   </style>
@@ -151,13 +237,20 @@
   <h1>Rijradius</h1>
 </header>
 
-<!-- Invoer -->
 <div class="controls">
-  <div class="field">
-    <label>Startlocatie</label>
-    <input id="locatie-input" type="text" placeholder="bijv. Amsterdam, Utrecht …"
-      autocomplete="off" onkeydown="if(event.key==='Enter')zoek()" />
+  <div class="field autocomplete-wrapper">
+    <label>
+      Startlocatie
+      <span class="default-badge" id="default-badge" style="display:none">standaard</span>
+    </label>
+    <input id="locatie-input" type="text" placeholder="bijv. Haren, Utrecht, 9752…"
+      autocomplete="off" />
+    <ul class="autocomplete-list" id="autocomplete-list"></ul>
   </div>
+
+  <button class="default-btn" id="save-default-btn" onclick="slaDefaultOp()" title="Sla huidige locatie op als standaard">
+    ☆ Sla op als standaard
+  </button>
 
   <div class="field">
     <label>Modus</label>
@@ -197,9 +290,15 @@
 <div id="map"></div>
 
 <script>
-  let mode   = 'km'
-  let marker = null
-  let layer  = null
+  let mode            = 'km'
+  let marker          = null
+  let layer           = null
+  let selectedCoords  = null   // ingesteld zodra gebruiker een suggestie kiest
+  let focusedIndex    = -1
+  let debounceTimer   = null
+  let huidigeDefault  = null   // { label, lat, lon }
+
+  const STORAGE_KEY = 'rijradius_default_location'
 
   const map = L.map('map').setView([52.2, 5.3], 7)
 
@@ -208,7 +307,168 @@
     maxZoom: 18,
   }).addTo(map)
 
-  const statusBar = document.getElementById('status-bar')
+  const statusBar      = document.getElementById('status-bar')
+  const locatieInput   = document.getElementById('locatie-input')
+  const suggList       = document.getElementById('autocomplete-list')
+  const defaultBadge   = document.getElementById('default-badge')
+  const saveDefaultBtn = document.getElementById('save-default-btn')
+
+  // ── Standaard locatie ──────────────────────────────────────────
+
+  function laadDefault() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (!raw) return
+      huidigeDefault = JSON.parse(raw)
+      locatieInput.value = huidigeDefault.label
+      selectedCoords     = { lat: huidigeDefault.lat, lon: huidigeDefault.lon }
+      defaultBadge.style.display = ''
+      saveDefaultBtn.classList.add('saved')
+      saveDefaultBtn.textContent = '★ Standaard opgeslagen'
+    } catch (_) {}
+  }
+
+  function slaDefaultOp() {
+    const label = locatieInput.value.trim()
+    if (!label) { setStatus('Vul eerst een locatie in.', 'error'); return }
+
+    const entry = {
+      label,
+      lat: selectedCoords ? selectedCoords.lat : null,
+      lon: selectedCoords ? selectedCoords.lon : null,
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(entry))
+    huidigeDefault = entry
+    defaultBadge.style.display = ''
+    saveDefaultBtn.classList.add('saved')
+    saveDefaultBtn.textContent = '★ Standaard opgeslagen'
+    setStatus(`"${label}" opgeslagen als standaard locatie.`, 'ok')
+  }
+
+  // ── Autocomplete (Photon) ──────────────────────────────────────
+
+  function sluitSuggesties() {
+    suggList.classList.remove('open')
+    suggList.innerHTML = ''
+    focusedIndex = -1
+  }
+
+  async function haalSuggesties(query) {
+    // Photon: gratis, geen API-key, NL-biased via lat/lon centrum Nederland
+    const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lang=nl&limit=6&lat=52.3&lon=5.3`
+    const res  = await fetch(url)
+    if (!res.ok) return []
+    const data = await res.json()
+
+    return data.features.map(f => {
+      const p    = f.properties
+      const naam = p.name || ''
+      const sub  = [p.postcode, p.city || p.town || p.village || p.county, p.country]
+                     .filter(Boolean).join(', ')
+      return {
+        label: naam,
+        sub,
+        lat: f.geometry.coordinates[1],
+        lon: f.geometry.coordinates[0],
+      }
+    }).filter(s => s.label)
+  }
+
+  function toonSuggesties(suggesties) {
+    suggList.innerHTML = ''
+    focusedIndex = -1
+
+    if (!suggesties.length) { sluitSuggesties(); return }
+
+    suggesties.forEach((s, i) => {
+      const li = document.createElement('li')
+      li.className = 'autocomplete-item'
+      li.innerHTML = `<div>${s.label}</div><div class="item-sub">${s.sub}</div>`
+      li.addEventListener('mousedown', (e) => {
+        e.preventDefault()
+        kiesSuggestie(s)
+      })
+      suggList.appendChild(li)
+    })
+
+    suggList.classList.add('open')
+  }
+
+  function kiesSuggestie(s) {
+    locatieInput.value = s.label + (s.sub ? ', ' + s.sub.split(',')[0] : '')
+    selectedCoords     = { lat: s.lat, lon: s.lon }
+    sluitSuggesties()
+
+    // Reset standaard-badge als de locatie afwijkt van de opgeslagen standaard
+    if (huidigeDefault && huidigeDefault.label !== locatieInput.value) {
+      defaultBadge.style.display = 'none'
+      saveDefaultBtn.classList.remove('saved')
+      saveDefaultBtn.textContent = '☆ Sla op als standaard'
+    }
+  }
+
+  function updateFocus(items) {
+    items.forEach((item, i) => {
+      item.classList.toggle('focused', i === focusedIndex)
+    })
+  }
+
+  // Debounced input handler
+  locatieInput.addEventListener('input', () => {
+    selectedCoords = null  // gebruiker tikt handmatig, reset gekozen coördinaten
+
+    // Badge dimmen als tekst wijzigt t.o.v. standaard
+    if (huidigeDefault && locatieInput.value !== huidigeDefault.label) {
+      defaultBadge.style.display = 'none'
+      saveDefaultBtn.classList.remove('saved')
+      saveDefaultBtn.textContent = '☆ Sla op als standaard'
+    }
+
+    clearTimeout(debounceTimer)
+    const query = locatieInput.value.trim()
+    if (query.length < 2) { sluitSuggesties(); return }
+
+    debounceTimer = setTimeout(async () => {
+      const suggesties = await haalSuggesties(query)
+      toonSuggesties(suggesties)
+    }, 280)
+  })
+
+  // Toetsenbordnavigatie in de dropdown
+  locatieInput.addEventListener('keydown', (e) => {
+    const items = [...suggList.querySelectorAll('.autocomplete-item')]
+    if (!items.length) {
+      if (e.key === 'Enter') zoek()
+      return
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      focusedIndex = Math.min(focusedIndex + 1, items.length - 1)
+      updateFocus(items)
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      focusedIndex = Math.max(focusedIndex - 1, -1)
+      updateFocus(items)
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      if (focusedIndex >= 0) {
+        items[focusedIndex].dispatchEvent(new Event('mousedown'))
+      } else {
+        sluitSuggesties()
+        zoek()
+      }
+    } else if (e.key === 'Escape') {
+      sluitSuggesties()
+    }
+  })
+
+  // Sluit dropdown bij klik buiten het veld
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.autocomplete-wrapper')) sluitSuggesties()
+  })
+
+  // ── Hulpfuncties ───────────────────────────────────────────────
 
   function setStatus(msg, type) {
     statusBar.textContent = msg
@@ -226,7 +486,7 @@
 
   async function geocode(query) {
     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`
-    const res = await fetch(url, { headers: { 'Accept-Language': 'nl' } })
+    const res  = await fetch(url, { headers: { 'Accept-Language': 'nl' } })
     if (!res.ok) throw new Error('Geocoding mislukt')
     const data = await res.json()
     if (!data.length) throw new Error(`"${query}" niet gevonden`)
@@ -238,16 +498,23 @@
     if (layer)  { map.removeLayer(layer);  layer  = null }
   }
 
+  // ── Hoofdfunctie ───────────────────────────────────────────────
+
   async function zoek() {
-    const locatie = document.getElementById('locatie-input').value.trim()
+    const locatie = locatieInput.value.trim()
     if (!locatie) { setStatus('Vul een startlocatie in.', 'error'); return }
 
     const btn = document.getElementById('zoek-btn')
     btn.disabled = true
+    sluitSuggesties()
     setStatus('Locatie zoeken…', '')
 
     try {
-      const loc = await geocode(locatie)
+      // Gebruik gekozen coördinaten als beschikbaar, anders geocode de tekst
+      const loc = selectedCoords
+        ? selectedCoords
+        : await geocode(locatie)
+
       clearLayers()
       marker = L.marker([loc.lat, loc.lon]).addTo(map)
 
@@ -287,8 +554,8 @@
   }
 
   async function toonIsochrone(loc, label) {
-    const uren = parseInt(document.getElementById('uren-input').value) || 0
-    const min  = parseInt(document.getElementById('min-input').value)  || 0
+    const uren     = parseInt(document.getElementById('uren-input').value) || 0
+    const min      = parseInt(document.getElementById('min-input').value)  || 0
     const seconden = uren * 3600 + min * 60
 
     if (seconden <= 0) { setStatus('Vul een reistijd in.', 'error'); return }
@@ -299,10 +566,10 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        locations: [[loc.lon, loc.lat]],
-        range: [seconden],
+        locations:  [[loc.lon, loc.lat]],
+        range:      [seconden],
         range_type: 'time',
-        smoothing: 0.5,
+        smoothing:  0.5,
       }),
     })
 
@@ -320,11 +587,11 @@
 
     layer = L.geoJSON(geojson, {
       style: {
-        color: '#e67e22',
-        fillColor: '#e67e22',
+        color:       '#e67e22',
+        fillColor:   '#e67e22',
         fillOpacity: 0.12,
-        weight: 2.5,
-        dashArray: '6 4',
+        weight:      2.5,
+        dashArray:   '6 4',
       }
     }).addTo(map)
 
@@ -342,6 +609,9 @@
     map.fitBounds(layer.getBounds(), { padding: [30, 30] })
     setStatus(`✓ ${label} — bereikbaar in ${tijdLabel}`, 'ok')
   }
+
+  // ── Init ────────────────────────────────────────────────────────
+  laadDefault()
 </script>
 
 </body>
