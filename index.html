@@ -78,6 +78,19 @@
 
     .hdr-btn:hover { background: #f0ede8; }
 
+    /* ── Secties ───────────────────────────────────────── */
+    .tool-section { margin-bottom: 32px; }
+    .section-title {
+      max-width: 760px;
+      margin: 0 auto 14px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #999;
+    }
+    .tool-section.empty { display: none; }
+
     /* ── Grid ──────────────────────────────────────────── */
     .grid {
       max-width: 760px;
@@ -516,7 +529,14 @@
         <button class="hdr-btn" onclick="doLogout()">Uitloggen</button>
       </div>
     </header>
-    <div class="grid" id="tileGrid"></div>
+    <div id="section-prive" class="tool-section">
+      <h2 class="section-title">Privé</h2>
+      <div class="grid" id="tileGrid-prive"></div>
+    </div>
+    <div id="section-zakelijk" class="tool-section">
+      <h2 class="section-title">Zakelijk</h2>
+      <div class="grid" id="tileGrid-zakelijk"></div>
+    </div>
   </div>
 
   <!-- ── Quick-add backdrop ───────────────────────────── -->
@@ -663,12 +683,13 @@
 
     // ── App definitions ────────────────────────────────
     const APPS = [
-      { key: 'daglicht', icon: '☀️',  title: 'Daglicht',           desc: 'Bekijk hoeveel daglicht er vandaag en de komende dagen is.', href: '/daglicht/' },
-      { key: 'claude',   icon: '🤖',  title: 'Claude gebruik',     desc: 'Bekijk je sessiegebruik, wekelijks limiet en plan.',          href: 'https://claude.ai/settings/usage', external: true },
-      { key: 'uren',     icon: '⏱️',  title: 'Uren schrijven',     desc: 'Snel uren registreren in SoloFlow.',                          action: 'uren' },
-      { key: 'taken',    icon: '✅',  title: 'Taken',              special: 'tasks' },
-      { key: 'docs',     icon: '📄',  title: 'Documenten → tekst', desc: 'Extraheer tekst uit Word-, PowerPoint-, PDF- of EPUB-bestand.',     href: '/document-extractor/' },
-      { key: 'rijradius', icon: '🗺️', title: 'Rijradius', desc: 'Voer een startlocatie en aantal kilometers in en zie op een kaart waar je uitkomt.', href: '/rijradius/' },
+      { key: 'daglicht', category: 'prive', icon: '☀️',  title: 'Daglicht',           desc: 'Bekijk hoeveel daglicht er vandaag en de komende dagen is.', href: '/daglicht/' },
+      { key: 'claude',   category: 'prive', icon: '🤖',  title: 'Claude gebruik',     desc: 'Bekijk je sessiegebruik, wekelijks limiet en plan.',          href: 'https://claude.ai/settings/usage', external: true },
+      { key: 'uren',     category: 'prive', icon: '⏱️',  title: 'Uren schrijven',     desc: 'Snel uren registreren in SoloFlow.',                          action: 'uren' },
+      { key: 'taken',    category: 'prive', icon: '✅',  title: 'Taken',              special: 'tasks' },
+      { key: 'docs',     category: 'prive', icon: '📄',  title: 'Documenten → tekst', desc: 'Extraheer tekst uit Word-, PowerPoint-, PDF- of EPUB-bestand.',     href: '/document-extractor/' },
+      { key: 'rijradius', category: 'prive', icon: '🗺️', title: 'Rijradius', desc: 'Voer een startlocatie en aantal kilometers in en zie op een kaart waar je uitkomt.', href: '/rijradius/' },
+      { key: 'respyre',  category: 'zakelijk', icon: '🌿', title: 'Respyre antwoorden', desc: 'Plak een binnengekomen aanvraag en genereer een concept-antwoord in jouw stijl.', href: '/respyre/' },
     ]
 
     // ── State ──────────────────────────────────────────
@@ -726,10 +747,15 @@
 
     // ── Tiles ──────────────────────────────────────────
     function renderTiles() {
-      const grid = document.getElementById('tileGrid')
-      grid.innerHTML = ''
-      APPS.filter(a => allowedApps.includes(a.key)).forEach(app => {
-        grid.appendChild(buildTile(app))
+      const categorieen = ['prive', 'zakelijk']
+      categorieen.forEach(cat => {
+        const grid = document.getElementById('tileGrid-' + cat)
+        const sectie = document.getElementById('section-' + cat)
+        grid.innerHTML = ''
+        const apps = APPS.filter(a => (a.category || 'prive') === cat && allowedApps.includes(a.key))
+        apps.forEach(app => grid.appendChild(buildTile(app)))
+        // Verberg een sectie zonder toegankelijke tools
+        sectie.classList.toggle('empty', apps.length === 0)
       })
     }
 
