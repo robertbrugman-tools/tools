@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Respyre antwoorden</title>
+<style>
+  :root{
+    --groen:#467886; --groen-donker:#2f5560; --bg:#f7f6f3; --kaart:#fff;
+    --rand:#e8e6e1; --tekst:#1d2b2f; --grijs:#777;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--tekst);line-height:1.5}
+  header{max-width:1080px;margin:0 auto;padding:22px 24px 0;display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  header h1{font-size:20px;margin:0;font-weight:600;letter-spacing:-0.01em}
+  header .sub{font-size:13px;color:var(--grijs);margin-top:2px}
+  header a.terug{font-size:13px;color:var(--groen);text-decoration:none}
+  header a.terug:hover{text-decoration:underline}
+  .wrap{max-width:1080px;margin:0 auto;padding:18px 24px 40px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:820px){.grid{grid-template-columns:1fr}}
+  .kaart{background:var(--kaart);border:1px solid var(--rand);border-radius:12px;padding:18px}
+  .kaart h2{font-size:14px;margin:0 0 12px;color:var(--groen-donker)}
+  label{display:block;font-size:13px;font-weight:600;margin:12px 0 5px;color:var(--groen-donker)}
+  label:first-of-type{margin-top:0}
+  textarea,select,input{width:100%;border:1px solid var(--rand);border-radius:8px;padding:10px;font-size:14px;font-family:inherit;background:#fff;color:var(--tekst)}
+  textarea{resize:vertical}
+  #aanvraag{min-height:240px}
+  .rij{display:flex;gap:12px;flex-wrap:wrap}
+  .rij>div{flex:1;min-width:150px}
+  button{cursor:pointer;border:none;border-radius:8px;font-size:14px;font-weight:600;padding:11px 18px;transition:.15s}
+  .primair{background:var(--groen);color:#fff;width:100%;margin-top:14px;font-size:15px}
+  .primair:hover{background:var(--groen-donker)}
+  .primair:disabled{opacity:.5;cursor:not-allowed}
+  .klein{background:#eef2f1;color:var(--groen-donker);padding:8px 13px;font-size:13px}
+  .klein:hover{background:#e2e9e7}
+  #antwoord{white-space:pre-wrap;font-size:14px;min-height:240px;border:1px solid var(--rand);border-radius:8px;padding:14px;background:#fbfcfc}
+  .leeg{color:var(--grijs);font-style:italic}
+  .balk{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .status{font-size:13px;color:var(--grijs);margin-top:8px;min-height:18px}
+  .fout{color:#b3261e}
+  .mini{font-size:12px;color:var(--grijs);margin-top:8px}
+  .spin{display:inline-block;width:13px;height:13px;border:2px solid #cbd6d4;border-top-color:var(--groen);border-radius:50%;animation:d .7s linear infinite;vertical-align:-2px;margin-right:6px}
+  @keyframes d{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Respyre antwoorden 🌿</h1>
+    <div class="sub">Plak een aanvraag, krijg een concept-antwoord in jouw stijl</div>
+  </div>
+  <a class="terug" href="/">← Terug naar Tools</a>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+    <div class="kaart">
+      <h2>1 · Binnengekomen aanvraag</h2>
+      <label for="aanvraag">Plak hier de mail of het formulierbericht</label>
+      <textarea id="aanvraag" placeholder="Bijv: 'Goedemiddag, wij hebben een noordgevel van ongeveer 40 m2 die we graag zouden vergroenen met mos. Kunt u aangeven wat dit ongeveer kost en hoe het werkt? Mvg, ...'"></textarea>
+
+      <div class="rij">
+        <div>
+          <label for="taal">Taal van je antwoord</label>
+          <select id="taal">
+            <option value="auto">Automatisch (volg de aanvraag)</option>
+            <option value="nl">Nederlands</option>
+            <option value="en">Engels</option>
+          </select>
+        </div>
+        <div>
+          <label for="lengte">Lengte</label>
+          <select id="lengte">
+            <option value="kort">Kort en bondig</option>
+            <option value="normaal" selected>Normaal</option>
+            <option value="uitgebreid">Uitgebreid</option>
+          </select>
+        </div>
+      </div>
+
+      <label for="extra">Extra instructie (optioneel)</label>
+      <input type="text" id="extra" placeholder="Bijv: 'noem ook de subsidiemogelijkheid' of 'dit is een particulier'">
+
+      <button class="primair" id="genereer" onclick="genereer()">Genereer antwoord</button>
+      <div class="status" id="status"></div>
+    </div>
+
+    <div class="kaart">
+      <h2>2 · Concept-antwoord</h2>
+      <div id="antwoord"><span class="leeg">Hier verschijnt je concept. Controleer altijd de prijzen en details voordat je verstuurt.</span></div>
+      <div class="balk">
+        <button class="klein" onclick="kopieer()">Kopieer</button>
+        <button class="klein" onclick="genereer()">Genereer opnieuw</button>
+      </div>
+      <p class="mini">Let op: dit is een concept. Prijzen, m² en projectdetails verschillen per situatie. Lees na en pas aan waar nodig.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+function zetStatus(t, fout){ const s=document.getElementById('status'); s.innerHTML=t; s.classList.toggle('fout', !!fout); }
+
+function kopieer(){
+  const t=document.getElementById('antwoord').innerText;
+  if(!t || t.startsWith('Hier verschijnt')) return;
+  navigator.clipboard.writeText(t).then(()=>zetStatus('Gekopieerd naar klembord.'));
+}
+
+async function genereer(){
+  const aanvraag=document.getElementById('aanvraag').value.trim();
+  const out=document.getElementById('antwoord');
+  const knop=document.getElementById('genereer');
+
+  if(!aanvraag){ zetStatus('Plak eerst een aanvraag in het linkervak.', true); return; }
+
+  knop.disabled=true;
+  zetStatus('<span class="spin"></span>Antwoord wordt gegenereerd...');
+  out.textContent='';
+
+  try{
+    const resp=await fetch('/.netlify/functions/respyre',{
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({
+        aanvraag,
+        taal:document.getElementById('taal').value,
+        lengte:document.getElementById('lengte').value,
+        extra:document.getElementById('extra').value.trim()
+      })
+    });
+
+    const data=await resp.json();
+    if(!resp.ok){ throw new Error(data.error || ('Fout '+resp.status)); }
+
+    out.textContent = data.antwoord || '';
+    if(!out.textContent) out.innerHTML='<span class="leeg">Geen antwoord ontvangen.</span>';
+    else zetStatus('Klaar. Controleer prijzen en details voordat je verstuurt.');
+  }catch(err){
+    zetStatus(err.message || 'Er ging iets mis.', true);
+    if(!out.textContent) out.innerHTML='<span class="leeg">Geen antwoord gegenereerd.</span>';
+  }finally{
+    knop.disabled=false;
+  }
+}
+</script>
+</body>
+</html>
