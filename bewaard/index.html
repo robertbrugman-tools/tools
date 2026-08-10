@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bewaard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f5f4f0;
+    color: #1a1a1a;
+    min-height: 100vh;
+  }
+  a { color: inherit; }
+
+  #authScreen {
+    position: fixed; inset: 0; background: #f5f4f0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px; z-index: 300;
+  }
+  .auth-box {
+    background: #fff; border: 1px solid #e8e6e1; border-radius: 16px;
+    padding: 40px 36px; width: 100%; max-width: 360px;
+  }
+  .auth-box h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 4px; }
+  .auth-box > p { font-size: 0.875rem; color: #777; margin-bottom: 28px; }
+
+  .fg { margin-bottom: 14px; }
+  .fg label { display: block; font-size: 0.78rem; font-weight: 500; color: #555; margin-bottom: 5px; }
+  input[type="email"], input[type="password"] {
+    width: 100%; padding: 9px 11px; border: 1px solid #e0ddd8; border-radius: 8px;
+    font-size: 0.87rem; background: #fafaf8; color: #1a1a1a; outline: none;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  input:focus { border-color: #1a1a1a; background: #fff; }
+
+  .submit-btn {
+    width: 100%; padding: 11px; background: #1a1a1a; color: #fff; border: none;
+    border-radius: 9px; font-size: 0.9rem; font-weight: 500; cursor: pointer;
+    margin-top: 6px; transition: background 0.15s;
+  }
+  .submit-btn:hover { background: #333; }
+  .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .msg { font-size: 0.82rem; text-align: center; margin-top: 10px; min-height: 1.2em; }
+  .msg.ok { color: #4a7c59; }
+  .msg.err { color: #c0392b; }
+
+  #app { display: none; padding: 40px 20px 80px; }
+  .wrap { max-width: 640px; margin: 0 auto; }
+
+  header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 12px; margin-bottom: 28px;
+  }
+  header h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em; }
+  header p { margin-top: 6px; font-size: 0.9rem; color: #777; }
+  .back-link { font-size: 0.82rem; color: #999; text-decoration: none; white-space: nowrap; margin-top: 4px; }
+  .back-link:hover { color: #555; }
+
+  .toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 18px; gap: 10px;
+  }
+  .hdr-btn {
+    background: none; border: 1px solid #ddd; border-radius: 7px; padding: 6px 12px;
+    font-size: 0.8rem; cursor: pointer; color: #555; transition: background 0.1s;
+  }
+  .hdr-btn:hover { background: #f0ede8; }
+  .hdr-btn.on { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+
+  .empty {
+    text-align: center; padding: 60px 20px; color: #aaa; font-size: 0.9rem; line-height: 1.6;
+  }
+
+  .item {
+    background: #fff; border: 1px solid #e8e6e1; border-radius: 12px;
+    padding: 18px 20px; margin-bottom: 12px;
+  }
+  .item.archived { opacity: 0.55; }
+  .item-top {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+  }
+  .item-subject { font-size: 0.95rem; font-weight: 600; letter-spacing: -0.01em; }
+  .item-date { font-size: 0.72rem; color: #aaa; white-space: nowrap; flex-shrink: 0; margin-top: 2px; }
+  .item-body {
+    font-size: 0.85rem; color: #555; line-height: 1.5; margin-top: 8px;
+    white-space: pre-wrap; max-height: 4.5em; overflow: hidden;
+  }
+  .item-body.expanded { max-height: none; }
+  .item-more {
+    font-size: 0.76rem; color: #4a7c59; cursor: pointer; margin-top: 4px; display: inline-block;
+  }
+  .item-links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .link-chip {
+    font-size: 0.78rem; padding: 5px 10px; border-radius: 20px; background: #f0ede8;
+    border: 1px solid #e0ddd8; text-decoration: none; color: #333;
+    max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .link-chip:hover { background: #e0ddd8; }
+  .item-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .item-actions button {
+    background: none; border: 1px solid #e0ddd8; border-radius: 7px; padding: 5px 11px;
+    font-size: 0.76rem; cursor: pointer; color: #666; transition: background 0.1s;
+  }
+  .item-actions button:hover { background: #f0ede8; }
+  .item-actions button.danger:hover { background: #fdecea; color: #c0392b; border-color: #f3c8c3; }
+
+  .loading { text-align: center; padding: 40px; color: #bbb; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+
+<div id="authScreen">
+  <div class="auth-box">
+    <h1>Bewaard</h1>
+    <p>Log in met je Hub-account</p>
+    <div class="fg">
+      <label>E-mailadres</label>
+      <input type="email" id="authEmail" placeholder="jouw@email.nl" onkeydown="if(event.key==='Enter')login()">
+    </div>
+    <div class="fg">
+      <label>Wachtwoord</label>
+      <input type="password" id="authPw" placeholder="••••••••" onkeydown="if(event.key==='Enter')login()">
+    </div>
+    <button class="submit-btn" id="btnLogin" onclick="login()">Inloggen</button>
+    <p class="msg" id="authMsg"></p>
+  </div>
+</div>
+
+<div id="app">
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Bewaard</h1>
+        <p>Mails die je naar jezelf stuurt in Proton, verzameld op één plek.</p>
+      </div>
+      <a class="back-link" href="/">← Tools</a>
+    </header>
+
+    <div class="toolbar">
+      <button class="hdr-btn" id="archiveToggle" onclick="toggleArchived()">Toon gearchiveerd</button>
+      <button class="hdr-btn" onclick="load()">↻ Ververs</button>
+    </div>
+
+    <div id="list"></div>
+  </div>
+</div>
+
+<script>
+  const HUB_URL = 'https://swrunlzeydmcskceqdju.supabase.co'
+  const HUB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3cnVubHpleWRtY3NrY2VxZGp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNjE2MDgsImV4cCI6MjA5MjkzNzYwOH0.V7haNdFPFJuvJJTbjhiUzKrWG8trW4UeRIJveAhFOgs'
+  const sb = supabase.createClient(HUB_URL, HUB_KEY)
+
+  let entries = []
+  let showArchived = false
+
+  ;(async () => {
+    const { data: { session } } = await sb.auth.getSession()
+    if (session) enter()
+  })()
+
+  async function login() {
+    const email = document.getElementById('authEmail').value.trim()
+    const pw = document.getElementById('authPw').value
+    const btn = document.getElementById('btnLogin')
+    const msg = document.getElementById('authMsg')
+    if (!email || !pw) { setMsg(msg, 'Vul e-mail en wachtwoord in.', false); return }
+    btn.disabled = true; btn.textContent = 'Bezig...'
+    const { error } = await sb.auth.signInWithPassword({ email, password: pw })
+    btn.disabled = false; btn.textContent = 'Inloggen'
+    if (error) setMsg(msg, 'Inloggen mislukt. Controleer je gegevens.', false)
+    else enter()
+  }
+
+  function enter() {
+    document.getElementById('authScreen').style.display = 'none'
+    document.getElementById('app').style.display = 'block'
+    load()
+  }
+
+  async function load() {
+    const list = document.getElementById('list')
+    list.innerHTML = '<div class="loading">Laden...</div>'
+    const { data: { session } } = await sb.auth.getSession()
+    if (!session) {
+      document.getElementById('authScreen').style.display = 'flex'
+      document.getElementById('app').style.display = 'none'
+      return
+    }
+
+    try {
+      const res = await fetch('/.netlify/functions/mail-list', {
+        headers: { Authorization: 'Bearer ' + session.access_token }
+      })
+      if (!res.ok) throw new Error('status ' + res.status)
+      entries = await res.json()
+      render()
+    } catch (err) {
+      list.innerHTML = '<div class="empty">Laden mislukt: ' + esc(err.message) + '</div>'
+    }
+  }
+
+  function toggleArchived() {
+    showArchived = !showArchived
+    const btn = document.getElementById('archiveToggle')
+    btn.classList.toggle('on', showArchived)
+    btn.textContent = showArchived ? 'Verberg gearchiveerd' : 'Toon gearchiveerd'
+    render()
+  }
+
+  function render() {
+    const list = document.getElementById('list')
+    const visible = entries.filter(e => showArchived || !e.archivedAt)
+    if (visible.length === 0) {
+      list.innerHTML = '<div class="empty">Nog niets bewaard.<br>Stuur jezelf een mail in Proton om hem hier te laten verschijnen.</div>'
+      return
+    }
+    list.innerHTML = ''
+    visible.forEach(e => list.appendChild(buildItem(e)))
+  }
+
+  function buildItem(e) {
+    const div = document.createElement('div')
+    div.className = 'item' + (e.archivedAt ? ' archived' : '')
+    const date = new Date(e.receivedAt)
+    const dateStr = date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }) + ' ' + date.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })
+    const links = (e.links || []).map(l => `<a class="link-chip" href="${esc(l)}" target="_blank" rel="noopener">${esc(shortenUrl(l))}</a>`).join('')
+    div.innerHTML = `
+      <div class="item-top">
+        <div class="item-subject">${esc(e.subject || '(geen onderwerp)')}</div>
+        <div class="item-date">${dateStr}</div>
+      </div>
+      ${e.body ? `<div class="item-body">${esc(e.body)}</div><span class="item-more" onclick="this.previousElementSibling.classList.toggle('expanded');this.textContent=this.previousElementSibling.classList.contains('expanded')?'Toon minder':'Toon meer'">Toon meer</span>` : ''}
+      ${links ? `<div class="item-links">${links}</div>` : ''}
+      <div class="item-actions">
+        <button onclick="setAction('${e.id}','${e.archivedAt ? 'unarchive' : 'archive'}')">${e.archivedAt ? 'Terugzetten' : 'Archiveren'}</button>
+        <button class="danger" onclick="setAction('${e.id}','delete')">Verwijderen</button>
+      </div>`
+    return div
+  }
+
+  async function setAction(id, action) {
+    if (action === 'delete' && !confirm('Dit bewaarde item definitief verwijderen?')) return
+    const { data: { session } } = await sb.auth.getSession()
+    if (!session) return
+    await fetch('/.netlify/functions/mail-update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+      body: JSON.stringify({ id, action })
+    })
+    await load()
+  }
+
+  function shortenUrl(url) {
+    try {
+      const u = new URL(url)
+      return u.hostname.replace(/^www\./, '') + (u.pathname !== '/' ? u.pathname : '')
+    } catch { return url }
+  }
+
+  function setMsg(el, text, ok) {
+    el.textContent = text
+    el.className = 'msg ' + (ok ? 'ok' : 'err')
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+  }
+</script>
+</body>
+</html>

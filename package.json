@@ -1,0 +1,8 @@
+{
+  "name": "robertbrugman-tools",
+  "private": true,
+  "dependencies": {
+    "busboy": "^1.6.0",
+    "@netlify/blobs": "^8.1.0"
+  }
+}
