@@ -6,6 +6,15 @@ const { getStore } = require('@netlify/blobs')
 const HUB_URL = 'https://swrunlzeydmcskceqdju.supabase.co'
 const HUB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3cnVubHpleWRtY3NrY2VxZGp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNjE2MDgsImV4cCI6MjA5MjkzNzYwOH0.V7haNdFPFJuvJJTbjhiUzKrWG8trW4UeRIJveAhFOgs'
 const ADMIN_EMAIL = 'robert@circe-advies.nl'
+const SITE_ID = '3811d4ae-1d5e-43ce-b299-bfa15db5a988'
+
+function bewaardStore() {
+  return getStore({
+    name: 'bewaard',
+    siteID: SITE_ID,
+    token: process.env.BLOBS_AUTH_TOKEN,
+  })
+}
 
 async function getEmailFromToken(token) {
   const res = await fetch(`${HUB_URL}/auth/v1/user`, {
@@ -40,7 +49,7 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: 'Ongeldige actie' }
   }
 
-  const store = getStore('bewaard')
+  const store = bewaardStore()
 
   if (action === 'delete') {
     await store.delete(id)
