@@ -42,8 +42,10 @@ exports.handler = async (event) => {
   try {
     const store = bewaardStore()
     const { blobs } = await store.list()
+    // "msgid:"-sleutels zijn dedupe-merkjes (platte tekst), geen berichten (JSON). Overslaan.
+    const entryBlobs = blobs.filter((b) => !b.key.startsWith('msgid:'))
     const entries = (await Promise.all(
-      blobs.map((b) => store.get(b.key, { type: 'json' }))
+      entryBlobs.map((b) => store.get(b.key, { type: 'json' }))
     )).filter(Boolean)
 
     entries.sort((a, b) => new Date(b.receivedAt) - new Date(a.receivedAt))
