@@ -57,10 +57,6 @@ exports.handler = async (event) => {
     }
   } catch (err) {
     console.error('mail-list fout:', err)
-    return {
-      statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: err.message, name: err.name }),
-    }
+    return { statusCode: 500, body: 'Interne fout bij het laden van de mails' }
   }
 }
