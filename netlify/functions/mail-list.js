@@ -30,17 +30,28 @@ exports.handler = async (event) => {
     return { statusCode: 403, body: 'Geen toegang' }
   }
 
-  const store = getStore('bewaard')
-  const { blobs } = await store.list()
-  const entries = (await Promise.all(
-    blobs.map((b) => store.get(b.key, { type: 'json' }))
-  )).filter(Boolean)
+  // TIJDELIJK: uitgebreide foutafhandeling om de oorzaak van de 502 te vinden.
+  // Zodra dit werkt, maken we dit weer simpeler.
+  try {
+    const store = getStore('bewaard')
+    const { blobs } = await store.list()
+    const entries = (await Promise.all(
+      blobs.map((b) => store.get(b.key, { type: 'json' }))
+    )).filter(Boolean)
 
-  entries.sort((a, b) => new Date(b.receivedAt) - new Date(a.receivedAt))
+    entries.sort((a, b) => new Date(b.receivedAt) - new Date(a.receivedAt))
 
-  return {
-    statusCode: 200,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(entries),
+    return {
+      statusCode: 200,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entries),
+    }
+  } catch (err) {
+    console.error('mail-list fout:', err)
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: err.message, name: err.name, stack: err.stack }),
+    }
   }
 }
