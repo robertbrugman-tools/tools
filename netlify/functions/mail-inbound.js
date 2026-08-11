@@ -4,6 +4,16 @@
 
 const { getStore } = require('@netlify/blobs')
 
+const SITE_ID = '3811d4ae-1d5e-43ce-b299-bfa15db5a988'
+
+function bewaardStore() {
+  return getStore({
+    name: 'bewaard',
+    siteID: SITE_ID,
+    token: process.env.BLOBS_AUTH_TOKEN,
+  })
+}
+
 function extractLinks(text) {
   if (!text) return []
   const matches = text.match(/https?:\/\/[^\s<>"')\]]+/g) || []
@@ -32,7 +42,7 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: 'messageId ontbreekt' }
   }
 
-  const store = getStore('bewaard')
+  const store = bewaardStore()
 
   // Voorkom dubbele opslag als het lokale script iets nog eens stuurt
   const dedupeKey = `msgid:${messageId}`
