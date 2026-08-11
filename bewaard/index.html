@@ -109,11 +109,6 @@
   .item-actions button.danger:hover { background: #fdecea; color: #c0392b; border-color: #f3c8c3; }
 
   .loading { text-align: center; padding: 40px; color: #bbb; font-size: 0.85rem; }
-  .debug-error {
-    font-size: 0.72rem; color: #999; background: #f5f4f0; border: 1px solid #e8e6e1;
-    border-radius: 8px; padding: 10px 12px; margin-top: 14px; text-align: left;
-    white-space: pre-wrap; word-break: break-word; max-width: 480px; margin-left: auto; margin-right: auto;
-  }
 </style>
 </head>
 <body>
@@ -200,14 +195,8 @@
       const res = await fetch('/.netlify/functions/mail-list', {
         headers: { Authorization: 'Bearer ' + session.access_token }
       })
-      const text = await res.text()
-      if (!res.ok) {
-        // TIJDELIJK: toon de volledige foutmelding uit de functie, om te debuggen.
-        list.innerHTML = '<div class="empty">Laden mislukt: status ' + res.status
-          + '<div class="debug-error">' + esc(text) + '</div></div>'
-        return
-      }
-      entries = JSON.parse(text)
+      if (!res.ok) throw new Error('status ' + res.status)
+      entries = await res.json()
       render()
     } catch (err) {
       list.innerHTML = '<div class="empty">Laden mislukt: ' + esc(err.message) + '</div>'
