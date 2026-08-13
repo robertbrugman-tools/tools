@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linkbeheer</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --groen:#4a7c59; --groen-donker:#37603f; --bg:#f5f4f0; --kaart:#fff;
+    --rand:#e8e6e1; --tekst:#1a1a1a; --grijs:#777;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--tekst);line-height:1.5}
+
+  /* ── Auth ─────────────────────────────────────────── */
+  #authScreen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px;z-index:300}
+  .auth-box{background:#fff;border:1px solid var(--rand);border-radius:16px;padding:40px 36px;width:100%;max-width:360px}
+  .auth-box h1{font-size:1.3rem;font-weight:700;letter-spacing:-0.02em;margin-bottom:4px}
+  .auth-box>p{font-size:0.875rem;color:var(--grijs);margin-bottom:24px}
+  .auth-box input{width:100%;border:1px solid var(--rand);border-radius:8px;padding:10px;font-size:14px;margin-bottom:10px;font-family:inherit}
+  .auth-box button{width:100%;background:var(--tekst);color:#fff;border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:600;cursor:pointer;margin-top:4px}
+  .auth-msg{font-size:0.8rem;margin-top:10px;min-height:16px}
+  .auth-msg.err{color:#b3261e}
+
+  #app{display:none}
+
+  header{max-width:900px;margin:0 auto;padding:22px 24px 0;display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  header h1{font-size:20px;margin:0;font-weight:600;letter-spacing:-0.01em}
+  header .sub{font-size:13px;color:var(--grijs);margin-top:2px}
+  header a.terug{font-size:13px;color:var(--groen);text-decoration:none;white-space:nowrap}
+  header a.terug:hover{text-decoration:underline}
+
+  .wrap{max-width:900px;margin:0 auto;padding:18px 24px 60px}
+
+  /* ── Toevoegen ────────────────────────────────────── */
+  .kaart{background:var(--kaart);border:1px solid var(--rand);border-radius:12px;padding:18px}
+  .kaart h2{font-size:14px;margin:0 0 12px;color:var(--groen-donker)}
+  label{display:block;font-size:13px;font-weight:600;margin:12px 0 5px;color:var(--groen-donker)}
+  label:first-of-type{margin-top:0}
+  input,select{width:100%;border:1px solid var(--rand);border-radius:8px;padding:10px;font-size:14px;font-family:inherit;background:#fff;color:var(--tekst)}
+
+  .label-row{display:flex;gap:8px;align-items:flex-end}
+  .label-row>div{flex:1}
+  .label-row select{width:100%}
+
+  button{cursor:pointer;border:none;border-radius:8px;font-size:14px;font-weight:600;padding:10px 16px;transition:.15s}
+  .primair{background:var(--groen);color:#fff;width:100%;margin-top:14px;font-size:15px}
+  .primair:hover{background:var(--groen-donker)}
+  .primair:disabled{opacity:.5;cursor:not-allowed}
+  .klein{background:#eef2ee;color:var(--groen-donker);padding:8px 13px;font-size:13px;white-space:nowrap}
+  .klein:hover{background:#e2e9e2}
+
+  .status{font-size:13px;color:var(--grijs);margin-top:8px;min-height:18px}
+  .status.fout{color:#b3261e}
+  .spin{display:inline-block;width:13px;height:13px;border:2px solid #cbd6cd;border-top-color:var(--groen);border-radius:50%;animation:d .7s linear infinite;vertical-align:-2px;margin-right:6px}
+  @keyframes d{to{transform:rotate(360deg)}}
+
+  /* ── Filters ──────────────────────────────────────── */
+  .filters{display:flex;gap:8px;align-items:center;margin:28px 0 14px;flex-wrap:wrap}
+  .filters .sort-label{font-size:13px;color:var(--grijs);margin-right:4px}
+  .chip-filter{font-size:12.5px;padding:5px 12px;border-radius:20px;border:1px solid var(--rand);background:#fff;color:#666;cursor:pointer}
+  .chip-filter.active{background:var(--tekst);color:#fff;border-color:var(--tekst)}
+  .toggle-done{margin-left:auto;font-size:12.5px;color:var(--grijs);display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+
+  /* ── Linklijst ────────────────────────────────────── */
+  .link-list{display:flex;flex-direction:column;gap:10px}
+  .link-item{background:#fff;border:1px solid var(--rand);border-radius:12px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start}
+  .link-item.done{background:#fafaf8;border-color:#eeece8}
+  .link-item.done .link-title{color:#aaa;text-decoration:line-through}
+  .link-item.done .link-summary{color:#c9c7c2}
+
+  .link-done-btn{width:24px;height:24px;background:none;border:1.5px solid #ccc;border-radius:50%;cursor:pointer;font-size:0.72rem;color:#bbb;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;transition:.12s}
+  .link-done-btn:hover{border-color:var(--groen);background:#edf4ef;color:var(--groen)}
+  .link-item.done .link-done-btn{border-color:var(--groen);background:var(--groen);color:#fff}
+
+  .link-body{flex:1;min-width:0;cursor:pointer}
+  .link-top-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+  .link-title{font-size:14.5px;font-weight:600;letter-spacing:-0.01em}
+  .link-label-tag{font-size:11px;padding:2px 9px;border-radius:20px;background:#eef2ee;color:var(--groen-donker);font-weight:600;letter-spacing:.02em}
+  .link-date{font-size:11.5px;color:#bbb;margin-left:auto;flex-shrink:0}
+  .link-summary{font-size:13px;color:#666;line-height:1.5}
+  .link-url{font-size:11.5px;color:#aaa;margin-top:5px;word-break:break-all}
+
+  .link-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+  .icon-btn{width:26px;height:26px;background:none;border:none;border-radius:6px;cursor:pointer;color:#bbb;font-size:14px;display:flex;align-items:center;justify-content:center}
+  .icon-btn:hover{background:#f0ede8;color:#b3261e}
+
+  .empty-state{text-align:center;padding:50px 20px;color:#bbb;font-size:14px}
+
+  .skeleton{background:#fff;border:1px solid var(--rand);border-radius:12px;padding:14px 16px;color:#ccc;font-size:13px;font-style:italic}
+</style>
+</head>
+<body>
+
+<div id="authScreen">
+  <div class="auth-box">
+    <h1>Linkbeheer 🔗</h1>
+    <p>Log in met je hub-account</p>
+    <input type="email" id="authEmail" placeholder="E-mailadres">
+    <input type="password" id="authPw" placeholder="Wachtwoord">
+    <button id="btnHubLogin" onclick="doLogin()">Inloggen</button>
+    <div class="auth-msg" id="authMsg"></div>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <div>
+      <h1>Linkbeheer 🔗</h1>
+      <div class="sub">Sla pagina's op in plaats van tabbladen open te houden</div>
+    </div>
+    <a class="terug" href="/">← Terug naar Tools</a>
+  </header>
+
+  <div class="wrap">
+    <div class="kaart">
+      <h2>Nieuwe link toevoegen</h2>
+      <label for="urlInput">URL</label>
+      <input type="url" id="urlInput" placeholder="https://...">
+
+      <div class="label-row">
+        <div>
+          <label for="labelSelect">Label</label>
+          <select id="labelSelect" onchange="onLabelSelectChange()">
+            <option value="">Geen label</option>
+            <option value="__new__">+ Nieuw label...</option>
+          </select>
+        </div>
+      </div>
+      <input type="text" id="newLabelInput" placeholder="Naam van nieuw label" style="display:none;margin-top:8px">
+
+      <button class="primair" id="addBtn" onclick="addLink()">Link toevoegen</button>
+      <div class="status" id="addStatus"></div>
+    </div>
+
+    <div class="filters">
+      <span class="sort-label">Label:</span>
+      <span id="labelChips"></span>
+      <label class="toggle-done">
+        <input type="checkbox" id="toggleDone" onchange="renderList()">
+        Toon afgevinkte
+      </label>
+    </div>
+
+    <div class="link-list" id="linkList">
+      <div class="skeleton">Bezig met laden...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const HUB_URL = 'https://swrunlzeydmcskceqdju.supabase.co'
+  const HUB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3cnVubHpleWRtY3NrY2VxZGp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNjE2MDgsImV4cCI6MjA5MjkzNzYwOH0.V7haNdFPFJuvJJTbjhiUzKrWG8trW4UeRIJveAhFOgs'
+  const sb = supabase.createClient(HUB_URL, HUB_KEY)
+
+  let me = null
+  let links = []
+  let labels = []
+  let activeLabelFilter = null
+
+  ;(async () => {
+    const { data: { session } } = await sb.auth.getSession()
+    if (session) await onAuth(session.user)
+  })()
+
+  async function onAuth(user) {
+    me = user
+    document.getElementById('authScreen').style.display = 'none'
+    document.getElementById('app').style.display = 'block'
+    await loadLabels()
+    await loadLinks()
+  }
+
+  async function doLogin() {
+    const email = document.getElementById('authEmail').value.trim()
+    const pw = document.getElementById('authPw').value
+    const btn = document.getElementById('btnHubLogin')
+    const msg = document.getElementById('authMsg')
+    if (!email || !pw) { setAuthMsg('Vul e-mail en wachtwoord in.'); return }
+    btn.disabled = true; btn.textContent = 'Bezig...'
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pw })
+    btn.disabled = false; btn.textContent = 'Inloggen'
+    if (error) setAuthMsg('Inloggen mislukt. Controleer je gegevens.')
+    else await onAuth(data.user)
+  }
+
+  function setAuthMsg(text) {
+    const el = document.getElementById('authMsg')
+    el.textContent = text
+    el.className = 'auth-msg err'
+  }
+
+  // ── Labels ──────────────────────────────────────────
+  async function loadLabels() {
+    const { data } = await sb.from('link_labels').select('*').eq('user_id', me.id).order('name')
+    labels = data || []
+    renderLabelSelect()
+    renderLabelChips()
+  }
+
+  function renderLabelSelect() {
+    const sel = document.getElementById('labelSelect')
+    const current = sel.value
+    sel.innerHTML = '<option value="">Geen label</option>' +
+      labels.map(l => `<option value="${escapeAttr(l.name)}">${escapeHtml(l.name)}</option>`).join('') +
+      '<option value="__new__">+ Nieuw label...</option>'
+    sel.value = current
+  }
+
+  function onLabelSelectChange() {
+    const sel = document.getElementById('labelSelect')
+    const newInput = document.getElementById('newLabelInput')
+    newInput.style.display = sel.value === '__new__' ? 'block' : 'none'
+    if (sel.value === '__new__') newInput.focus()
+  }
+
+  async function ensureLabel(name) {
+    if (!name) return null
+    const existing = labels.find(l => l.name.toLowerCase() === name.toLowerCase())
+    if (existing) return existing.name
+    const { data, error } = await sb.from('link_labels').insert({ user_id: me.id, name }).select().single()
+    if (error) return name // val terug op de naam zelf, ook als opslaan faalt
+    labels.push(data)
+    renderLabelSelect()
+    renderLabelChips()
+    return data.name
+  }
+
+  function renderLabelChips() {
+    const el = document.getElementById('labelChips')
+    const chips = ['<span class="chip-filter' + (activeLabelFilter === null ? ' active' : '') + '" onclick="setLabelFilter(null)">Alle</span>']
+    labels.forEach(l => {
+      chips.push(`<span class="chip-filter${activeLabelFilter === l.name ? ' active' : ''}" onclick="setLabelFilter('${escapeAttr(l.name)}')">${escapeHtml(l.name)}</span>`)
+    })
+    el.innerHTML = chips.join(' ')
+  }
+
+  function setLabelFilter(name) {
+    activeLabelFilter = name
+    renderLabelChips()
+    renderList()
+  }
+
+  // ── Links laden ─────────────────────────────────────
+  async function loadLinks() {
+    const { data, error } = await sb.from('saved_links').select('*').eq('user_id', me.id).order('created_at', { ascending: false })
+    links = data || []
+    renderList()
+  }
+
+  async function addLink() {
+    const urlInput = document.getElementById('urlInput')
+    const url = urlInput.value.trim()
+    const statusEl = document.getElementById('addStatus')
+    const btn = document.getElementById('addBtn')
+
+    if (!url || !/^https?:\/\//i.test(url)) {
+      statusEl.textContent = 'Vul een geldige URL in (met https://).'
+      statusEl.className = 'status fout'
+      return
+    }
+
+    const sel = document.getElementById('labelSelect')
+    const newLabelInput = document.getElementById('newLabelInput')
+    let labelName = sel.value === '__new__' ? newLabelInput.value.trim() : sel.value
+
+    btn.disabled = true
+    statusEl.innerHTML = '<span class="spin"></span>Samenvatting ophalen...'
+    statusEl.className = 'status'
+
+    if (labelName) labelName = await ensureLabel(labelName)
+
+    let title = url
+    let summary = ''
+    try {
+      const resp = await fetch('/.netlify/functions/summarize-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      })
+      const data = await resp.json()
+      if (resp.ok) {
+        title = data.title || url
+        summary = data.summary || ''
+      }
+    } catch (err) {
+      // samenvatting mislukt: link toch opslaan, zonder samenvatting
+    }
+
+    const { data: inserted, error } = await sb.from('saved_links').insert({
+      user_id: me.id, url, title, summary, label: labelName || null,
+    }).select().single()
+
+    btn.disabled = false
+
+    if (error) {
+      statusEl.textContent = 'Opslaan mislukt: ' + error.message
+      statusEl.className = 'status fout'
+      return
+    }
+
+    links.unshift(inserted)
+    urlInput.value = ''
+    sel.value = ''
+    newLabelInput.value = ''
+    newLabelInput.style.display = 'none'
+    statusEl.textContent = 'Toegevoegd.'
+    statusEl.className = 'status'
+    setTimeout(() => { statusEl.textContent = '' }, 2000)
+    renderList()
+  }
+
+  async function toggleDone(id, done) {
+    const item = links.find(l => l.id === id)
+    if (!item) return
+    item.done = done
+    item.done_at = done ? new Date().toISOString() : null
+    renderList()
+    await sb.from('saved_links').update({ done, done_at: item.done_at }).eq('id', id)
+  }
+
+  async function deleteLink(id) {
+    links = links.filter(l => l.id !== id)
+    renderList()
+    await sb.from('saved_links').delete().eq('id', id)
+  }
+
+  function openLink(url) {
+    window.open(url, '_blank')
+  }
+
+  // ── Render ───────────────────────────────────────────
+  function renderList() {
+    const el = document.getElementById('linkList')
+    const showDone = document.getElementById('toggleDone').checked
+
+    let items = links.filter(l => showDone ? true : !l.done)
+    if (activeLabelFilter !== null) items = items.filter(l => l.label === activeLabelFilter)
+
+    if (items.length === 0) {
+      el.innerHTML = '<div class="empty-state">Nog geen links opgeslagen.</div>'
+      return
+    }
+
+    el.innerHTML = items.map(l => `
+      <div class="link-item${l.done ? ' done' : ''}">
+        <button class="link-done-btn" onclick="toggleDone('${l.id}', ${!l.done})" title="${l.done ? 'Weer openen' : 'Afvinken'}">${l.done ? '✓' : ''}</button>
+        <div class="link-body" onclick="openLink('${escapeAttr(l.url)}')">
+          <div class="link-top-row">
+            <span class="link-title">${escapeHtml(l.title || l.url)}</span>
+            ${l.label ? `<span class="link-label-tag">${escapeHtml(l.label)}</span>` : ''}
+            <span class="link-date">${formatDate(l.created_at)}</span>
+          </div>
+          ${l.summary ? `<div class="link-summary">${escapeHtml(l.summary)}</div>` : ''}
+          <div class="link-url">${escapeHtml(l.url)}</div>
+        </div>
+        <div class="link-actions">
+          <button class="icon-btn" onclick="deleteLink('${l.id}')" title="Verwijderen">✕</button>
+        </div>
+      </div>
+    `).join('')
+  }
+
+  function formatDate(iso) {
+    if (!iso) return ''
+    const d = new Date(iso)
+    return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
+  }
+
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+  }
+  function escapeAttr(s) {
+    return escapeHtml(s).replace(/`/g, '&#96;')
+  }
+</script>
+</body>
+</html>
