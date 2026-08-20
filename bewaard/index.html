@@ -100,6 +100,23 @@
     max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .link-chip:hover { background: #e0ddd8; }
+
+  .item-summary {
+    font-size: 0.85rem; color: #3a3a3a; line-height: 1.5; margin-top: 10px;
+    padding: 10px 12px; background: #f7f6f2; border-radius: 8px; border: 1px solid #ece9e3;
+  }
+  .item-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .tag-chip {
+    font-size: 0.72rem; padding: 3px 9px; border-radius: 20px; background: #edf4ef;
+    border: 1px solid #d7e6db; color: #4a7c59;
+  }
+  .item-action {
+    font-size: 0.82rem; margin-top: 8px; padding: 8px 12px; background: #fff8ec;
+    border: 1px solid #f0e0bb; border-radius: 8px; color: #7a5c1e;
+  }
+  .item-action b { color: #5c4415; }
+  .item-processing { font-size: 0.74rem; color: #bbb; margin-top: 8px; font-style: italic; }
+
   .item-actions { display: flex; gap: 8px; margin-top: 12px; }
   .item-actions button {
     background: none; border: 1px solid #e0ddd8; border-radius: 7px; padding: 5px 11px;
@@ -228,6 +245,26 @@
     const date = new Date(e.receivedAt)
     const dateStr = date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }) + ' ' + date.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })
     const links = (e.links || []).map(l => `<a class="link-chip" href="${esc(l)}" target="_blank" rel="noopener">${esc(shortenUrl(l))}</a>`).join('')
+
+    const p = e.processed
+    let processedHtml = ''
+    if (p && p.summary) {
+      processedHtml += `<div class="item-summary">${esc(p.summary)}</div>`
+    }
+    if (p && Array.isArray(p.tags) && p.tags.length) {
+      processedHtml += `<div class="item-tags">${p.tags.map(t => `<span class="tag-chip">${esc(t)}</span>`).join('')}</div>`
+    }
+    if (p && p.actionItem) {
+      processedHtml += `<div class="item-action"><b>Actiepunt:</b> ${esc(p.actionItem)}</div>`
+    }
+    if (e.processing === 'pending' || e.processing === undefined && !p) {
+      // 'pending' zou hier niet meer moeten voorkomen na afronding van de aanvraag,
+      // maar oudere entries van vóór deze functie hebben geen processing-veld.
+    }
+    if (e.processing === 'failed') {
+      processedHtml += `<div class="item-processing">Automatische verwerking is niet gelukt.</div>`
+    }
+
     div.innerHTML = `
       <div class="item-top">
         <div class="item-subject">${esc(e.subject || '(geen onderwerp)')}</div>
@@ -235,6 +272,7 @@
       </div>
       ${e.body ? `<div class="item-body">${esc(e.body)}</div><span class="item-more" onclick="this.previousElementSibling.classList.toggle('expanded');this.textContent=this.previousElementSibling.classList.contains('expanded')?'Toon minder':'Toon meer'">Toon meer</span>` : ''}
       ${links ? `<div class="item-links">${links}</div>` : ''}
+      ${processedHtml}
       <div class="item-actions">
         <button onclick="setAction('${e.id}','${e.archivedAt ? 'unarchive' : 'archive'}')">${e.archivedAt ? 'Terugzetten' : 'Archiveren'}</button>
         <button class="danger" onclick="setAction('${e.id}','delete')">Verwijderen</button>
