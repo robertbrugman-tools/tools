@@ -88,9 +88,25 @@ async function callClaude(system, user, maxTokens) {
     throw new Error(msg)
   }
 
-  const raw = (data.content && data.content[0] && data.content[0].text) || ''
+  // Niet blind content[0] pakken: soms staat het tekstblok niet op index 0.
+  // Zoek het eerste blok met type 'text' op, ongeacht positie.
+  const blokken = Array.isArray(data.content) ? data.content : []
+  const tekstBlok = blokken.find((b) => b && b.type === 'text')
+  const raw = (tekstBlok && tekstBlok.text) || ''
+
+  if (!raw) {
+    const blokTypes = blokken.map((b) => b && b.type).join(', ') || '(geen blokken)'
+    throw new Error(`Leeg antwoord van Claude (stop_reason: ${data.stop_reason || '?'}, blok-types: [${blokTypes}])`)
+  }
+
   const jsonMatch = raw.match(/\{[\s\S]*\}/)
-  return JSON.parse(jsonMatch ? jsonMatch[0] : raw)
+  try {
+    return JSON.parse(jsonMatch ? jsonMatch[0] : raw)
+  } catch (parseErr) {
+    const reden = data.stop_reason ? ` (stop_reason: ${data.stop_reason})` : ''
+    const staartje = raw.slice(-120).replace(/\s+/g, ' ')
+    throw new Error(`${parseErr.message}${reden} — antwoord: "...${staartje}"`)
+  }
 }
 
 // Vat de pagina achter een URL samen, zelfde stijl als Linkbeheer.
@@ -114,10 +130,12 @@ Paginatekst (geëxtraheerd, kan rommelig zijn):
 ${tekst}
 """
 
-Geef antwoord in exact dit JSON-formaat, zonder andere tekst eromheen:
+De paginatekst begint mogelijk met menu- en inlogtekst (bijvoorbeeld "Inloggen", "Abonneren", "Mijn nieuws") vóórdat het echte artikel begint. Negeer dat en vat alleen de daadwerkelijke artikelinhoud samen.
+
+Geef antwoord in exact dit JSON-formaat, zonder andere tekst eromheen. Zorg dat het geldige JSON is: escape aanhalingstekens en nieuwe regels binnen de tekstwaarden correct (bijvoorbeeld \" en \\n), en gebruik zelf geen letterlijke nieuwe regel binnen een waarde.
 {"title": "korte duidelijke titel, max 60 tekens", "summary": "samenvatting van 3 tot 4 zinnen"}`
 
-  const parsed = await callClaude(system, user, 400)
+  const parsed = await callClaude(system, user, 600)
   return { type: 'link', title: parsed.title || pageTitle || url, summary: parsed.summary || '' }
 }
 
@@ -131,10 +149,10 @@ Inhoud:
 ${body.slice(0, 8000)}
 """
 
-Geef antwoord in exact dit JSON-formaat, zonder andere tekst eromheen:
+Geef antwoord in exact dit JSON-formaat, zonder andere tekst eromheen. Zorg dat het geldige JSON is: escape aanhalingstekens en nieuwe regels binnen de tekstwaarden correct (bijvoorbeeld \" en \\n), en gebruik zelf geen letterlijke nieuwe regel binnen een waarde.
 {"summary": "korte samenvatting van 1 tot 2 zinnen, of lege string als de tekst te kort/onduidelijk is om samen te vatten", "tags": ["max 3 korte labels zoals recept, idee, te lezen, taak, herinnering"], "actionItem": "een concreet actiepunt als de tekst een taak/herinnering lijkt te zijn, anders lege string"}`
 
-  const parsed = await callClaude(system, user, 400)
+  const parsed = await callClaude(system, user, 600)
   return {
     type: 'text',
     summary: parsed.summary || '',
