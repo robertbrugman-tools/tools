@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Warmtedoorgang — kozijnenanalyse</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --bg:#0d1b2e; --panel:#12253d; --panel2:#0f2038; --grid:#1e3654;
+    --ink:#eef4fb; --sub:#8fa5c7; --line:#2c4a70;
+    --warm:#e8703a; --warm-dim:#5a3626;
+    --cool:#48c0d9; --cool-dim:#254452;
+    --mono: "SF Mono", "JetBrains Mono", ui-monospace, Consolas, monospace;
+    --sans: -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:
+      linear-gradient(var(--grid) 1px, transparent 1px) 0 0/32px 32px,
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0/32px 32px,
+      var(--bg);
+    color:var(--ink); font-family:var(--sans); line-height:1.5;
+    padding:28px 16px 100px;
+  }
+  .wrap{max-width:1040px; margin:0 auto;}
+
+  .titleblock{
+    border:1px solid var(--line); padding:18px 22px; margin-bottom:22px;
+    position:relative; background:rgba(15,32,56,0.6);
+  }
+  .titleblock::before, .titleblock::after{
+    content:''; position:absolute; width:10px; height:10px;
+    border-top:2px solid var(--warm); border-left:2px solid var(--warm);
+    top:-1px; left:-1px;
+  }
+  .titleblock::after{ top:auto; bottom:-1px; right:-1px; left:auto;
+    border-top:none; border-left:none; border-bottom:2px solid var(--cool); border-right:2px solid var(--cool);
+  }
+  .eyebrow{
+    font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--sub); margin:0 0 6px;
+  }
+  h1{ font-size:22px; margin:0 0 6px; letter-spacing:.01em; font-weight:700; }
+  .sub{color:var(--sub); font-size:13.5px; margin:0; max-width:700px;}
+
+  .status-row{display:flex; gap:10px; align-items:center; margin-top:12px; flex-wrap:wrap;}
+  .status-dot{width:8px; height:8px; border-radius:50%; background:var(--sub); display:inline-block;}
+  .status-dot.ok{background:#6bd68f;}
+  .status-dot.err{background:var(--warm);}
+  .status-text{font-family:var(--mono); font-size:11px; color:var(--sub);}
+
+  .facade{
+    border:1px solid var(--line); padding:20px 22px 10px; margin-bottom:22px;
+    background:rgba(15,32,56,0.6);
+  }
+  .facade-label{font-family:var(--mono); font-size:11px; color:var(--sub); text-transform:uppercase; letter-spacing:.1em; margin-bottom:10px;}
+  svg#facadeSvg{width:100%; height:auto; display:block;}
+  .k-readout{
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-family:var(--mono); font-size:12px; color:var(--sub); margin-top:8px; padding-bottom:6px;
+    border-top:1px dashed var(--line); padding-top:10px; flex-wrap:wrap; gap:8px;
+  }
+  .k-readout b{color:var(--ink); font-size:15px;}
+
+  .panel{
+    border:1px solid var(--line); background:rgba(15,32,56,0.5);
+    padding:18px 20px; margin-bottom:18px;
+  }
+  .panel h2{
+    font-size:13px; margin:0 0 14px; text-transform:uppercase; letter-spacing:.1em;
+    color:var(--sub); font-weight:600; display:flex; align-items:center; gap:8px;
+  }
+  .panel h2 .n{
+    font-family:var(--mono); color:var(--warm); border:1px solid var(--warm); width:18px; height:18px;
+    display:inline-flex; align-items:center; justify-content:center; font-size:10px;
+  }
+  .panel p.explain{color:var(--sub); font-size:12.5px; margin:-6px 0 14px; max-width:760px;}
+
+  label{display:block; font-size:11.5px; color:var(--sub); margin:0 0 4px; font-family:var(--mono); text-transform:uppercase; letter-spacing:.05em;}
+  input[type=text], input[type=date], select{
+    width:100%; padding:8px 10px; background:var(--panel2); border:1px solid var(--line);
+    color:var(--ink); font-family:var(--sans); font-size:13.5px;
+  }
+  input:focus, button:focus-visible{outline:2px solid var(--warm); outline-offset:1px;}
+
+  .period-card{
+    border:1px solid var(--line); padding:14px 16px; margin-bottom:12px; background:var(--panel2);
+    display:grid; grid-template-columns:1.1fr 1fr 1fr 1fr auto; gap:12px; align-items:end;
+  }
+  @media(max-width:900px){ .period-card{grid-template-columns:1fr 1fr;} }
+
+  button{
+    background:transparent; color:var(--warm); border:1px solid var(--warm);
+    padding:8px 14px; font-family:var(--mono); font-size:12px; text-transform:uppercase;
+    letter-spacing:.05em; cursor:pointer;
+  }
+  button:hover{background:var(--warm-dim);}
+  button.ghost{color:var(--sub); border-color:var(--line);}
+  button.ghost:hover{background:rgba(255,255,255,0.04); color:var(--ink);}
+  button.primary{color:var(--bg); background:var(--warm); font-weight:700;}
+  button.primary:hover{background:#f2854f;}
+  button:disabled{opacity:.4; cursor:not-allowed;}
+  button.small{padding:4px 9px; font-size:10.5px;}
+
+  .actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;}
+
+  .toggle-row{display:flex; gap:0; border:1px solid var(--line); width:fit-content; margin-bottom:16px; flex-wrap:wrap;}
+  .toggle-row button{border:none; border-right:1px solid var(--line); color:var(--sub);}
+  .toggle-row button:last-child{border-right:none;}
+  .toggle-row button.active{background:var(--warm); color:var(--bg); font-weight:700;}
+
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th, td{padding:8px 10px; text-align:left; border-bottom:1px solid var(--line); font-family:var(--mono); font-size:12px;}
+  th{color:var(--sub); text-transform:uppercase; font-size:10.5px; letter-spacing:.06em;}
+  td.name{font-family:var(--sans); font-size:13px;}
+  .swatch{width:10px; height:10px; display:inline-block; margin-right:7px; border-radius:1px;}
+
+  canvas{max-width:100%;}
+  .hint{font-size:11.5px; color:var(--sub); margin-top:8px; font-family:var(--mono); line-height:1.6;}
+  .log{font-family:var(--mono); font-size:11.5px; color:var(--sub); max-height:150px; overflow-y:auto; white-space:pre-wrap;}
+  .log .err{color:var(--warm);}
+  .badge{font-family:var(--mono); font-size:10.5px; padding:2px 8px; border:1px solid var(--line); color:var(--sub);}
+  .spinner{display:inline-block; width:11px; height:11px; border:2px solid var(--line); border-top-color:var(--warm); border-radius:50%; animation:spin .7s linear infinite; vertical-align:-2px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="titleblock">
+    <p class="eyebrow">Bouwfysica &middot; live &middot; Supabase</p>
+    <h1>Warmtedoorgang door de gevel</h1>
+    <p class="sub">Vergelijk per uur hoe sterk de binnentemperatuur meebeweegt met een verandering van de buitentemperatuur, per periode en per kamer. Data komt rechtstreeks uit je Netatmo-station via de achtergrond-sync.</p>
+    <div class="status-row">
+      <span class="status-dot" id="connDot"></span>
+      <span class="status-text" id="connText">niet verbonden</span>
+    </div>
+  </div>
+
+
+  <div class="facade">
+    <div class="facade-label">Doorsnede triple glas — geselecteerde periode</div>
+    <svg id="facadeSvg" viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg">
+      <text x="45" y="20" fill="#8fa5c7" font-family="monospace" font-size="10" text-anchor="middle">BUITEN</text>
+      <rect x="150" y="4" width="14" height="152" fill="#1e3654" stroke="#2c4a70"/>
+      <rect x="286" y="4" width="14" height="152" fill="#1e3654" stroke="#2c4a70"/>
+      <rect x="164" y="10" width="6" height="140" fill="#3a5878" stroke="#4a6d92"/>
+      <rect x="170" y="10" width="30" height="140" fill="#12253d"/>
+      <rect x="200" y="10" width="6" height="140" fill="#3a5878" stroke="#4a6d92"/>
+      <rect x="206" y="10" width="30" height="140" fill="#12253d"/>
+      <rect x="236" y="10" width="6" height="140" fill="#3a5878" stroke="#4a6d92"/>
+      <text x="185" y="24" fill="#5a7196" font-family="monospace" font-size="7" text-anchor="middle">spouw</text>
+      <text x="221" y="24" fill="#5a7196" font-family="monospace" font-size="7" text-anchor="middle">spouw</text>
+      <text x="440" y="20" fill="#8fa5c7" font-family="monospace" font-size="10" text-anchor="middle" id="roomLabel">BINNEN</text>
+      <g id="flowArrows"></g>
+      <line x1="150" y1="150" x2="150" y2="158" stroke="#2c4a70"/>
+      <line x1="300" y1="150" x2="300" y2="158" stroke="#2c4a70"/>
+      <line x1="150" y1="156" x2="300" y2="156" stroke="#2c4a70"/>
+      <text x="225" y="168" fill="#5a7196" font-family="monospace" font-size="8" text-anchor="middle">kozijn · triple glas · 3 lagen</text>
+    </svg>
+    <div class="k-readout">
+      <div>Koppelingsconstante k: <b id="kValue">—</b> /uur</div>
+      <div>Tijdconstante τ: <b id="tauValue">—</b> uur</div>
+      <div>Periode: <b id="kPeriodLabel">—</b></div>
+    </div>
+    <p class="hint" style="margin-top:10px;">Zoninstraling is niet als aparte variabele meegenomen. Aanname: gemiddeld vergelijkbaar tussen de vergeleken periodes. Wijkt dat af, dan beïnvloedt dat de uitkomst.</p>
+  </div>
+
+  <div class="panel">
+    <h2><span class="n">1</span> Periode &amp; kamer</h2>
+    <p class="explain">Kies één keer een kamer en een periode (bijvoorbeeld 1 t/m 31 juli). Daaronder kies je met welke andere jaren je diezelfde periode wilt vergelijken. Staat de data nog niet in de database, dan wordt die bij het analyseren automatisch bij Netatmo opgehaald (tot 10 jaar terug beschikbaar).</p>
+    <div class="period-card" style="grid-template-columns:1fr 1fr 1fr;">
+      <div>
+        <label>Kamer</label>
+        <select id="baseRoom"></select>
+      </div>
+      <div>
+        <label>Vanaf</label>
+        <input type="date" id="baseStart" value="2026-07-01">
+      </div>
+      <div>
+        <label>Tot en met</label>
+        <input type="date" id="baseEnd" value="2026-07-31">
+      </div>
+    </div>
+    <p class="hint" style="margin-top:10px;">Dit is je referentieperiode (meestal de meest recente). Hieronder voeg je jaren toe om mee te vergelijken, elk met exact dezelfde maand/dagen.</p>
+    <div id="compareYears" style="margin-top:14px;"></div>
+    <div class="actions">
+      <button class="ghost small" id="btnAddYear">+ jaar toevoegen om te vergelijken</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2><span class="n">2</span> Weergave</h2>
+    <div class="toggle-row" id="viewToggle">
+      <button data-view="uurkoppeling" class="active">Uurkoppeling (k)</button>
+      <button data-view="scatter">Stijging buiten vs binnen</button>
+      <button data-view="opwarming">Opwarming (dag)</button>
+      <button data-view="afkoeling">Afkoeling (nacht)</button>
+    </div>
+    <p class="explain" id="viewExplain"></p>
+    <div class="actions" style="margin-top:0;">
+      <button class="primary" id="btnAnalyse">Analyseren</button>
+    </div>
+  </div>
+
+  <div class="panel" id="summaryPanel" style="display:none;">
+    <h2>Samenvatting</h2>
+    <div id="summaryText" style="font-size:14.5px; line-height:1.7;"></div>
+  </div>
+
+  <div class="panel" id="resultsPanel" style="display:none;">
+    <h2><span class="n">3</span> Resultaat (detail)</h2>
+    <table id="resultsTable">
+      <thead><tr id="resultsHead"></tr></thead>
+      <tbody></tbody>
+    </table>
+    <canvas id="chart" height="240" style="margin-top:18px;"></canvas>
+  </div>
+
+  <div class="panel">
+    <h2>Log</h2>
+    <div class="log" id="log">Bezig met verbinden...</div>
+  </div>
+</div>
+
+<script>
+const PALETTE = ["#e8703a","#48c0d9","#c9a13a","#7f96b8","#9b6bd6","#6bd68f"];
+let periodCount = 0;
+const periodDefs = {}; // id -> {name, room, start, end}
+let supa = null;
+let roomOptions = ['Woonkamer','Slaapkamer','Buiten'];
+
+function log(msg, isErr){
+  const el = document.getElementById('log');
+  const line = document.createElement('div');
+  if(isErr) line.className='err';
+  line.textContent = (isErr?'✗ ':'· ') + msg;
+  el.appendChild(line); el.scrollTop = el.scrollHeight;
+}
+
+function setConn(ok, text){
+  document.getElementById('connDot').className = 'status-dot ' + (ok ? 'ok' : 'err');
+  document.getElementById('connText').textContent = text;
+}
+
+// --- Supabase verbinding ---
+// Zelfde project als de hub op robertbrugman.nl. Dit is de publieke, leesbare
+// publishable/anon key (geen geheim), dus vast in de code net als bij de andere tools.
+const SUPA_URL = 'https://swrunlzeydmcskceqdju.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3cnVubHpleWRtY3NrY2VxZGp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNjE2MDgsImV4cCI6MjA5MjkzNzYwOH0.V7haNdFPFJuvJJTbjhiUzKrWG8trW4UeRIJveAhFOgs';
+
+async function connect(){
+  try{
+    supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+    // testquery: haal 1 rij op om te zien of tabel/rechten kloppen
+    const {data, error} = await supa.from('netatmo_metingen').select('module_naam').limit(1);
+    if(error) throw error;
+    setConn(true, 'verbonden met Supabase');
+    log('Verbinding gelukt.');
+    await loadRoomOptions();
+    return true;
+  } catch(e){
+    setConn(false, 'verbinding mislukt');
+    log('Verbinding mislukt: ' + (e.message||e), true);
+    return false;
+  }
+}
+
+async function loadRoomOptions(){
+  const {data, error} = await supa.from('netatmo_metingen').select('module_naam').limit(1000);
+  if(error || !data) return;
+  const set = new Set(data.map(r=>r.module_naam));
+  if(set.size) roomOptions = [...set];
+  const sel = document.getElementById('baseRoom');
+  const current = sel.value;
+  sel.innerHTML = roomOptions.map(r=>`<option value="${r}" ${r===current?'selected':''}>${r}</option>`).join('');
+}
+
+function initApp(){
+  // UI direct opbouwen, niet laten wachten op de Supabase-verbinding: die kan er (bij een
+  // netwerkstoring) lang over doen voordat hij zelf als mislukt wordt gemeld, en dan zou de
+  // gebruiker een tijd lang een leeg scherm zien terwijl er niets aan de hand hoeft te zijn
+  // met periode/jaren.
+  const roomSel = document.getElementById('baseRoom');
+  roomSel.innerHTML = roomOptions.map(r=>`<option value="${r}">${r}</option>`).join('');
+  addCompareYear(2024);
+  updateViewExplain();
+  connect(); // async, loopt op de achtergrond door en werkt de status/log zelf bij
+}
+// Ons eigen <script> staat na de body en wordt tijdens het parsen uitgevoerd, dus
+// 'DOMContentLoaded' kan al gevuurd zijn tegen de tijd dat we deze listener toevoegen
+// (bijvoorbeeld als de externe scripts in de head traag laden). Daarom: alleen wachten
+// op het event als het document nog niet klaar is, anders direct starten.
+if(document.readyState === 'loading'){
+  window.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
+
+// --- periode-UI: één basisperiode + kamer, plus jaren om mee te vergelijken ---
+// periodDefs bevat nu: 'base' (de ingevulde periode zelf) en 'cmp<jaar>' voor elk vergelijkingsjaar,
+// elk met dezelfde maand/dag-range als de basisperiode maar dan in dat jaar.
+function addCompareYear(defaultYear){
+  periodCount++;
+  const id = 'cmp'+periodCount;
+  const color = PALETTE[periodCount%PALETTE.length];
+  periodDefs[id] = {color};
+  const row = document.createElement('div');
+  row.className = 'period-card';
+  row.id = id;
+  row.style.gridTemplateColumns = '1fr auto';
+  row.innerHTML = `
+    <div>
+      <label><span style="display:inline-block;width:9px;height:9px;background:${color};margin-right:6px;"></span>Vergelijk met jaar</label>
+      <input type="number" value="${defaultYear}" data-field="year" min="2000" max="2100" step="1">
+    </div>
+    <div>
+      <button class="ghost small" onclick="removeCompareYear('${id}')">verwijder</button>
+    </div>
+  `;
+  document.getElementById('compareYears').appendChild(row);
+}
+
+function removeCompareYear(id){
+  document.getElementById(id).remove();
+  delete periodDefs[id];
+}
+
+document.getElementById('btnAddYear').onclick = () => {
+  // pak een jaar dat nog niet gekozen is, één jaar eerder dan het laagst gekozen jaar
+  const gekozen = [...document.querySelectorAll('#compareYears [data-field=year]')].map(i=>Number(i.value)).filter(Boolean);
+  const voorstel = gekozen.length ? Math.min(...gekozen)-1 : new Date().getFullYear()-1;
+  addCompareYear(voorstel);
+};
+
+// Verplaatst een datum (YYYY-MM-DD) naar een ander jaar, met behoud van maand/dag.
+// 29 februari in een niet-schrikkeljaar valt terug op 28 februari.
+function withYear(dateStr, year){
+  const [, m, d] = dateStr.split('-').map(Number);
+  const daysInMonth = new Date(year, m, 0).getDate();
+  const day = Math.min(d, daysInMonth);
+  return `${year}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+}
+
+// --- data ophalen uit Supabase ---
+async function fetchPeriodRows(room, startDate, endDate){
+  // range is t/m einde van einddatum
+  const startISO = new Date(startDate + 'T00:00:00').toISOString();
+  const endISO = new Date(endDate + 'T23:59:59').toISOString();
+
+  let all = [];
+  let from = 0;
+  const pageSize = 1000;
+  while(true){
+    const {data, error} = await supa
+      .from('netatmo_metingen')
+      .select('ts, temperatuur, module_naam')
+      .eq('module_naam', room)
+      .gte('ts', startISO)
+      .lte('ts', endISO)
+      .order('ts', {ascending:true})
+      .range(from, from+pageSize-1);
+    if(error) throw error;
+    all = all.concat(data);
+    if(data.length < pageSize) break;
+    from += pageSize;
+  }
+  return all;
+}
+
+async function fetchOutsideRows(startDate, endDate){
+  return fetchPeriodRows('Buiten', startDate, endDate);
+}
+
+// --- ontbrekende historische data ophalen ---
+// Verwacht aantal uurpunten in een periode (ruwe schatting, inclusief marge voor kleine gaten bij het station zelf).
+function expectedHourCount(startDate, endDate){
+  const start = new Date(startDate + 'T00:00:00');
+  const end = new Date(endDate + 'T23:59:59');
+  const hours = Math.floor((end - start) / 3600000);
+  return Math.max(1, hours);
+}
+
+async function countRows(room, startDate, endDate){
+  const startISO = new Date(startDate + 'T00:00:00').toISOString();
+  const endISO = new Date(endDate + 'T23:59:59').toISOString();
+  const {count, error} = await supa
+    .from('netatmo_metingen')
+    .select('ts', {count:'exact', head:true})
+    .eq('module_naam', room)
+    .gte('ts', startISO)
+    .lte('ts', endISO);
+  if(error) throw error;
+  return count || 0;
+}
+
+async function backfillRoom(room, startDate, endDate){
+  const startISO = new Date(startDate + 'T00:00:00').toISOString();
+  const endISO = new Date(endDate + 'T23:59:59').toISOString();
+  const {data, error} = await supa.functions.invoke('netatmo-backfill', {
+    body: { date_begin: startISO, date_end: endISO, rooms: [room, 'Buiten'] }
+  });
+  if(error) throw new Error(error.message || 'backfill mislukt');
+  if(data && data.ok === false) throw new Error(data.error || 'backfill mislukt');
+  return data;
+}
+
+// Zorgt dat een periode+kamer voldoende data heeft; haalt zelf op bij Netatmo als dat nodig is.
+// Wordt automatisch aangeroepen bij Analyseren, geen aparte knop nodig.
+const backfillCache = new Set(); // voorkomt dubbele ophaal-calls binnen dezelfde sessie voor dezelfde periode
+async function ensurePeriodData(name, room, start, end){
+  const key = `${room}|${start}|${end}`;
+  if(backfillCache.has(key)) return;
+
+  const expected = expectedHourCount(start, end);
+  const have = await countRows(room, start, end);
+  const drempel = expected * 0.9; // 90% van verwacht aantal uren als ondergrens, station heeft af en toe een gaatje
+  if(have >= drempel){
+    backfillCache.add(key);
+    return;
+  }
+  log(`Periode "${name}" (${room}): ${have}/${expected} uurpunten aanwezig, ontbrekende data ophalen bij Netatmo...`);
+  const result = await backfillRoom(room, start, end);
+  const aantallen = Object.entries(result.metingen||{}).map(([k,v])=>`${k}: ${v}`).join(', ');
+  log(`Periode "${name}" (${room}): opgehaald — ${aantallen}.`);
+  backfillCache.add(key);
+}
+
+// --- analyse: 1 punt per uur, per module al zo opgeslagen ---
+function toHourly(rows){
+  // netatmo_metingen bevat al 1 rij per uur per module (scale=1hour bij ophalen),
+  // dit is enkel defensief: dedupliceren op afgeronde kloktijd.
+  const byHour = {};
+  for(const r of rows){
+    const d = new Date(r.ts);
+    const key = new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours()).getTime();
+    byHour[key] = Number(r.temperatuur);
+  }
+  return Object.keys(byHour).map(Number).sort((a,b)=>a-b).map(ts => ({ts, temp: byHour[ts]}));
+}
+
+function joinInOut(inSeries, outSeries){
+  const outMap = {};
+  for(const o of outSeries) outMap[o.ts] = o.temp;
+  const joined = [];
+  for(const i of inSeries){
+    if(outMap[i.ts] !== undefined){
+      joined.push({ts:i.ts, in_temp:i.temp, out_temp:outMap[i.ts]});
+    }
+  }
+  return joined;
+}
+
+function linreg(xs, ys){
+  const n=xs.length;
+  const mx=xs.reduce((a,b)=>a+b,0)/n, my=ys.reduce((a,b)=>a+b,0)/n;
+  let num=0, den=0, ssTot=0, ssRes=0;
+  for(let i=0;i<n;i++){ num+=(xs[i]-mx)*(ys[i]-my); den+=(xs[i]-mx)**2; }
+  const slope = den===0?0:num/den;
+  const intercept = my-slope*mx;
+  for(let i=0;i<n;i++){ const p=slope*xs[i]+intercept; ssRes+=(ys[i]-p)**2; ssTot+=(ys[i]-my)**2; }
+  const r2 = ssTot===0?0:1-ssRes/ssTot;
+  return {slope, intercept, r2, n};
+}
+
+// Newton-model: dT_binnen(uur) = k * (T_buiten(uur) - T_binnen(uur))
+// Dit omzeilt het faseverschil-probleem (binnen loopt achter door thermische massa):
+// we kijken niet naar delta-buiten vs delta-binnen op hetzelfde kloktijdstip,
+// maar naar het gat tussen buiten en binnen als voorspeller van de eerstvolgende verandering.
+function newtonK(joined){
+  const gaps=[], dins=[];
+  for(let i=0;i<joined.length-1;i++){
+    if(joined[i+1].ts - joined[i].ts > 3600*1000*1.5) continue; // gat in data overslaan
+    gaps.push(joined[i].out_temp - joined[i].in_temp);
+    dins.push(joined[i+1].in_temp - joined[i].in_temp);
+  }
+  const {slope, r2, n} = linreg(gaps, dins);
+  return {k: slope, r2, n, tau: slope>0 ? 1/slope : null};
+}
+
+// Uur-op-uur stijging buiten vs stijging binnen, rechtstreeks (elk uur is een eigen datapunt,
+// dus 24 punten per dag zoals gevraagd). Dit is de "verhouding" tussen beide stijgingen per uur.
+function hourlyDeltaRatio(joined){
+  const dOut=[], dIn=[];
+  for(let i=0;i<joined.length-1;i++){
+    if(joined[i+1].ts - joined[i].ts > 3600*1000*1.5) continue;
+    dOut.push(joined[i+1].out_temp - joined[i].out_temp);
+    dIn.push(joined[i+1].in_temp - joined[i].in_temp);
+  }
+  const reg = linreg(dOut, dIn);
+  return {...reg, points: dOut.map((x,idx)=>({dOut:x, dIn:dIn[idx]}))};
+}
+
+function opwarmingAfkoeling(joined){
+  const byDate = {};
+  for(const r of joined){
+    const d = new Date(r.ts);
+    const dateKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    if(!byDate[dateKey]) byDate[dateKey] = [];
+    byDate[dateKey].push({hour:d.getHours(), in_t:r.in_temp, out_t:r.out_temp, ts:r.ts});
+  }
+  const dates = Object.keys(byDate).sort((a,b)=> byDate[a][0].ts - byDate[b][0].ts);
+  const opw = [], afk = [];
+  for(let i=0;i<dates.length;i++){
+    const day = byDate[dates[i]];
+    const ochtend = day.filter(r=>r.hour>=0 && r.hour<10);
+    const middag = day.filter(r=>r.hour>=12 && r.hour<20);
+    if(ochtend.length>=7 && middag.length>=6){
+      const in_min = Math.min(...ochtend.map(r=>r.in_t)), in_max = Math.max(...middag.map(r=>r.in_t));
+      const out_min = Math.min(...ochtend.map(r=>r.out_t)), out_max = Math.max(...middag.map(r=>r.out_t));
+      opw.push({buiten: out_max-out_min, binnen: in_max-in_min});
+    }
+    if(i < dates.length-1){
+      const nextDay = byDate[dates[i+1]];
+      const avond = day.filter(r=>r.hour>=14 && r.hour<22);
+      const vroeg = nextDay.filter(r=>r.hour>=0 && r.hour<8);
+      if(avond.length>=6 && vroeg.length>=6){
+        const in_max2 = Math.max(...avond.map(r=>r.in_t)), in_min2 = Math.min(...vroeg.map(r=>r.in_t));
+        const out_max2 = Math.max(...avond.map(r=>r.out_t)), out_min2 = Math.min(...vroeg.map(r=>r.out_t));
+        afk.push({buiten: out_max2-out_min2, binnen: in_max2-in_min2});
+      }
+    }
+  }
+  return {opw, afk};
+}
+
+let chartInstance = null;
+let currentView = 'uurkoppeling';
+let lastResults = [];
+
+const viewExplains = {
+  uurkoppeling: 'Newton-model: per uur-overgang wordt het gat tussen buiten en binnen gebruikt om te voorspellen hoeveel binnen dat uur verandert. k is het percentage van dat gat dat per uur wordt doorgegeven; τ = 1/k is de tijdconstante in uren. Hoger τ = trager, dus beter geïsoleerd. Dit is de meest robuuste maat, want elk uur van de dag telt individueel mee, in plaats van één dag-gemiddelde.',
+  scatter: 'Elke stip is één uur-overgang: hoeveel buiten in dat uur steeg (x-as) tegen hoeveel binnen in datzelfde uur steeg (y-as). De helling van de regressielijn is de directe "stijging binnen per graad stijging buiten"-verhouding die je vroeg. Vergelijk de helling tussen periodes: een vlakkere lijn na de kozijnen betekent minder doorwerking.',
+  opwarming: 'Eén punt per dag: totale stijging buiten (ochtendminimum tot middagmaximum) tegen totale stijging binnen in diezelfde periode.',
+  afkoeling: 'Eén punt per nacht: totale daling buiten (avondmaximum tot ochtendminimum de volgende dag) tegen totale daling binnen.'
+};
+function updateViewExplain(){ document.getElementById('viewExplain').textContent = viewExplains[currentView]; }
+
+document.querySelectorAll('#viewToggle button').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('#viewToggle button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentView = btn.dataset.view;
+    updateViewExplain();
+    if(document.getElementById('resultsPanel').style.display !== 'none') renderResults();
+  };
+});
+
+function renderFacade(k, tau, label){
+  document.getElementById('kValue').textContent = k!==null && k!==undefined ? k.toFixed(4) : '—';
+  document.getElementById('tauValue').textContent = tau!==null && tau!==undefined ? tau.toFixed(0) : '—';
+  document.getElementById('kPeriodLabel').textContent = label || '—';
+
+  const g = document.getElementById('flowArrows');
+  g.innerHTML = '';
+  if(k===null || k===undefined) return;
+  const intensity = Math.min(1, k / 0.02);
+  const nArrows = Math.max(1, Math.round(intensity*6));
+  const color = intensity > 0.5 ? '#e8703a' : '#48c0d9';
+  for(let i=0;i<nArrows;i++){
+    const y = 25 + i*20;
+    const arrow = document.createElementNS('http://www.w3.org/2000/svg','line');
+    arrow.setAttribute('x1', 20); arrow.setAttribute('y1', y);
+    arrow.setAttribute('x2', 220); arrow.setAttribute('y2', y);
+    arrow.setAttribute('stroke', color);
+    arrow.setAttribute('stroke-width', 1.5);
+    arrow.setAttribute('opacity', 0.25 + intensity*0.5);
+    arrow.setAttribute('stroke-dasharray', '4 3');
+    g.appendChild(arrow);
+  }
+}
+
+function buildPeriodList(){
+  const room = document.getElementById('baseRoom').value;
+  const baseStart = document.getElementById('baseStart').value;
+  const baseEnd = document.getElementById('baseEnd').value;
+  if(!baseStart || !baseEnd) return {room, list: []};
+
+  const baseYear = Number(baseStart.slice(0,4));
+  periodDefs['base'] = periodDefs['base'] || {color: PALETTE[0]};
+  const list = [{ id:'base', name: `${baseYear}`, room, start: baseStart, end: baseEnd, color: periodDefs['base'].color }];
+
+  const yearRows = [...document.getElementById('compareYears').children];
+  for(const row of yearRows){
+    const id = row.id;
+    const year = Number(row.querySelector('[data-field=year]').value);
+    if(!year) continue;
+    const start = withYear(baseStart, year);
+    const end = withYear(baseEnd, year);
+    list.push({ id, name: `${year}`, room, start, end, color: periodDefs[id]?.color || PALETTE[1] });
+  }
+  return {room, list};
+}
+
+document.getElementById('btnAnalyse').onclick = async () => {
+  if(!supa){ log('Nog niet verbonden met Supabase.', true); return; }
+  const {list: periods} = buildPeriodList();
+  lastResults = [];
+  const btn = document.getElementById('btnAnalyse');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> analyseren...';
+
+  if(periods.length < 2){
+    log('Vul een basisperiode in en voeg minstens één jaar toe om mee te vergelijken.', true);
+    btn.disabled = false; btn.textContent = 'Analyseren';
+    return;
+  }
+
+  for(const card of periods){
+    const id = card.id;
+    const name = card.name;
+    const room = card.room;
+    const start = card.start;
+    const end = card.end;
+    if(!start || !end){ log(`Periode "${name}": vul een start- en einddatum in.`, true); continue; }
+
+    try{
+      log(`Periode "${name}" (${room}): controleren of data compleet is...`);
+      await Promise.all([
+        ensurePeriodData(name, room, start, end),
+        ensurePeriodData(name, 'Buiten', start, end)
+      ]);
+
+      log(`Periode "${name}" (${room}): data ophalen...`);
+      const [inRows, outRows] = await Promise.all([
+        fetchPeriodRows(room, start, end),
+        fetchOutsideRows(start, end)
+      ]);
+      if(inRows.length < 24){ log(`Periode "${name}": te weinig data (${inRows.length} uurpunten).`, true); continue; }
+
+      const inHourly = toHourly(inRows);
+      const outHourly = toHourly(outRows);
+      const joined = joinInOut(inHourly, outHourly);
+      if(joined.length < 24){ log(`Periode "${name}": te weinig overlappende uren tussen binnen en buiten.`, true); continue; }
+
+      const {opw, afk} = opwarmingAfkoeling(joined);
+      const kRes = newtonK(joined);
+      const scatterRes = hourlyDeltaRatio(joined);
+
+      const owReg = opw.length>=5 ? linreg(opw.map(o=>o.buiten), opw.map(o=>o.binnen)) : null;
+      const akReg = afk.length>=5 ? linreg(afk.map(a=>a.buiten), afk.map(a=>a.binnen)) : null;
+
+      lastResults.push({
+        id, name, room, color: periodDefs[id].color,
+        n_uren: joined.length,
+        opwarming: owReg ? {...owReg, gemBuiten: opw.reduce((s,o)=>s+o.buiten,0)/opw.length, gemBinnen: opw.reduce((s,o)=>s+o.binnen,0)/opw.length} : null,
+        afkoeling: akReg ? {...akReg, gemBuiten: afk.reduce((s,a)=>s+a.buiten,0)/afk.length, gemBinnen: afk.reduce((s,a)=>s+a.binnen,0)/afk.length} : null,
+        k: kRes,
+        scatter: scatterRes,
+      });
+      log(`Periode "${name}" (${room}) klaar: ${joined.length} gekoppelde uurpunten, ${opw.length} opwarmdagen, ${afk.length} afkoelnachten.`);
+    } catch(e){
+      log(`Periode "${name}": fout — ${e.message||e}`, true);
+    }
+  }
+
+  btn.disabled = false; btn.textContent = 'Analyseren';
+  document.getElementById('resultsPanel').style.display = lastResults.length ? 'block' : 'none';
+  document.getElementById('summaryPanel').style.display = lastResults.length ? 'block' : 'none';
+  if(lastResults.length){
+    renderSummary();
+    renderResults();
+    const first = lastResults[0];
+    renderFacade(first.k.k, first.k.tau, first.name + ' — ' + first.room);
+  }
+};
+
+// --- samenvatting in gewone taal ---
+// De basisperiode (eerste in de lijst, meest recente) wordt vergeleken met elk ander jaar
+// op basis van de k-waarde (Newton-koppeling): lager k = minder doorwerking van buiten naar binnen.
+function renderSummary(){
+  const el = document.getElementById('summaryText');
+  const [basis, ...anderen] = lastResults;
+  if(!basis || anderen.length === 0){
+    el.innerHTML = `<p>Voeg minstens één vergelijkingsjaar toe voor een samenvatting.</p>`;
+    return;
+  }
+
+  const rows = anderen.map(a => {
+    if(basis.k.k===null || a.k.k===null || !isFinite(basis.k.k) || !isFinite(a.k.k)){
+      return `<p><b>${basis.name}</b> vs <b>${a.name}</b>: te weinig betrouwbare data om te vergelijken.</p>`;
+    }
+    const verschilPct = (1 - basis.k.k / a.k.k) * 100;
+    const richting = verschilPct > 0 ? 'minder' : 'meer';
+    const betrouwbaar = (basis.k.r2 < 0.1 || a.k.r2 < 0.1);
+    return `<p>
+      <b>${basis.name}</b> vs <b>${a.name}</b>: de binnentemperatuur volgt de buitentemperatuur in ${basis.name}
+      <b>${Math.abs(verschilPct).toFixed(0)}% ${richting}</b> sterk dan in ${a.name}
+      (τ ${basis.k.tau?.toFixed(0)??'—'} uur vs ${a.k.tau?.toFixed(0)??'—'} uur; hoger τ = trager, dus beter geïsoleerd).
+      ${betrouwbaar ? '<span style="color:var(--sub)">Let op: de statistische betrouwbaarheid (R²) is laag voor deze periode, dus zie dit als een indicatie, niet als een harde uitkomst.</span>' : ''}
+    </p>`;
+  }).join('');
+
+  el.innerHTML = rows + `<p class="hint" style="margin-top:6px;">Gebaseerd op de "Uurkoppeling (k)"-methode: hoe sterk elk uur de sprong tussen buiten- en binnentemperatuur wordt gedicht. Voor het volledige cijferoverzicht per periode, zie de tabel hieronder.</p>`;
+}
+
+function renderResults(){
+  const head = document.getElementById('resultsHead');
+  const tbody = document.querySelector('#resultsTable tbody');
+  tbody.innerHTML = '';
+
+  if(currentView === 'uurkoppeling'){
+    head.innerHTML = '<th>Periode</th><th>Kamer</th><th>k (/uur)</th><th>τ (uur)</th><th>R²</th><th>n (uren)</th>';
+    for(const r of lastResults){
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td class="name"><span class="swatch" style="background:${r.color}"></span>${r.name}</td>
+        <td class="name">${r.room}</td>
+        <td>${r.k.k!==null?r.k.k.toFixed(4):'—'}</td>
+        <td>${r.k.tau!==null?r.k.tau.toFixed(0):'—'}</td>
+        <td>${r.k.r2.toFixed(3)}</td><td>${r.k.n}</td>`;
+      tr.style.cursor='pointer';
+      tr.onclick = () => renderFacade(r.k.k, r.k.tau, r.name+' — '+r.room);
+      tbody.appendChild(tr);
+    }
+  } else if(currentView === 'scatter'){
+    head.innerHTML = '<th>Periode</th><th>Kamer</th><th>Helling (Δbinnen / Δbuiten)</th><th>R²</th><th>n (uur-overgangen)</th>';
+    for(const r of lastResults){
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td class="name"><span class="swatch" style="background:${r.color}"></span>${r.name}</td>
+        <td class="name">${r.room}</td>
+        <td>${r.scatter.slope.toFixed(3)}</td><td>${r.scatter.r2.toFixed(3)}</td><td>${r.scatter.n}</td>`;
+      tbody.appendChild(tr);
+    }
+  } else {
+    const key = currentView;
+    head.innerHTML = '<th>Periode</th><th>Kamer</th><th>Helling</th><th>R²</th><th>Gem. buiten</th><th>Gem. binnen</th><th>Verhouding</th>';
+    for(const r of lastResults){
+      const d = r[key];
+      if(!d) continue;
+      const ratio = d.gemBuiten ? d.gemBinnen/d.gemBuiten : null;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td class="name"><span class="swatch" style="background:${r.color}"></span>${r.name}</td>
+        <td class="name">${r.room}</td>
+        <td>${d.slope.toFixed(3)}</td><td>${d.r2.toFixed(3)}</td>
+        <td>${d.gemBuiten.toFixed(2)}</td><td>${d.gemBinnen.toFixed(2)}</td>
+        <td>${ratio!==null?ratio.toFixed(3):'—'}</td>`;
+      tbody.appendChild(tr);
+    }
+  }
+
+  if(chartInstance) chartInstance.destroy();
+  const ctx = document.getElementById('chart');
+
+  if(currentView === 'uurkoppeling'){
+    chartInstance = new Chart(ctx, {
+      type:'bar',
+      data:{
+        labels: lastResults.map(r=>r.name+' / '+r.room),
+        datasets:[{ label:'τ (tijdconstante, uur)', data: lastResults.map(r=>r.k.tau||0), backgroundColor: lastResults.map(r=>r.color) }]
+      },
+      options:{ scales:{ y:{ title:{display:true, text:'uur (hoger = trager, beter geïsoleerd)'} } }, plugins:{legend:{display:false}} }
+    });
+  } else if(currentView === 'scatter'){
+    chartInstance = new Chart(ctx, {
+      type:'scatter',
+      data:{
+        datasets: lastResults.map(r => ({
+          label: r.name+' / '+r.room,
+          data: r.scatter.points.map(p=>({x:p.dOut, y:p.dIn})),
+          backgroundColor: r.color,
+          pointRadius: 2.5,
+        }))
+      },
+      options:{
+        scales:{
+          x:{ title:{display:true, text:'Δ buiten per uur (°C)'} },
+          y:{ title:{display:true, text:'Δ binnen per uur (°C)'} }
+        },
+        plugins:{legend:{position:'bottom'}}
+      }
+    });
+  } else {
+    chartInstance = new Chart(ctx, {
+      type:'bar',
+      data:{
+        labels: lastResults.map(r=>r.name+' / '+r.room),
+        datasets:[
+          { label:'Gem. buiten', data: lastResults.map(r=>r[currentView]?.gemBuiten||0), backgroundColor: currentView==='opwarming'?'#5a3626':'#254452' },
+          { label:'Gem. binnen', data: lastResults.map(r=>r[currentView]?.gemBinnen||0), backgroundColor: lastResults.map(r=>r.color) },
+        ]
+      },
+      options:{ scales:{ y:{ title:{display:true, text:'°C'} } }, plugins:{legend:{position:'bottom'}} }
+    });
+  }
+}
+</script>
+</body>
+</html>
