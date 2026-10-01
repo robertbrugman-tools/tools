@@ -1245,16 +1245,34 @@
       const selApps = [...document.querySelectorAll('#newUserAppChips .chip.on')].map(c => c.dataset.app)
       if (!email || !pw) { setMsg(msg, 'Vul e-mail en wachtwoord in.', false); return }
 
-      const { data, error } = await sb.auth.signUp({ email, password: pw })
-      if (error) { setMsg(msg, 'Fout: ' + error.message, false); return }
-
-      const uid = data.user.id
-      await sb.from('hub_user_info').insert({ user_id: uid, email })
-      if (selApps.length > 0) {
-        await sb.from('hub_permissions').insert(selApps.map(app => ({ user_id: uid, app_key: app })))
+      // Server-side aangemaakt met e-mail direct bevestigd (geen bevestigingsmail nodig)
+      let uid
+      try {
+        const resp = await fetch('/.netlify/functions/admin-create-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password: pw }),
+        })
+        const data = await resp.json()
+        if (!resp.ok) { setMsg(msg, 'Fout: ' + (data.error || 'onbekende fout'), false); return }
+        uid = data.userId
+      } catch (err) {
+        setMsg(msg, 'Fout: ' + err.message, false)
+        return
       }
 
-      setMsg(msg, `✓ Account aangemaakt voor ${email}`, true)
+      const { error: infoError } = await sb.from('hub_user_info').insert({ user_id: uid, email })
+      let permError = null
+      if (selApps.length > 0) {
+        const result = await sb.from('hub_permissions').insert(selApps.map(app => ({ user_id: uid, app_key: app })))
+        permError = result.error
+      }
+      if (infoError || permError) {
+        const details = [infoError && `gebruikersinfo: ${infoError.message}`, permError && `app-toegang: ${permError.message}`].filter(Boolean).join(' / ')
+        setMsg(msg, `⚠ Account is aangemaakt (${email}), maar opslaan van gegevens is mislukt: ${details}`, false)
+      } else {
+        setMsg(msg, `✓ Account aangemaakt en direct actief voor ${email}`, true)
+      }
       document.getElementById('newUserEmail').value = ''
       document.getElementById('newUserPw').value    = ''
       renderNewUserChips()
