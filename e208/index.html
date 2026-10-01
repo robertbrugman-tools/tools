@@ -282,12 +282,12 @@
       state = await res.json()
       render()
     } catch (err) {
-      document.getElementById('heroBody').innerHTML = '<p class="empty"><b>Laden mislukt.</b><br>' + esc(err.message) + ' Controleer of de lokale server draait en ververs de pagina.</p>'
+      document.getElementById('heroBody').innerHTML = '<p class="empty"><b>Laden mislukt.</b><br>' + esc(err.message) + ' Ververs de pagina en probeer het opnieuw.</p>'
     }
   }
 
   const ERRORS = {
-    NO_SECRET: 'Het Smartcar-secret ontbreekt. Zet SMARTCAR_CLIENT_SECRET in het bestand .env en start de server opnieuw.',
+    NO_SECRET: 'De koppeling met Smartcar is nog niet ingesteld. Neem contact op met Robert.',
     TOKEN_FAILED: 'Smartcar weigert de inloggegevens. Controleer Client ID en secret.',
     NO_CONNECTION: 'Er is geen auto verbonden. Open de Smartcar Connect-link en log in met je MyPeugeot-account.',
   }
@@ -307,7 +307,7 @@
       else setStatus('Ververst om ' + new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }) + '.')
       render()
     } catch (err) {
-      setStatus('De server is niet bereikbaar. Controleer of netlify dev draait.', true)
+      setStatus('De server is niet bereikbaar. Probeer het later opnieuw.', true)
     }
     btn.disabled = false; btn.classList.remove('spin')
   }
