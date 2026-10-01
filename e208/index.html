@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Peugeot e208</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --paper: #e9eef1;
+    --surface: #f9fbfc;
+    --ink: #13212b;
+    --ink-2: #3f505c;
+    --ink-3: #5f6f7b;
+    --rule: #cfd9e0;
+    --charge: #2447d6;
+    --charge-off: #d3dce4;
+    --warn: #a35f00;
+    --alert: #b3261e;
+    --font: 'Bricolage Grotesque', ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--paper); color: var(--ink); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--charge); outline-offset: 2px; border-radius: 4px; }
+
+  /* ── Inloggen ─────────────────────────────── */
+  #authScreen { position: fixed; inset: 0; background: var(--paper); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 300; }
+  .auth-box { background: var(--surface); border: 1px solid var(--rule); border-radius: 18px; padding: 40px 36px; width: 100%; max-width: 360px; }
+  .auth-box h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 4px; }
+  .auth-box > p { font-size: 0.9rem; color: var(--ink-3); margin-bottom: 26px; }
+  .fg { margin-bottom: 14px; }
+  .fg label { display: block; font-size: 0.8rem; font-weight: 500; color: var(--ink-2); margin-bottom: 5px; }
+  input[type="email"], input[type="password"] { width: 100%; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 9px; font: inherit; font-size: 0.9rem; background: #fff; color: var(--ink); }
+  input:focus { outline: 2px solid var(--charge); outline-offset: 0; border-color: var(--charge); }
+  .submit-btn { width: 100%; padding: 12px; background: var(--ink); color: #fff; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; margin-top: 6px; }
+  .submit-btn:hover { background: #24384a; }
+  .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .msg { font-size: 0.84rem; text-align: center; margin-top: 10px; min-height: 1.2em; color: var(--alert); }
+
+  /* ── Pagina ───────────────────────────────── */
+  #app { display: none; padding: 28px 20px 72px; }
+  .wrap { max-width: 920px; margin: 0 auto; }
+
+  .top { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+  .top h1 { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.01em; }
+  .top .sub { font-size: 0.88rem; color: var(--ink-3); margin-left: 10px; font-weight: 400; }
+  .back-link { font-size: 0.85rem; color: var(--ink-3); text-decoration: none; white-space: nowrap; }
+  .back-link:hover { color: var(--ink); }
+
+  .panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 20px; }
+
+  /* Hero */
+  .hero { padding: 34px 34px 30px; }
+  .hero-head { display: grid; grid-template-columns: auto 1fr; gap: 12px 40px; align-items: end; }
+  .soc { display: flex; align-items: baseline; line-height: 0.82; }
+  .soc-num { font-size: clamp(96px, 19vw, 184px); font-weight: 700; letter-spacing: -0.045em; font-variation-settings: 'opsz' 96; font-variant-numeric: tabular-nums; }
+  .soc-pct { font-size: clamp(30px, 5.5vw, 56px); font-weight: 500; color: var(--ink-3); margin-left: 6px; letter-spacing: -0.02em; }
+  .soc.low .soc-num { color: var(--warn); }
+  .soc.critical .soc-num { color: var(--alert); }
+
+  .meta { justify-self: end; text-align: right; font-size: 0.92rem; line-height: 1.5; color: var(--ink-2); padding-bottom: 6px; }
+  .meta strong { display: block; font-size: 1.05rem; font-weight: 600; color: var(--ink); }
+  .meta .stale { color: var(--warn); font-weight: 500; }
+  .meta .fetched { color: var(--ink-3); font-size: 0.82rem; margin-top: 2px; }
+  .level-note { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; margin-top: 6px; }
+  .level-note svg { width: 14px; height: 14px; }
+  .level-note.low { color: var(--warn); }
+  .level-note.critical { color: var(--alert); }
+
+  .battery { display: flex; gap: 5px; margin-top: 30px; }
+  .seg { flex: 1; height: 58px; background: var(--charge-off); border-radius: 5px; overflow: hidden; }
+  .seg i { display: block; height: 100%; width: 0; background: var(--charge); transition: width 0.28s ease-out; }
+  .battery.low .seg i { background: var(--warn); }
+  .battery.critical .seg i { background: var(--alert); }
+  .scale { display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.76rem; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+  .hero-actions { display: flex; align-items: center; gap: 14px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--rule); }
+  .btn { background: var(--ink); color: #fff; border: none; border-radius: 10px; padding: 9px 18px; font-weight: 600; font-size: 0.9rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+  .btn:hover { background: #24384a; }
+  .btn:disabled { opacity: 0.55; cursor: progress; }
+  .btn svg { width: 15px; height: 15px; }
+  .btn.spin svg { animation: spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .status-line { font-size: 0.85rem; color: var(--ink-3); }
+  .status-line.err { color: var(--alert); font-weight: 500; }
+
+  .empty { padding: 20px 0 8px; color: var(--ink-2); line-height: 1.6; max-width: 46ch; }
+  .empty b { color: var(--ink); }
+
+  /* Feiten */
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); margin: 26px 0; }
+  .fact { padding: 4px 24px; border-left: 1px solid var(--rule); }
+  .fact:first-child { padding-left: 4px; border-left: none; }
+  .fact dt { font-size: 0.84rem; color: var(--ink-3); }
+  .fact dd { font-size: 1.7rem; font-weight: 600; letter-spacing: -0.02em; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .fact dd small { font-size: 0.9rem; font-weight: 500; color: var(--ink-3); margin-left: 4px; letter-spacing: 0; }
+
+  /* Verloop */
+  .trend { padding: 26px 30px 22px; margin-top: 26px; }
+  .trend-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+  .trend-head h2 { font-size: 1.05rem; font-weight: 600; letter-spacing: -0.01em; }
+  .range { display: inline-flex; border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
+  .range button { background: none; border: none; padding: 6px 13px; font-size: 0.83rem; cursor: pointer; color: var(--ink-2); }
+  .range button + button { border-left: 1px solid var(--rule); }
+  .range button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+  #chartWrap { position: relative; touch-action: pan-y; }
+  #chartWrap svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .tip { position: absolute; pointer-events: none; background: var(--ink); color: #fff; font-size: 0.8rem; line-height: 1.35; padding: 7px 10px; border-radius: 8px; white-space: nowrap; transform: translate(-50%, -100%); opacity: 0; transition: opacity 0.08s; }
+  .tip b { font-weight: 600; font-size: 0.95rem; }
+  .tip.on { opacity: 1; }
+  .chart-empty { padding: 36px 0 26px; color: var(--ink-3); text-align: center; line-height: 1.6; }
+  details.tbl { margin-top: 12px; }
+  details summary { cursor: pointer; font-size: 0.84rem; color: var(--ink-3); width: fit-content; }
+  details summary:hover { color: var(--ink); }
+  table { border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; width: 100%; max-width: 420px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 6px 10px 6px 0; border-top: 1px solid var(--rule); font-weight: 400; }
+  th { color: var(--ink-3); border-top: none; }
+
+  /* Meer gegevens */
+  .more { margin-top: 18px; padding: 0 4px; }
+  .sig { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-top: 1px solid var(--rule); font-size: 0.9rem; }
+  .sig span:first-child { color: var(--ink-2); }
+  .sig span:last-child { font-weight: 600; text-align: right; word-break: break-word; }
+  .more-actions { margin-top: 14px; }
+  .link-btn { background: none; border: none; color: var(--ink-3); font-size: 0.82rem; cursor: pointer; text-decoration: underline; padding: 0; }
+  .link-btn:hover { color: var(--ink); }
+
+  .foot { font-size: 0.8rem; color: var(--ink-3); line-height: 1.6; margin-top: 22px; max-width: 70ch; }
+
+  @media (max-width: 640px) {
+    #app { padding: 20px 14px 56px; }
+    .hero { padding: 24px 20px 22px; border-radius: 18px; }
+    .hero-head { grid-template-columns: 1fr; }
+    .meta { justify-self: start; text-align: left; }
+    .battery { gap: 3px; margin-top: 22px; }
+    .seg { height: 44px; border-radius: 4px; }
+    .trend { padding: 20px 18px 18px; border-radius: 18px; }
+    .facts { grid-template-columns: repeat(2, 1fr); }
+    .fact { padding: 4px 14px; }
+    .fact:nth-child(2n+1) { border-left: none; padding-left: 4px; }
+    .fact dd { font-size: 1.45rem; }
+    .top .sub { display: block; margin: 2px 0 0; }
+    .top { align-items: flex-start; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .seg i { transition: none; }
+    .btn.spin svg { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="authScreen">
+  <div class="auth-box">
+    <h1>Peugeot e208</h1>
+    <p>Log in met je Hub-account</p>
+    <div class="fg">
+      <label for="authEmail">E-mailadres</label>
+      <input type="email" id="authEmail" placeholder="jouw@email.nl" onkeydown="if(event.key==='Enter')login()">
+    </div>
+    <div class="fg">
+      <label for="authPw">Wachtwoord</label>
+      <input type="password" id="authPw" placeholder="••••••••" onkeydown="if(event.key==='Enter')login()">
+    </div>
+    <button class="submit-btn" id="btnLogin" onclick="login()">Inloggen</button>
+    <p class="msg" id="authMsg"></p>
+  </div>
+</div>
+
+<div id="app">
+  <div class="wrap">
+    <div class="top">
+      <h1>Peugeot e208<span class="sub" id="carSub"></span></h1>
+      <a class="back-link" href="/">← Tools</a>
+    </div>
+
+    <section class="panel hero" aria-labelledby="socLabel">
+      <div id="heroBody"><p class="empty">Laden...</p></div>
+      <div class="hero-actions">
+        <button class="btn" id="btnRefresh" onclick="refresh()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
+          Ververs
+        </button>
+        <span class="status-line" id="statusLine" role="status"></span>
+      </div>
+    </section>
+
+    <dl class="facts" id="facts"></dl>
+
+    <section class="panel trend" aria-labelledby="trendTitle">
+      <div class="trend-head">
+        <h2 id="trendTitle">Verloop van het laadpercentage</h2>
+        <div class="range" role="group" aria-label="Periode">
+          <button type="button" data-range="1" aria-pressed="false">24 uur</button>
+          <button type="button" data-range="7" aria-pressed="false">7 dagen</button>
+          <button type="button" data-range="all" aria-pressed="true">Alles</button>
+        </div>
+      </div>
+      <div id="chartWrap"></div>
+      <details class="tbl" id="tblWrap" style="display:none">
+        <summary>Toon als tabel</summary>
+        <div id="tbl"></div>
+      </details>
+    </section>
+
+    <details class="more" id="moreWrap" style="display:none">
+      <summary>Meer gegevens van de auto</summary>
+      <div id="signals" style="margin-top:10px"></div>
+      <div class="more-actions"><button class="link-btn" type="button" onclick="copyRaw()" id="btnCopy">Kopieer alle ruwe data</button></div>
+    </details>
+
+    <p class="foot">Het gratis Smartcar-plan levert het laadpercentage en een paar basisgegevens. Actieradius en laadstatus vragen een betaald plan.
+      De waarden komen van de fabrikant. De auto meldt niet continu, dus een waarde kan uren oud zijn, ook direct na verversen.</p>
+  </div>
+</div>
+
+<script>
+  const HUB_URL = 'https://swrunlzeydmcskceqdju.supabase.co'
+  const HUB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3cnVubHpleWRtY3NrY2VxZGp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNjE2MDgsImV4cCI6MjA5MjkzNzYwOH0.V7haNdFPFJuvJJTbjhiUzKrWG8trW4UeRIJveAhFOgs'
+  const sb = supabase.createClient(HUB_URL, HUB_KEY)
+  const FN = '/.netlify/functions/e208-status'
+  const STALE_HOURS = 3
+  const SEGMENTS = 20
+
+  let state = { latest: null, history: [] }
+  let chartRange = 'all'
+
+  ;(async () => {
+    const { data: { session } } = await sb.auth.getSession()
+    if (session) enter()
+  })()
+
+  async function login() {
+    const email = document.getElementById('authEmail').value.trim()
+    const pw = document.getElementById('authPw').value
+    const btn = document.getElementById('btnLogin')
+    const msg = document.getElementById('authMsg')
+    if (!email || !pw) { msg.textContent = 'Vul e-mail en wachtwoord in.'; return }
+    btn.disabled = true; btn.textContent = 'Bezig...'
+    const { error } = await sb.auth.signInWithPassword({ email, password: pw })
+    btn.disabled = false; btn.textContent = 'Inloggen'
+    if (error) msg.textContent = 'Inloggen mislukt. Controleer je gegevens.'
+    else enter()
+  }
+
+  function enter() {
+    document.getElementById('authScreen').style.display = 'none'
+    document.getElementById('app').style.display = 'block'
+    document.querySelectorAll('.range button').forEach(b => b.addEventListener('click', () => {
+      chartRange = b.dataset.range
+      document.querySelectorAll('.range button').forEach(x => x.setAttribute('aria-pressed', String(x === b)))
+      renderChart()
+    }))
+    load()
+  }
+
+  let rz
+  window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(renderChart, 150) })
+
+  async function authHeader() {
+    const { data: { session } } = await sb.auth.getSession()
+    if (!session) {
+      document.getElementById('authScreen').style.display = 'flex'
+      document.getElementById('app').style.display = 'none'
+      return null
+    }
+    return { Authorization: 'Bearer ' + session.access_token }
+  }
+
+  async function load() {
+    const headers = await authHeader()
+    if (!headers) return
+    try {
+      const res = await fetch(FN, { headers })
+      if (res.status === 403) throw new Error('Dit account heeft geen toegang tot deze tool.')
+      if (!res.ok) throw new Error('De server antwoordde met status ' + res.status + '.')
+      state = await res.json()
+      render()
+    } catch (err) {
+      document.getElementById('heroBody').innerHTML = '<p class="empty"><b>Laden mislukt.</b><br>' + esc(err.message) + ' Controleer of de lokale server draait en ververs de pagina.</p>'
+    }
+  }
+
+  const ERRORS = {
+    NO_SECRET: 'Het Smartcar-secret ontbreekt. Zet SMARTCAR_CLIENT_SECRET in het bestand .env en start de server opnieuw.',
+    TOKEN_FAILED: 'Smartcar weigert de inloggegevens. Controleer Client ID en secret.',
+    NO_CONNECTION: 'Er is geen auto verbonden. Open de Smartcar Connect-link en log in met je MyPeugeot-account.',
+  }
+
+  async function refresh() {
+    const headers = await authHeader()
+    if (!headers) return
+    const btn = document.getElementById('btnRefresh')
+    btn.disabled = true; btn.classList.add('spin')
+    setStatus('Ophalen bij Smartcar...')
+    try {
+      const res = await fetch(FN, { method: 'POST', headers })
+      const body = await res.json().catch(() => ({}))
+      if (body && body.latest !== undefined) state = { latest: body.latest, history: body.history || [] }
+      if (!res.ok) setStatus(ERRORS[body.code] || body.error || ('Fout ' + res.status), true)
+      else if (body.cooldown) setStatus('Net al ververst. Probeer het over een minuut opnieuw.')
+      else setStatus('Ververst om ' + new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }) + '.')
+      render()
+    } catch (err) {
+      setStatus('De server is niet bereikbaar. Controleer of netlify dev draait.', true)
+    }
+    btn.disabled = false; btn.classList.remove('spin')
+  }
+
+  function setStatus(text, isErr) {
+    const el = document.getElementById('statusLine')
+    el.textContent = text
+    el.className = 'status-line' + (isErr ? ' err' : '')
+  }
+
+  /* ── Helpers ─────────────────────────────── */
+  const UNITS = { percent: '%', percentage: '%', kilometers: 'km', kilometres: 'km', meters: 'm', miles: 'mi', volts: 'V', amperes: 'A', kilowatts: 'kW', kilowatt_hours: 'kWh', celsius: '°C', bar: 'bar', kilopascals: 'kPa' }
+  const sigs = () => (state.latest && state.latest.signals) || []
+
+  function sigValue(s) {
+    if (!s) return null
+    const b = s.body
+    if (b && typeof b === 'object' && !Array.isArray(b) && 'value' in b) return b.value
+    return b
+  }
+  function sigUnit(s) {
+    const b = s && s.body
+    if (b && typeof b === 'object' && typeof b.unit === 'string') return UNITS[b.unit] || b.unit
+    return ''
+  }
+  function statusOf(s) {
+    const st = s && s.status
+    if (!st) return null
+    return typeof st === 'object' ? (st.value || null) : String(st)
+  }
+  const hasValue = s => { const v = sigValue(s); return v !== null && v !== undefined && statusOf(s) !== 'ERROR' }
+  const findSig = re => sigs().find(s => re.test(s.code) && hasValue(s))
+  const nl = (n, d = 0) => n.toLocaleString('nl-NL', { maximumFractionDigits: d })
+
+  function fmtValue(s) {
+    const v = sigValue(s)
+    if (typeof v === 'number') return nl(v, 1) + (sigUnit(s) ? ' ' + sigUnit(s) : '')
+    if (typeof v === 'boolean') return v ? 'Ja' : 'Nee'
+    if (Array.isArray(v)) return v.join(', ')
+    if (typeof v === 'object') return JSON.stringify(v)
+    return String(v) + (sigUnit(s) ? ' ' + sigUnit(s) : '')
+  }
+  const hhmm = d => d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })
+  function fmtDay(iso) {
+    if (!iso) return '–'
+    const d = new Date(iso), now = new Date()
+    const days = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5)
+    if (days === 0) return 'vandaag ' + hhmm(d)
+    if (days === 1) return 'gisteren ' + hhmm(d)
+    return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }) + ' ' + hhmm(d)
+  }
+  function ago(iso) {
+    const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000)
+    if (mins < 2) return 'zojuist'
+    if (mins < 60) return mins + ' minuten geleden'
+    const h = Math.round(mins / 60)
+    if (h < 48) return h + ' uur geleden'
+    return Math.round(h / 24) + ' dagen geleden'
+  }
+  const level = p => p < 10 ? 'critical' : p < 20 ? 'low' : ''
+
+  /* ── Render ──────────────────────────────── */
+  function render() {
+    renderHero()
+    renderFacts()
+    renderChart()
+    renderMore()
+  }
+
+  function renderHero() {
+    const body = document.getElementById('heroBody')
+    const sub = document.getElementById('carSub')
+    const latest = state.latest
+    if (!latest) {
+      sub.textContent = ''
+      body.innerHTML = '<p class="empty"><b>Nog geen gegevens.</b><br>Verbind je auto via de Smartcar Connect-link en kies daarna Ververs.</p>'
+      return
+    }
+    const car = latest.vehicle || {}
+    const trim = findSig(/trim$/i), color = findSig(/exteriorcolor$/i)
+    sub.textContent = [car.year, trim && sigValue(trim), color && sigValue(color)].filter(Boolean).join(', ')
+
+    const soc = findSig(/stateofcharge/i)
+    const v = sigValue(soc)
+    if (typeof v !== 'number') {
+      body.innerHTML = '<p class="empty"><b>Geen laadpercentage ontvangen.</b><br>Vink State Of Charge aan in de Smartcar-configuratie, publiceer en verbind de auto opnieuw.</p>'
+      return
+    }
+    const pct = Math.max(0, Math.min(100, v))
+    const lvl = level(pct)
+    const oem = soc.oemUpdatedAt
+    const stale = oem && (Date.now() - new Date(oem).getTime()) > STALE_HOURS * 3600e3
+    const warn = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 1 21h22L12 2Zm1 14h-2v-2h2v2Zm0-4h-2V9h2v3Z"/></svg>'
+
+    body.innerHTML = `
+      <div class="hero-head">
+        <div class="soc ${lvl}" id="socLabel"><span class="soc-num">${esc(nl(v, 0))}</span><span class="soc-pct">%</span></div>
+        <div class="meta">
+          <strong>${oem ? esc(fmtDay(oem)) : esc(fmtDay(latest.takenAt))}</strong>
+          ${oem ? `<span class="${stale ? 'stale' : ''}">Door de auto gemeld, ${esc(ago(oem))}</span>` : ''}
+          <div class="fetched">Opgehaald ${esc(fmtDay(latest.takenAt))}</div>
+          ${lvl ? `<div class="level-note ${lvl}">${warn}${lvl === 'critical' ? 'Bijna leeg' : 'Laag'}</div>` : ''}
+        </div>
+      </div>
+      <div class="battery ${lvl}" role="img" aria-label="Laadpercentage ${esc(nl(v, 0))} procent">${'<div class="seg"><i></i></div>'.repeat(SEGMENTS)}</div>
+      <div class="scale"><span>0</span><span>50</span><span>100%</span></div>`
+
+    // Eén ingestudeerd moment: de blokjes lopen na elkaar vol.
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const per = 100 / SEGMENTS
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      body.querySelectorAll('.seg i').forEach((el, i) => {
+        const fill = Math.max(0, Math.min(1, (pct - i * per) / per))
+        if (!reduce) el.style.transitionDelay = (i * 22) + 'ms'
+        el.style.width = (fill * 100) + '%'
+      })
+    }))
+  }
+
+  function renderFacts() {
+    const el = document.getElementById('facts')
+    const items = []
+    const odo = findSig(/odometer/i)
+    if (odo) items.push(['Kilometerstand', nl(sigValue(odo), 0), sigUnit(odo) || 'km'])
+    const online = findSig(/isonline$/i), asleep = findSig(/isasleep$/i)
+    if (asleep && sigValue(asleep) === true) items.push(['Verbinding', 'Slaapt', ''])
+    else if (online) items.push(['Verbinding', sigValue(online) ? 'Online' : 'Offline', ''])
+    el.innerHTML = items.map(([k, v, u]) => `<div class="fact"><dt>${esc(k)}</dt><dd>${esc(v)}${u ? `<small>${esc(u)}</small>` : ''}</dd></div>`).join('')
+    el.style.display = items.length ? '' : 'none'
+  }
+
+  /* ── Grafiek ─────────────────────────────── */
+  function chartPoints() {
+    let pts = (state.history || []).filter(p => typeof p.soc === 'number').map(p => ({ t: new Date(p.t).getTime(), soc: p.soc, odo: p.odo })).sort((a, b) => a.t - b.t)
+    if (chartRange !== 'all') {
+      const since = Date.now() - Number(chartRange) * 864e5
+      pts = pts.filter(p => p.t >= since)
+    }
+    return pts
+  }
+
+  function renderChart() {
+    const wrap = document.getElementById('chartWrap')
+    const tblWrap = document.getElementById('tblWrap')
+    const pts = chartPoints()
+    if (pts.length < 2) {
+      wrap.innerHTML = '<p class="chart-empty">' + (state.history && state.history.length > 1
+        ? 'In deze periode zijn er minder dan twee metingen.'
+        : 'Het verloop verschijnt na de tweede meting.<br>Elke keer dat de auto iets nieuws meldt en jij ververst, komt er een punt bij.') + '</p>'
+      tblWrap.style.display = 'none'
+      return
+    }
+    const W = Math.max(300, Math.round(wrap.clientWidth || 720)), H = W < 520 ? 210 : 250, L = 42, R = W < 520 ? 46 : 54, T = 18, B = 32
+    const t0 = pts[0].t, t1 = pts[pts.length - 1].t, span = Math.max(t1 - t0, 1)
+    const X = t => L + ((t - t0) / span) * (W - L - R)
+    const lo = Math.max(0, Math.floor((Math.min(...pts.map(p => p.soc)) - 5) / 10) * 10), hi = 100
+    const Y = v => T + (1 - (v - lo) / (hi - lo)) * (H - T - B)
+    const long = span > 36 * 3600e3
+    const tick = t => long ? new Date(t).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }) : hhmm(new Date(t))
+
+    let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Lijngrafiek van het laadpercentage, ${pts.length} metingen">`
+    ;[lo, (lo + hi) / 2, hi].forEach(g => {
+      svg += `<line x1="${L}" x2="${W - R}" y1="${Y(g)}" y2="${Y(g)}" stroke="#d9e1e7" stroke-width="1"/>
+        <text x="${L - 10}" y="${Y(g) + 4}" text-anchor="end" font-size="12" fill="#5f6f7b">${g}%</text>`
+    })
+    ;[0, 1 / 3, 2 / 3, 1].forEach((f, i) => {
+      const t = t0 + span * f
+      svg += `<text x="${X(t)}" y="${H - 8}" text-anchor="${i === 0 ? 'start' : i === 3 ? 'end' : 'middle'}" font-size="12" fill="#5f6f7b">${esc(tick(t))}</text>`
+    })
+    const d = pts.map((p, i) => (i ? 'L' : 'M') + X(p.t).toFixed(1) + ' ' + Y(p.soc).toFixed(1)).join(' ')
+    svg += `<path d="${d}" fill="none" stroke="#2447d6" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`
+    if (pts.length <= 40) pts.forEach(p => { svg += `<circle cx="${X(p.t).toFixed(1)}" cy="${Y(p.soc).toFixed(1)}" r="3" fill="#2447d6"/>` })
+    const last = pts[pts.length - 1]
+    svg += `<circle cx="${X(last.t).toFixed(1)}" cy="${Y(last.soc).toFixed(1)}" r="6" fill="#2447d6" stroke="#f9fbfc" stroke-width="2"/>
+      <text x="${X(last.t) + 12}" y="${Y(last.soc) + 5}" font-size="15" font-weight="700" fill="#13212b">${esc(nl(last.soc))}%</text>
+      <g id="xh" style="display:none"><line id="xhl" y1="${T}" y2="${H - B}" stroke="#13212b" stroke-width="1" stroke-dasharray="3 3"/><circle id="xhd" r="6" fill="#2447d6" stroke="#f9fbfc" stroke-width="2"/></g></svg>
+      <div class="tip" id="tip"></div>`
+    wrap.innerHTML = svg
+
+    const svgEl = wrap.querySelector('svg'), tip = wrap.querySelector('#tip'), xh = wrap.querySelector('#xh')
+    const xhl = wrap.querySelector('#xhl'), xhd = wrap.querySelector('#xhd')
+    const move = e => {
+      const r = svgEl.getBoundingClientRect()
+      const mx = ((e.clientX - r.left) / r.width) * W
+      let best = pts[0]
+      pts.forEach(p => { if (Math.abs(X(p.t) - mx) < Math.abs(X(best.t) - mx)) best = p })
+      const x = X(best.t), y = Y(best.soc)
+      xh.style.display = ''
+      xhl.setAttribute('x1', x); xhl.setAttribute('x2', x)
+      xhd.setAttribute('cx', x); xhd.setAttribute('cy', y)
+      tip.innerHTML = `${esc(fmtDay(new Date(best.t).toISOString()))}<br><b>${esc(nl(best.soc))}%</b>`
+      tip.style.left = (x / W * r.width) + 'px'
+      tip.style.top = (y / H * r.height - 12) + 'px'
+      tip.classList.add('on')
+    }
+    const leave = () => { xh.style.display = 'none'; tip.classList.remove('on') }
+    svgEl.addEventListener('pointermove', move)
+    svgEl.addEventListener('pointerdown', move)
+    svgEl.addEventListener('pointerleave', leave)
+
+    const rows = pts.slice().reverse().slice(0, 60).map(p => `<tr><td>${esc(fmtDay(new Date(p.t).toISOString()))}</td><td>${esc(nl(p.soc))}%</td></tr>`).join('')
+    document.getElementById('tbl').innerHTML = `<table><thead><tr><th>Gemeld door de auto</th><th>Laadpercentage</th></tr></thead><tbody>${rows}</tbody></table>`
+    tblWrap.style.display = ''
+  }
+
+  /* ── Meer gegevens ───────────────────────── */
+  const SHOWN = /stateofcharge|odometer|isonline$|isasleep$|(^|-)vin$|permissions|-role$/i
+  function renderMore() {
+    const wrap = document.getElementById('moreWrap')
+    const list = sigs().filter(s => hasValue(s) && !SHOWN.test(s.code))
+    if (!state.latest) { wrap.style.display = 'none'; return }
+    wrap.style.display = ''
+    document.getElementById('signals').innerHTML = list.length
+      ? list.map(s => `<div class="sig"><span>${esc(s.name)}</span><span>${esc(fmtValue(s))}</span></div>`).join('')
+      : '<p class="status-line">Er komen op dit moment geen andere gegevens binnen.</p>'
+  }
+
+  async function copyRaw() {
+    const btn = document.getElementById('btnCopy')
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(state.latest, null, 2))
+      btn.textContent = 'Gekopieerd'
+    } catch { btn.textContent = 'Kopiëren lukt niet in deze browser' }
+    setTimeout(() => { btn.textContent = 'Kopieer alle ruwe data' }, 2500)
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  }
+</script>
+</body>
+</html>
