@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>@media (pointer:coarse){input,select,textarea{font-size:16px!important}}</style>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="48x48" href="/icons/favicon-48.png">
@@ -23,7 +24,7 @@
       min-height: 100vh;
     }
 
-    /* ── Auth screen ───────────────────────────────────────────── */
+    /* ── Auth screen ───────────────────────────────────────────────────── */
     #authScreen {
       position: fixed;
       inset: 0;
@@ -47,7 +48,7 @@
     .auth-box h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 4px; }
     .auth-box > p { font-size: 0.875rem; color: #777; margin-bottom: 28px; }
 
-    /* ── App (hidden until logged in) ───────────────── */
+    /* ── App (hidden until logged in) ─────────────────────────── */
     #app { display: none; padding: 48px 24px; }
 
     header {
@@ -86,7 +87,7 @@
 
     .hdr-btn:hover { background: #f0ede8; }
 
-    /* ── Secties ─────────────────────────────────────────────── */
+    /* ── Secties ─────────────────────────────────────────────────────── */
     .tool-section { margin-bottom: 32px; }
     .section-title {
       max-width: 760px;
@@ -99,7 +100,7 @@
     }
     .tool-section.empty { display: none; }
 
-    /* ── Grid ───────────────────────────────────────────────── */
+    /* ── Grid ─────────────────────────────────────────────────────────── */
     .grid {
       max-width: 760px;
       margin: 0 auto;
@@ -146,7 +147,7 @@
 
     .card-btn:hover { background: #333; }
 
-    /* ── Task tile ───────────────────────────────────────── */
+    /* ── Task tile ──────────────────────────────────────────────────── */
     .task-card { cursor: pointer; }
 
     .task-card-top {
@@ -271,7 +272,7 @@
 
     .add-icon-btn:hover { background: #333; }
 
-    /* ── Active task items ───────────────────────────────── */
+    /* ── Active task items ─────────────────────────────────────────── */
     .task-item {
       display: flex;
       align-items: center;
@@ -318,7 +319,7 @@
 
     .task-done-btn:hover { border-color: #4a7c59; background: #edf4ef; color: #4a7c59; }
 
-    /* ── Completed tasks ─────────────────────────────────── */
+    /* ── Completed tasks ──────────────────────────────────────────── */
     .section-label {
       font-size: 0.72rem;
       font-weight: 600;
@@ -347,7 +348,7 @@
       flex-shrink: 0;
     }
 
-    /* ── Admin user rows ─────────────────────────────────── */
+    /* ── Admin user rows ───────────────────────────────────────────── */
     .user-row {
       background: #fafaf8;
       border: 1px solid #e8e6e1;
@@ -393,7 +394,7 @@
 
     .del-btn:hover { color: #c0392b; }
 
-    /* ── Form elements ───────────────────────────────────── */
+    /* ── Form elements ───────────────────────────────────────────────── */
     .fg { margin-bottom: 14px; }
 
     .fg label {
@@ -464,7 +465,7 @@
     .msg.ok  { color: #4a7c59; }
     .msg.err { color: #c0392b; }
 
-    /* ── Mic input ───────────────────────────────────────── */
+    /* ── Mic input ─────────────────────────────────────────────────── */
     .input-mic-row {
       display: flex;
       gap: 8px;
@@ -503,7 +504,7 @@
 </head>
 <body>
 
-  <!-- ── Auth screen ──────────────────────────────────────────────── -->
+  <!-- ── Auth screen ──────────────────────────────────────────────────────────── -->
   <div id="authScreen">
     <div class="auth-box">
       <h1>Tools</h1>
@@ -523,7 +524,7 @@
     </div>
   </div>
 
-  <!-- ── Main app ─────────────────────────────────────────────── -->
+  <!-- ── Main app ───────────────────────────────────────────────────── -->
   <div id="app">
     <header>
       <div>
@@ -547,7 +548,7 @@
     </div>
   </div>
 
-  <!-- ── Quick-add backdrop ─────────────────────────────────── -->
+  <!-- ── Quick-add backdrop ───────────────────────────────────────────────── -->
   <div class="backdrop" id="quickAddBackdrop"
     onclick="if(event.target===this)closeQuickAdd()">
     <div class="modal" style="max-width:380px">
@@ -565,7 +566,7 @@
     </div>
   </div>
 
-  <!-- ── Task modal ────────────────────────────────────────────── -->
+  <!-- ── Task modal ──────────────────────────────────────────────────────── -->
   <div class="backdrop" id="taskBackdrop"
     onclick="if(event.target===this)closeTaskModal()">
     <div class="modal" style="max-width:480px">
@@ -582,7 +583,7 @@
     </div>
   </div>
 
-  <!-- ── Uren modal ─────────────────────────────────────────────── -->
+  <!-- ── Uren modal ───────────────────────────────────────────────────────── -->
   <div class="backdrop" id="urenBackdrop"
     onclick="if(event.target===this)closeUrenModal()">
     <div class="modal">
@@ -648,7 +649,7 @@
     </div>
   </div>
 
-  <!-- ── Admin modal ────────────────────────────────────────────── -->
+  <!-- ── Admin modal ──────────────────────────────────────────────────────── -->
   <div class="backdrop" id="adminBackdrop"
     onclick="if(event.target===this)closeAdminModal()">
     <div class="modal" style="max-width:520px">
@@ -689,7 +690,7 @@
 
     const ADMIN_EMAIL = 'robert@circe-advies.nl'
 
-    // ── App definitions ────────────────────────────────────────
+    // ── App definitions ─────────────────────────────────────────────────────
     const APPS = [
       { key: 'daglicht', category: 'prive', icon: '☀️',  title: 'Daglicht',           desc: 'Bekijk hoeveel daglicht er vandaag en de komende dagen is.', href: '/daglicht/' },
       { key: 'claude',   category: 'prive', icon: '🤖',  title: 'Claude gebruik',     desc: 'Bekijk je sessiegebruik, wekelijks limiet en plan.',          href: 'https://claude.ai/settings/usage', external: true },
@@ -703,7 +704,7 @@
       { key: 'respyre',  category: 'zakelijk', icon: '🌿', title: 'Respyre antwoorden', desc: 'Plak een binnengekomen aanvraag en genereer een concept-antwoord in jouw stijl.', href: '/respyre/' },
     ]
 
-    // ── State ──────────────────────────────────────────────────
+    // ── State ──────────────────────────────────────────────────────────────
     let me           = null
     let isAdmin      = false
     let allowedApps  = []
@@ -711,7 +712,7 @@
     let doneTasks    = []
     let dragSrcId    = null
 
-    // ── Boot ───────────────────────────────────────────────────
+    // ── Boot ───────────────────────────────────────────────────────────────
     ;(async () => {
       const { data: { session } } = await sb.auth.getSession()
       if (session) await onAuth(session.user)
@@ -737,7 +738,7 @@
       if (allowedApps.includes('taken')) await loadTasks()
     }
 
-    // ── Auth ─────────────────────────────────────────────────────
+    // ── Auth ──────────────────────────────────────────────────────────────────
     async function doHubLogin() {
       const email = document.getElementById('authEmail').value.trim()
       const pw    = document.getElementById('authPw').value
@@ -756,7 +757,7 @@
       location.reload()
     }
 
-    // ── Tiles ───────────────────────────────────────────────────
+    // ── Tiles ──────────────────────────────────────────────────────────────────
     function renderTiles() {
       const categorieen = ['prive', 'zakelijk']
       categorieen.forEach(cat => {
@@ -813,7 +814,7 @@
       return div
     }
 
-    // ── Tasks: load & render preview ───────────────────────────────
+    // ── Tasks: load & render preview ─────────────────────────────────────────────
     async function loadTasks() {
       const [aRes, dRes] = await Promise.all([
         sb.from('tasks').select('*')
@@ -850,7 +851,7 @@
       }
     }
 
-    // ── Tasks: modal ───────────────────────────────────────────────
+    // ── Tasks: modal ────────────────────────────────────────────────────────────
     function openTaskModal() {
       renderTaskModal()
       document.getElementById('taskBackdrop').classList.add('open')
@@ -924,7 +925,7 @@
       return div
     }
 
-    // ── Tasks: quick-add ──────────────────────────────────────────
+    // ── Tasks: quick-add ──────────────────────────────────────────────────────
     function openQuickAdd() {
       document.getElementById('quickAddInput').value = ''
       document.getElementById('quickAddMsg').textContent = ''
@@ -941,7 +942,7 @@
       document.getElementById('quickAddBackdrop').classList.remove('open')
     }
 
-    // ── Voice input ──────────────────────────────────────────────
+    // ── Voice input ────────────────────────────────────────────────────────
     let recognition  = null
     let isRecording  = false
 
@@ -1018,7 +1019,7 @@
       closeQuickAdd()
     }
 
-    // ── Tasks: complete & reorder ──────────────────────────────────
+    // ── Tasks: complete & reorder ──────────────────────────────────────────────
     async function completeTask(id) {
       const now = new Date().toISOString()
       const { error } = await sb.from('tasks').update({ completed_at: now }).eq('id', id)
@@ -1051,7 +1052,7 @@
       )
     }
 
-    // ── Uren modal ────────────────────────────────────────────────
+    // ── Uren modal ──────────────────────────────────────────────────────────
     document.getElementById('eDate').value = new Date().toISOString().slice(0, 10)
 
     async function openUrenModal() {
@@ -1157,7 +1158,7 @@
       document.getElementById('eDate').value  = new Date().toISOString().slice(0, 10)
     }
 
-    // ── Admin modal ───────────────────────────────────────────────
+    // ── Admin modal ───────────────────────────────────────────────────────────
     async function openAdminModal() {
       document.getElementById('adminBackdrop').classList.add('open')
       await renderAdminUserList()
@@ -1287,7 +1288,7 @@
       await renderAdminUserList()
     }
 
-    // ── Helpers ───────────────────────────────────────────────────
+    // ── Helpers ──────────────────────────────────────────────────────────────────
     function setMsg(el, text, ok) {
       el.textContent = text
       el.className   = 'msg ' + (ok ? 'ok' : 'err')
