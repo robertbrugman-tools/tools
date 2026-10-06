@@ -134,14 +134,14 @@ async function fetchAllFiles(dealId, personId) {
   return out
 }
 
-// Notities met datum (HTML verwijderd)
+// Notities met datum (HTML verwijderd, regeleinden behouden)
 async function fetchNotesFull(dealId) {
   try {
     const data = await pd('/v1/notes', { deal_id: dealId, limit: 30, sort: 'add_time DESC' })
     return (data.data || []).map(n => ({
       id: n.id,
       addTime: n.add_time,
-      text: String(n.content || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n').replace(/<[^>]+>/g, ' ').replace(/[ \t]+/g, ' ').replace(/\n\s*\n+/g, '\n').trim(),
+      text: String(n.content || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|h[1-6]|tr)>/gi, '\n').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/[ \t]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{2,}/g, '\n').trim(),
     })).filter(n => n.text)
   } catch (_) {
     return []
