@@ -7,6 +7,7 @@
 const { checkAccess } = require('../lib/hub-auth')
 const { classify, BUCKETS } = require('../lib/aanvragen-classify')
 const { F, SINCE_ISO, fetchNewDeals, fetchByIds } = require('../lib/pipedrive')
+const { rawFields, priveMail } = require('../lib/aanvragen-raw')
 
 const APP_KEY = 'aanvragen'
 
@@ -44,6 +45,8 @@ exports.handler = async (event) => {
         person: { name: person ? person.name : null, email },
         org: org ? org.name : null,
         labels: c.labels,
+        raw: rawFields(d, F),
+        priveMail: priveMail(email),
         ...c,
       }
     })

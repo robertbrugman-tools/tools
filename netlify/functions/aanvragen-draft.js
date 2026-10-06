@@ -7,6 +7,7 @@ const { checkAccess } = require('../lib/hub-auth')
 const { classify, BUCKETS } = require('../lib/aanvragen-classify')
 const { KENNIS, STIJL, REGELS, BUCKET_REGELS, regioRegels } = require('../lib/aanvragen-kennis')
 const { F, fetchDeal, fetchByIds, fetchNotes } = require('../lib/pipedrive')
+const { rawFields } = require('../lib/aanvragen-raw')
 
 const APP_KEY = 'aanvragen'
 const MODEL = process.env.RESPYRE_MODEL || 'claude-sonnet-5-5'
@@ -52,13 +53,17 @@ exports.handler = async (event) => {
     const taalNaam = { nl: 'Nederlands', en: 'Engels (English)', de: 'Duits (Deutsch)' }[lang]
     const extra = String(payload.extra || '').trim().slice(0, 600)
 
+    const raw = rawFields(deal, F)
+    const rv = l => (raw.find(r => r.label === l) || {}).value
     const aanvraagTekst = [
       ['Titel van de deal', deal.title],
-      ['Projectnaam', c.fields.projectnaam],
-      ['Type bouwwerk', c.fields.bouwtype],
-      ['Grootte (zoals ingevuld)', c.fields.grootte],
-      ['Specifics (vrije tekst van de aanvrager)', c.fields.specifics],
-      ['Opmerkingen', c.fields.opmerkingen],
+      ['Locatie', rv('Locatie')],
+      ['Projectnaam', rv('Project name')],
+      ['Bouw type (zoals ingevuld)', rv('Bouw type')],
+      ['Grootte (zoals ingevuld)', rv('Grootte')],
+      ['Specifics (vrije tekst van de aanvrager)', rv('Specifics')],
+      ['Specific requirements (voorkeuren van de aanvrager)', rv('Specific requirements')],
+      ['Opmerkingen', rv('Opmerkingen')],
       ['Notities bij de deal', notes.join('\n')],
     ].filter(([, v]) => v && String(v).trim()).map(([k, v]) => `${k}: ${v}`).join('\n')
 

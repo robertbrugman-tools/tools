@@ -32,6 +32,7 @@ const F = {
   bouwtype: 'dd0d766d5a5ade8f3457a38c00fc375b6a0a9973',
   projectnaam: '9b81d52136c7c4110e18a2d7cf84c25aa9104751',
   specifics: '0d00acc16bf246a9d2dd550da487fddef269a1f0',
+  requirements: '6d805135da62de308c026ee64bd0b3011e038eb5',
   opmerkingen: '31260dd066fa2b55e902d5481c7557cec3be7d0e',
   marktsegment: '36c03c0fddbde11ce0f3de00bef424a7f32d5c5d',
 }
