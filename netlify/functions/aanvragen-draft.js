@@ -1,5 +1,5 @@
 // Netlify function: conceptantwoord op een aanvraag, op basis van het bakje.
-//   POST { dealId, bucket?, extra? } -> { onderwerp, tekst, kopjes, lang, bucket }
+//   POST { dealId, bucket?, extra? } -> { onderwerp, tekst, lang, bucket }
 // De deal wordt server-side opnieuw uit Pipedrive gehaald; de browser levert geen aanvraagtekst aan.
 // Sleutel: RESPYRE_ANTHROPIC_KEY (of ANTHROPIC_API_KEY) in Netlify. Model: RESPYRE_MODEL, anders claude-sonnet-5-5.
 
@@ -9,7 +9,7 @@ const { KENNIS, STIJL, REGELS, BUCKET_REGELS, regioRegels } = require('../lib/aa
 const { F, fetchDeal, fetchByIds, fetchNotesFull, fetchAllFiles } = require('../lib/pipedrive')
 const { rawFields } = require('../lib/aanvragen-raw')
 const { filterNotes, notesVoorPrompt } = require('../lib/aanvragen-notes')
-const { OPMAAK, schoon, kopjesUitTekst } = require('../lib/aanvragen-opmaak')
+const { OPMAAK, schoon, kopjesUitTekst, zonderIrrigatiekosten } = require('../lib/aanvragen-opmaak')
 
 const APP_KEY = 'aanvragen'
 const MODEL = process.env.RESPYRE_MODEL || 'claude-sonnet-5-5'
@@ -90,12 +90,14 @@ exports.handler = async (event) => {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: MODEL, max_tokens: 1800, system: systeem, messages: [{ role: 'user', content: gebruiker }] }),
+      body: JSON.stringify({ model: MODEL, max_tokens: 4000, system: systeem, messages: [{ role: 'user', content: gebruiker }] }),
     })
     const data = await res.json()
     if (!res.ok) return json(res.status, { error: (data.error && data.error.message) || 'Fout ' + res.status })
 
-    let tekst = schoon(((data.content || []).find(b => b.type === 'text') || {}).text || '').trim()
+    if (data.stop_reason === 'max_tokens') return json(502, { error: 'Het concept werd afgekapt omdat het te lang werd. Klik opnieuw op Genereer, eventueel met de extra instructie "houd het korter".' })
+
+    let tekst = zonderIrrigatiekosten(schoon(((data.content || []).find(b => b.type === 'text') || {}).text || '')).trim()
     let onderwerp = ''
     const m = tekst.match(/^ONDERWERP:\s*(.+)\n+/i)
     if (m) { onderwerp = m[1].trim(); tekst = tekst.slice(m[0].length).trim() }
