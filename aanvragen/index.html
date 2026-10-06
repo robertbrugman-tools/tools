@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>@media (pointer:coarse){input,select,textarea{font-size:16px!important}}</style>
+<title>Aanvragen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --paper: #eef1ee; --surface: #fafbfa; --ink: #16231f; --ink-2: #42524c; --ink-3: #63726c;
+    --rule: #d3dcd6; --accent: #2f6b57; --accent-2: #245544; --warn: #9a5b00; --warn-bg: #fff4de; --alert: #b3261e;
+    --font: 'Bricolage Grotesque', ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--paper); color: var(--ink); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+  #authScreen { position: fixed; inset: 0; background: var(--paper); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 300; }
+  .auth-box { background: var(--surface); border: 1px solid var(--rule); border-radius: 18px; padding: 40px 36px; width: 100%; max-width: 360px; }
+  .auth-box h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 4px; }
+  .auth-box > p { font-size: 0.9rem; color: var(--ink-3); margin-bottom: 26px; }
+  .fg { margin-bottom: 14px; }
+  .fg label, .lbl { display: block; font-size: 0.8rem; font-weight: 500; color: var(--ink-2); margin-bottom: 5px; }
+  input, select, textarea { width: 100%; padding: 9px 11px; border: 1px solid var(--rule); border-radius: 9px; font: inherit; font-size: 0.9rem; background: #fff; color: var(--ink); }
+  textarea { resize: vertical; line-height: 1.5; }
+  .submit-btn { width: 100%; padding: 12px; background: var(--ink); color: #fff; border: none; border-radius: 10px; font-weight: 600; margin-top: 6px; }
+  .submit-btn:disabled { opacity: .5; cursor: not-allowed; }
+  .msg { font-size: .84rem; text-align: center; margin-top: 10px; min-height: 1.2em; color: var(--alert); }
+
+  #app { display: none; padding: 22px 20px 60px; }
+  .wrap { max-width: 1280px; margin: 0 auto; }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+  .top h1 { font-size: 1.2rem; font-weight: 700; letter-spacing: -0.01em; }
+  .top .sub { font-size: .85rem; color: var(--ink-3); margin-left: 10px; font-weight: 400; }
+  .top-right { display: flex; align-items: center; gap: 14px; }
+  .back-link { font-size: .85rem; color: var(--ink-3); text-decoration: none; }
+  .back-link:hover { color: var(--ink); }
+  .btn { background: var(--ink); color: #fff; border: none; border-radius: 10px; padding: 9px 16px; font-weight: 600; font-size: .88rem; display: inline-flex; align-items: center; gap: 8px; }
+  .btn:hover { background: #26382f; }
+  .btn:disabled { opacity: .55; cursor: progress; }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--rule); }
+  .btn.ghost:hover { background: #e7ece8; }
+  .btn svg { width: 15px; height: 15px; }
+  .btn.spin svg { animation: spin .9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .status-line { font-size: .84rem; color: var(--ink-3); }
+  .status-line.err { color: var(--alert); font-weight: 500; }
+
+  .layout { display: grid; grid-template-columns: 250px minmax(280px, 1fr) minmax(360px, 1.2fr); gap: 16px; align-items: start; }
+  .panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 16px; }
+
+  .buckets { padding: 8px; position: sticky; top: 14px; }
+  .bk { width: 100%; text-align: left; background: none; border: none; border-radius: 10px; padding: 9px 10px; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .bk:hover { background: #e9eeea; }
+  .bk[aria-pressed="true"] { background: var(--ink); color: #fff; }
+  .bk .n { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .bk .nm { font-size: .88rem; line-height: 1.3; }
+  .bk small { display: block; font-size: .72rem; color: var(--ink-3); margin-top: 2px; }
+  .bk[aria-pressed="true"] small { color: #c9d5cf; }
+  .bk.zero .n { color: var(--ink-3); font-weight: 400; }
+  .bk[aria-pressed="true"].zero .n { color: #c9d5cf; }
+
+  .list { padding: 6px; min-height: 120px; }
+  .list h2 { font-size: .95rem; font-weight: 600; padding: 10px 10px 4px; }
+  .list .hint { font-size: .8rem; color: var(--ink-3); padding: 0 10px 8px; }
+  .row { width: 100%; text-align: left; background: none; border: none; border-radius: 10px; padding: 10px; display: block; border-top: 1px solid var(--rule); }
+  .row:first-of-type { border-top: none; }
+  .row:hover { background: #e9eeea; }
+  .row[aria-current="true"] { background: #dde8e1; }
+  .row .l1 { display: flex; justify-content: space-between; gap: 10px; font-size: .92rem; font-weight: 600; }
+  .row .l1 span:last-child { font-weight: 400; color: var(--ink-3); font-size: .78rem; white-space: nowrap; }
+  .row .l2 { font-size: .82rem; color: var(--ink-2); margin-top: 2px; }
+  .tag { display: inline-block; font-size: .72rem; border-radius: 6px; padding: 1px 6px; background: var(--warn-bg); color: var(--warn); margin-left: 6px; font-weight: 500; }
+  .tag.red { background: #fde7e5; color: var(--alert); }
+  .empty { padding: 18px 10px; color: var(--ink-3); font-size: .9rem; line-height: 1.6; }
+
+  .detail { padding: 22px; position: sticky; top: 14px; max-height: calc(100vh - 28px); overflow: auto; }
+  .detail h2 { font-size: 1.1rem; letter-spacing: -.01em; }
+  .detail .org { color: var(--ink-3); font-size: .9rem; margin-top: 2px; }
+  dl.facts { display: grid; grid-template-columns: 110px 1fr; gap: 6px 12px; margin: 16px 0; font-size: .88rem; }
+  dl.facts dt { color: var(--ink-3); }
+  dl.facts dd { word-break: break-word; }
+  .why { background: #eef3ef; border-radius: 10px; padding: 10px 12px; font-size: .84rem; color: var(--ink-2); line-height: 1.5; margin-bottom: 10px; }
+  .flag { background: var(--warn-bg); color: var(--warn); border-radius: 10px; padding: 9px 12px; font-size: .86rem; margin-bottom: 8px; font-weight: 500; }
+  .flag.red { background: #fde7e5; color: var(--alert); }
+  .txt { border: 1px solid var(--rule); border-radius: 10px; padding: 10px 12px; font-size: .86rem; line-height: 1.55; white-space: pre-wrap; background: #fff; margin: 6px 0 14px; max-height: 190px; overflow: auto; }
+  .ctrl { display: grid; grid-template-columns: 1fr 120px; gap: 10px; margin-bottom: 10px; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0; align-items: center; }
+  .draft { margin-top: 18px; border-top: 1px solid var(--rule); padding-top: 16px; }
+  #dBody { min-height: 280px; }
+  .note { font-size: .78rem; color: var(--ink-3); margin-top: 6px; line-height: 1.5; }
+
+  @media (max-width: 1100px) { .layout { grid-template-columns: 220px 1fr; } .detail { grid-column: 1 / -1; position: static; max-height: none; } }
+  @media (max-width: 720px) { .layout { grid-template-columns: 1fr; } .buckets { position: static; } #app { padding: 16px 12px 48px; } }
+</style>
+</head>
+<body>
+
+<div id="authScreen">
+  <div class="auth-box">
+    <h1>Aanvragen</h1>
+    <p>Log in met je Hub-account</p>
+    <div class="fg"><label for="authEmail">E-mailadres</label><input type="email" id="authEmail" placeholder="jouw@email.nl" onkeydown="if(event.key==='Enter')login()"></div>
+    <div class="fg"><label for="authPw">Wachtwoord</label><input type="password" id="authPw" placeholder="••••••••" onkeydown="if(event.key==='Enter')login()"></div>
+    <button class="submit-btn" id="btnLogin" onclick="login()">Inloggen</button>
+    <p class="msg" id="authMsg"></p>
+  </div>
+</div>
+
+<div id="app">
+  <div class="wrap">
+    <div class="top">
+      <h1>Aanvragen<span class="sub" id="sub"></span></h1>
+      <div class="top-right">
+        <span class="status-line" id="status" role="status"></span>
+        <button class="btn" id="btnRefresh" onclick="load(true)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
+          Ververs
+        </button>
+        <a class="back-link" href="/">← Tools</a>
+      </div>
+    </div>
+
+    <div class="layout">
+      <nav class="panel buckets" id="buckets" aria-label="Bakjes"></nav>
+      <section class="panel list" id="list" aria-live="polite"></section>
+      <section class="panel detail" id="detail"><p class="empty">Kies een aanvraag.</p></section>
+    </div>
+  </div>
+</div>
+
+<script>
+  const HUB_URL = 'https://swrunlzeydmcskceqdju.supabase.co'
+  const HUB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3cnVubHpleWRtY3NrY2VxZGp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNjE2MDgsImV4cCI6MjA5MjkzNzYwOH0.V7haNdFPFJuvJJTbjhiUzKrWG8trW4UeRIJveAhFOgs'
+  const sb = supabase.createClient(HUB_URL, HUB_KEY)
+  const FN_LIST = '/.netlify/functions/aanvragen-list'
+  const FN_DRAFT = '/.netlify/functions/aanvragen-draft'
+  const ORDER = ['p_klein','p_nl','p_buiten','b_benelux_de','b_europa','b_wereld','grens','betonproducent','samenwerking','handmatig']
+
+  let data = null
+  let current = localStorage.getItem('aanvragen_bucket') || 'b_benelux_de'
+  let selectedId = null
+  const drafts = {}
+  let overrides = {}
+  try { overrides = JSON.parse(localStorage.getItem('aanvragen_override') || '{}') } catch (_) { overrides = {} }
+
+  ;(async () => {
+    const { data: { session } } = await sb.auth.getSession()
+    if (session) enter()
+  })()
+
+  async function login() {
+    const email = document.getElementById('authEmail').value.trim()
+    const pw = document.getElementById('authPw').value
+    const btn = document.getElementById('btnLogin'), msg = document.getElementById('authMsg')
+    if (!email || !pw) { msg.textContent = 'Vul e-mail en wachtwoord in.'; return }
+    btn.disabled = true; btn.textContent = 'Bezig...'
+    const { error } = await sb.auth.signInWithPassword({ email, password: pw })
+    btn.disabled = false; btn.textContent = 'Inloggen'
+    if (error) msg.textContent = 'Inloggen mislukt. Controleer je gegevens.'
+    else enter()
+  }
+  function enter() {
+    document.getElementById('authScreen').style.display = 'none'
+    document.getElementById('app').style.display = 'block'
+    load(false)
+  }
+  async function authHeader() {
+    const { data: { session } } = await sb.auth.getSession()
+    if (!session) {
+      document.getElementById('authScreen').style.display = 'flex'
+      document.getElementById('app').style.display = 'none'
+      return null
+    }
+    return { Authorization: 'Bearer ' + session.access_token }
+  }
+
+  const esc = s => String(s === null || s === undefined ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+  const dt = iso => {
+    const d = new Date(iso), now = new Date()
+    const days = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5)
+    const t = d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })
+    if (days === 0) return 'vandaag ' + t
+    if (days === 1) return 'gisteren ' + t
+    return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
+  }
+  function setStatus(t, err) { const el = document.getElementById('status'); el.textContent = t; el.className = 'status-line' + (err ? ' err' : '') }
+
+  async function load(isRefresh) {
+    const headers = await authHeader(); if (!headers) return
+    const btn = document.getElementById('btnRefresh')
+    btn.disabled = true; btn.classList.add('spin')
+    setStatus('Ophalen uit Pipedrive...')
+    try {
+      const res = await fetch(FN_LIST, { headers })
+      const body = await res.json().catch(() => ({}))
+      if (res.status === 403) throw new Error('Dit account heeft geen toegang tot deze tool.')
+      if (!res.ok) throw new Error(body.error || ('De server antwoordde met status ' + res.status + '.'))
+      data = body
+      setStatus('Ververst om ' + new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }) + '.')
+      render()
+    } catch (err) {
+      setStatus(err.message, true)
+    }
+    btn.disabled = false; btn.classList.remove('spin')
+  }
+
+  const bucketOf = i => overrides[i.id] && data.buckets[overrides[i.id]] ? overrides[i.id] : i.bucket
+  function counts() {
+    const c = {}; ORDER.forEach(k => c[k] = 0)
+    data.items.forEach(i => { c[bucketOf(i)]++ })
+    return c
+  }
+
+  function render() {
+    document.getElementById('sub').textContent = data.total + ' aanvragen sinds 1 oktober 2026'
+    renderBuckets(); renderList(); renderDetail()
+  }
+
+  function renderBuckets() {
+    const c = counts()
+    document.getElementById('buckets').innerHTML = ORDER.map(k => {
+      const b = data.buckets[k]
+      return `<button class="bk ${c[k] ? '' : 'zero'}" data-k="${k}" aria-pressed="${k === current}"><span class="nm">${esc(b.nr)}. ${esc(b.naam)}<small>${esc(b.uitleg)}</small></span><span class="n">${c[k]}</span></button>`
+    }).join('')
+    document.querySelectorAll('.bk').forEach(el => el.addEventListener('click', () => {
+      current = el.dataset.k; localStorage.setItem('aanvragen_bucket', current); selectedId = null; render()
+    }))
+  }
+
+  function renderList() {
+    const b = data.buckets[current]
+    const items = data.items.filter(i => bucketOf(i) === current).sort((a, z) => new Date(z.addTime) - new Date(a.addTime))
+    let h = `<h2>${esc(b.naam)}</h2><p class="hint">${esc(b.uitleg)}</p>`
+    if (!items.length) h += '<p class="empty">Geen aanvragen in dit bakje.</p>'
+    h += items.map(i => {
+      const tags = (i.noGo ? '<span class="tag red">no-go</span>' : '') + (i.flags.length && !i.noGo ? '<span class="tag">let op</span>' : '') + (drafts[i.id] ? '<span class="tag" style="background:#dde8e1;color:#24554a">concept</span>' : '')
+      const l2 = [i.org, i.land.naam, i.m2 !== null ? i.m2 + ' m²' : 'm² onbekend'].filter(Boolean).join(' · ')
+      return `<button class="row" data-id="${i.id}" aria-current="${i.id === selectedId}"><div class="l1"><span>${esc(i.person.name || i.title)}${tags}</span><span>${esc(dt(i.addTime))}</span></div><div class="l2">${esc(l2)}</div></button>`
+    }).join('')
+    document.getElementById('list').innerHTML = h
+    document.querySelectorAll('.row').forEach(el => el.addEventListener('click', () => { selectedId = Number(el.dataset.id); renderList(); renderDetail() }))
+  }
+
+  function renderDetail() {
+    const el = document.getElementById('detail')
+    const i = data.items.find(x => x.id === selectedId)
+    if (!i) { el.innerHTML = '<p class="empty">Kies een aanvraag.</p>'; return }
+    const bk = bucketOf(i)
+    const f = i.fields || {}
+    const tekst = [['Project', f.projectnaam], ['Type bouwwerk', f.bouwtype], ['Specifics', f.specifics], ['Opmerkingen', f.opmerkingen]].filter(([, v]) => v)
+    const d = drafts[i.id]
+    el.innerHTML = `
+      <h2>${esc(i.person.name || i.title)}</h2>
+      <div class="org">${esc(i.org || 'Geen organisatie')}</div>
+      <dl class="facts">
+        <dt>E-mail</dt><dd>${esc(i.person.email || 'onbekend')}</dd>
+        <dt>Land</dt><dd>${esc(i.land.naam || i.land.raw || 'onbekend')}</dd>
+        <dt>Oppervlak</dt><dd>${i.m2 !== null ? esc(i.m2) + ' m²' : 'onbekend'}${i.grootteTekst ? ' (ingevuld: "' + esc(i.grootteTekst) + '")' : ''}</dd>
+        <dt>Soort</dt><dd>${esc(i.soort)}</dd>
+        <dt>Taal</dt><dd>${esc({ nl: 'Nederlands', en: 'Engels', de: 'Duits' }[i.lang])}</dd>
+        <dt>Binnen</dt><dd>${esc(new Date(i.addTime).toLocaleString('nl-NL', { dateStyle: 'medium', timeStyle: 'short' }))} · <a href="https://app.pipedrive.com/deal/${i.id}" target="_blank" rel="noopener">Pipedrive</a></dd>
+      </dl>
+      ${i.noGo ? '<div class="flag red">No-go: ' + esc(i.flags[0]) + '</div>' : ''}
+      ${i.flags.filter(x => !i.noGo || x !== i.flags[0]).map(x => '<div class="flag">' + esc(x) + '</div>').join('')}
+      <div class="why"><b>Waarom dit bakje:</b> ${esc(i.reasons.join('. '))}.</div>
+      ${tekst.length ? '<div class="lbl">Aanvraag</div><div class="txt">' + esc(tekst.map(([k, v]) => k + ': ' + v).join('\n')) + '</div>' : '<p class="note" style="margin-bottom:12px">Geen vrije tekst in de velden van de deal. Notities bij de deal worden pas bij het genereren meegelezen.</p>'}
+      <div class="ctrl">
+        <div><label class="lbl" for="selBucket">Bakje voor het antwoord</label><select id="selBucket">${ORDER.map(k => `<option value="${k}" ${k === bk ? 'selected' : ''}>${esc(data.buckets[k].nr)}. ${esc(data.buckets[k].naam)}</option>`).join('')}</select></div>
+        <div><label class="lbl" for="selLang">Taal</label><select id="selLang"><option value="">Auto</option><option value="nl">NL</option><option value="en">EN</option><option value="de">DE</option></select></div>
+      </div>
+      <label class="lbl" for="extra">Extra instructie (optioneel)</label>
+      <input id="extra" type="text" placeholder="Bijvoorbeeld: noem ook de foto's van Utrecht" value="${esc(d ? d.extra : '')}">
+      <div class="actions"><button class="btn" id="btnGen">${d ? 'Genereer opnieuw' : 'Genereer antwoord'}</button><span class="status-line" id="genStatus"></span></div>
+      <div id="draftBox">${d ? draftHtml(i, d) : ''}</div>`
+    document.getElementById('selBucket').addEventListener('change', e => {
+      const v = e.target.value
+      if (v === i.bucket) delete overrides[i.id]; else overrides[i.id] = v
+      localStorage.setItem('aanvragen_override', JSON.stringify(overrides))
+      renderBuckets(); renderList()
+      if (current !== v) { /* de aanvraag blijft hier geselecteerd */ }
+    })
+    document.getElementById('btnGen').addEventListener('click', () => generate(i))
+    bindDraft(i)
+  }
+
+  function draftHtml(i, d) {
+    return `<div class="draft">
+      <label class="lbl" for="dSubj">Onderwerp</label><input id="dSubj" type="text" value="${esc(d.onderwerp)}">
+      <label class="lbl" for="dBody" style="margin-top:10px">Tekst (aan te passen)</label><textarea id="dBody">${esc(d.tekst)}</textarea>
+      <div class="actions">
+        <button class="btn" id="btnMail" ${i.person.email ? '' : 'disabled'}>Open in e-mail</button>
+        <button class="btn ghost" id="btnCopy">Kopieer tekst</button>
+        <span class="status-line" id="copyStatus"></span>
+      </div>
+      <p class="note">Geen handtekening en geen afsluitgroet, die voeg je zelf toe. Controleer prijzen en details voor je verstuurt. Bakje: ${esc(data.buckets[d.bucket].naam)}, model: ${esc(d.model)}.${i.person.email ? '' : ' Er is geen e-mailadres bij deze aanvraag, dus alleen kopiëren kan.'}</p>
+    </div>`
+  }
+  function bindDraft(i) {
+    const btnMail = document.getElementById('btnMail'), btnCopy = document.getElementById('btnCopy')
+    if (!btnCopy) return
+    const body = () => document.getElementById('dBody').value
+    const subj = () => document.getElementById('dSubj').value
+    const keep = () => { drafts[i.id].tekst = body(); drafts[i.id].onderwerp = subj() }
+    document.getElementById('dBody').addEventListener('input', keep)
+    document.getElementById('dSubj').addEventListener('input', keep)
+    btnCopy.addEventListener('click', async () => {
+      const el = document.getElementById('copyStatus')
+      try { await navigator.clipboard.writeText(body()); el.textContent = 'Gekopieerd.' } catch (_) { el.textContent = 'Kopiëren lukt niet in deze browser.' }
+    })
+    if (btnMail) btnMail.addEventListener('click', () => {
+      const text = body().replace(/\r?\n/g, '\r\n')
+      const url = 'mailto:' + encodeURIComponent(i.person.email) + '?subject=' + encodeURIComponent(subj()) + '&body=' + encodeURIComponent(text)
+      if (url.length > 7000) { document.getElementById('copyStatus').textContent = 'De tekst is te lang voor een e-maillink. Gebruik Kopieer tekst.'; return }
+      window.location.href = url
+    })
+  }
+
+  async function generate(i) {
+    const headers = await authHeader(); if (!headers) return
+    const btn = document.getElementById('btnGen'), st = document.getElementById('genStatus')
+    const bucket = document.getElementById('selBucket').value
+    const lang = document.getElementById('selLang').value
+    const extra = document.getElementById('extra').value.trim()
+    if (bucket === 'handmatig') { st.textContent = 'Kies eerst een ander bakje voor het antwoord.'; st.className = 'status-line err'; return }
+    btn.disabled = true; st.className = 'status-line'; st.textContent = 'Concept wordt geschreven, dit duurt ongeveer 10 seconden...'
+    try {
+      const res = await fetch(FN_DRAFT, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ dealId: i.id, bucket, lang: lang || undefined, extra }) })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || ('Fout ' + res.status))
+      drafts[i.id] = { ...body, extra }
+      renderList(); renderDetail()
+    } catch (err) {
+      st.textContent = err.message; st.className = 'status-line err'
+    }
+    const b2 = document.getElementById('btnGen'); if (b2) b2.disabled = false
+  }
+</script>
+</body>
+</html>
