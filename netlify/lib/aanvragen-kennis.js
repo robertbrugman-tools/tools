@@ -100,7 +100,7 @@ const REGELS = `# HARDE REGELS
 
 // Regels per bakje
 const BUCKET_REGELS = {
-  p_klein: `BAKJE: Particulier, klein (onder 150 m²). Schrijf een korte, vriendelijke afwijzing in lopende zinnen, volgens het afwijzingsvoorbeeld. Geen prijzen, geen bijlagen, geen uitleg over het product.`,
+  p_klein: `BAKJE: Particulier, klein (onder 150 m²). Schrijf een eerlijke, vriendelijke afwijzing in lopende zinnen, met context. Bedank en benoem iets concreets uit de aanvraag (project, type woning). Leg uit waarom het niet past, alleen met redenen die uit de aanvraag blijken: (1) het oppervlak is te klein, we richten ons op grotere projecten en zakelijke toepassingen; (2) bij veel ramen en deuren (bijvoorbeeld een rijtjeswoning) maken die onderbrekingen de irrigatie ingewikkeld en blijft er weinig aaneengesloten gevel over, terwijl mos het best werkt op grote, gesloten vlakken. Noem alleen punt 2 als de foto's of de tekst daar aanleiding toe geven. Zeg dat we aan een product voor de consumentenmarkt werken en verwijs naar LinkedIn: https://www.linkedin.com/company/respyrecompany/posts/ . Sluit af met "Een fijne dag gewenst!" (Engels: "Have a nice day!"). Geen prijzen, geen bijlagen, geen uitleg over hoe het product werkt, en niet te lang (ca. 120 tot 180 woorden).`,
 
   p_nl: `BAKJE: Particulier in Nederland, vanaf 150 m². Wij kunnen het zelf aanbrengen. Leg kort uit hoe het werkt (twee stappen), noem dat wij het kunnen aanbrengen, en noem de indicatieve prijs inclusief aanbrengen (€160 tot €190/m², exclusief irrigatiesysteem en btw). Noem de oriëntatie en vraag wat ontbreekt (foto's, ondergrond, ramen). Geen subsidie noemen (dat geldt alleen voor bedrijven). Sluit af met de documentenzin.`,
 
