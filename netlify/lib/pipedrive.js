@@ -99,4 +99,53 @@ async function fetchNotes(dealId) {
   }
 }
 
-module.exports = { pd, F, PIPELINE_ID, STAGE_ID, SINCE_ISO, fetchNewDeals, fetchByIds, fetchDeal, fetchNotes }
+// Binair bestand uit Pipedrive (voor bijlagen)
+async function pdBinary(path) {
+  const token = process.env.PIPEDRIVE_API_TOKEN
+  if (!token) {
+    const e = new Error('PIPEDRIVE_API_TOKEN is niet ingesteld in Netlify.')
+    e.code = 'NO_PIPEDRIVE_TOKEN'
+    throw e
+  }
+  const res = await fetch(BASE + path, { headers: { 'x-api-token': token } })
+  if (!res.ok) {
+    const e = new Error('Pipedrive gaf status ' + res.status + ' bij het ophalen van het bestand.')
+    e.status = res.status
+    throw e
+  }
+  return { buf: Buffer.from(await res.arrayBuffer()), type: res.headers.get('content-type') || 'application/octet-stream' }
+}
+
+async function fetchFilesFor(kind, id) {
+  try {
+    const data = await pd(`/v1/${kind}/${id}/files`, { limit: 100 })
+    return data.data || []
+  } catch (_) {
+    return []
+  }
+}
+
+// Bijlagen bij de deal en bij de contactpersoon, zonder dubbelen
+async function fetchAllFiles(dealId, personId) {
+  const lists = await Promise.all([fetchFilesFor('deals', dealId), personId ? fetchFilesFor('persons', personId) : []])
+  const seen = new Set()
+  const out = []
+  lists.flat().forEach(f => { if (f && !seen.has(f.id)) { seen.add(f.id); out.push(f) } })
+  return out
+}
+
+// Notities met datum (HTML verwijderd)
+async function fetchNotesFull(dealId) {
+  try {
+    const data = await pd('/v1/notes', { deal_id: dealId, limit: 30, sort: 'add_time DESC' })
+    return (data.data || []).map(n => ({
+      id: n.id,
+      addTime: n.add_time,
+      text: String(n.content || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n').replace(/<[^>]+>/g, ' ').replace(/[ \t]+/g, ' ').replace(/\n\s*\n+/g, '\n').trim(),
+    })).filter(n => n.text)
+  } catch (_) {
+    return []
+  }
+}
+
+module.exports = { pdBinary, fetchFilesFor, fetchAllFiles, fetchNotesFull, pd, F, PIPELINE_ID, STAGE_ID, SINCE_ISO, fetchNewDeals, fetchByIds, fetchDeal, fetchNotes }

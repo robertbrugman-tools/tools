@@ -6,7 +6,7 @@
 const { checkAccess } = require('../lib/hub-auth')
 const { classify, BUCKETS } = require('../lib/aanvragen-classify')
 const { KENNIS, STIJL, REGELS, BUCKET_REGELS, regioRegels } = require('../lib/aanvragen-kennis')
-const { F, fetchDeal, fetchByIds, fetchNotes } = require('../lib/pipedrive')
+const { F, fetchDeal, fetchByIds, fetchNotes, fetchAllFiles } = require('../lib/pipedrive')
 const { rawFields } = require('../lib/aanvragen-raw')
 
 const APP_KEY = 'aanvragen'
@@ -43,6 +43,7 @@ exports.handler = async (event) => {
     const person = persons[pid] || null
     const org = orgs[oid] || null
     const notes = await fetchNotes(dealId)
+    const files = await fetchAllFiles(dealId, pid)
 
     const c = classify(deal, person, org, F, notes.join(' '))
     const bucket = BUCKETS[payload.bucket] ? payload.bucket : c.bucket
@@ -65,6 +66,7 @@ exports.handler = async (event) => {
       ['Specific requirements (voorkeuren van de aanvrager)', rv('Specific requirements')],
       ['Opmerkingen', rv('Opmerkingen')],
       ['Notities bij de deal', notes.join('\n')],
+      ['Bijlagen die de aanvrager heeft meegestuurd (alleen de namen, de inhoud heb je niet gezien)', files.map(f => f.name || f.file_name).filter(Boolean).join(', ')],
     ].filter(([, v]) => v && String(v).trim()).map(([k, v]) => `${k}: ${v}`).join('\n')
 
     const systeem = [
