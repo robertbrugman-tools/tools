@@ -1,24 +1,21 @@
 // Netlify function: conceptantwoord op een aanvraag, op basis van het bakje.
-//   POST { dealId, bucket?, extra? } -> { onderwerp, tekst, lang, bucket }
+//   POST { dealId, bucket?, extra? } -> { onderwerp, tekst, kopjes, lang, bucket }
 // De deal wordt server-side opnieuw uit Pipedrive gehaald; de browser levert geen aanvraagtekst aan.
 // Sleutel: RESPYRE_ANTHROPIC_KEY (of ANTHROPIC_API_KEY) in Netlify. Model: RESPYRE_MODEL, anders claude-sonnet-5-5.
 
 const { checkAccess } = require('../lib/hub-auth')
 const { classify, BUCKETS } = require('../lib/aanvragen-classify')
 const { KENNIS, STIJL, REGELS, BUCKET_REGELS, regioRegels } = require('../lib/aanvragen-kennis')
-const { F, fetchDeal, fetchByIds, fetchNotes, fetchAllFiles } = require('../lib/pipedrive')
+const { F, fetchDeal, fetchByIds, fetchNotesFull, fetchAllFiles } = require('../lib/pipedrive')
 const { rawFields } = require('../lib/aanvragen-raw')
+const { filterNotes, notesVoorPrompt } = require('../lib/aanvragen-notes')
+const { OPMAAK, schoon, kopjesUitTekst } = require('../lib/aanvragen-opmaak')
 
 const APP_KEY = 'aanvragen'
 const MODEL = process.env.RESPYRE_MODEL || 'claude-sonnet-5-5'
 
 function json(statusCode, obj) {
   return { statusCode, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify(obj) }
-}
-
-function schoon(tekst) {
-  // Geen gedachtestreepjes, ook niet als het model ze toch gebruikt.
-  return tekst.replace(/\s[—–]\s/g, ', ').replace(/[—–]/g, '-')
 }
 
 exports.handler = async (event) => {
@@ -42,10 +39,10 @@ exports.handler = async (event) => {
     const orgs = oid ? await fetchByIds('organizations', [oid]) : {}
     const person = persons[pid] || null
     const org = orgs[oid] || null
-    const notes = await fetchNotes(dealId)
+    const notesFull = await fetchNotesFull(dealId)
     const files = await fetchAllFiles(dealId, pid)
 
-    const c = classify(deal, person, org, F, notes.join(' '))
+    const c = classify(deal, person, org, F, notesFull.map(n => n.text).join(' '))
     const bucket = BUCKETS[payload.bucket] ? payload.bucket : c.bucket
     if (bucket === 'handmatig') {
       return json(400, { error: 'Dit bakje is Handmatig. Kies eerst zelf een bakje voor deze aanvraag.' })
@@ -65,13 +62,13 @@ exports.handler = async (event) => {
       ['Specifics (vrije tekst van de aanvrager)', rv('Specifics')],
       ['Specific requirements (voorkeuren van de aanvrager)', rv('Specific requirements')],
       ['Opmerkingen', rv('Opmerkingen')],
-      ['Notities bij de deal', notes.join('\n')],
+      ['Notities bij de deal (het formulier zelf is al weggelaten, dit is alleen wat erbij is gekomen)', notesVoorPrompt(filterNotes(notesFull))],
       ['Bijlagen die de aanvrager heeft meegestuurd (alleen de namen, de inhoud heb je niet gezien)', files.map(f => f.name || f.file_name).filter(Boolean).join(', ')],
     ].filter(([, v]) => v && String(v).trim()).map(([k, v]) => `${k}: ${v}`).join('\n')
 
     const systeem = [
       'Je schrijft een CONCEPT van een e-mailantwoord namens Robert Brugman, Account Manager bij Respyre, op een binnengekomen aanvraag. Je bent niet Robert zelf en voegt niets toe wat niet in de kennis of aanvraag staat.',
-      REGELS, STIJL, BUCKET_REGELS[bucket], regioRegels(c.land.code),
+      REGELS, STIJL, OPMAAK, BUCKET_REGELS[bucket], regioRegels(c.land.code),
       `=== KENNIS ===\n${KENNIS}\n=== EINDE KENNIS ===`,
     ].join('\n\n')
 
@@ -87,13 +84,13 @@ exports.handler = async (event) => {
       aanvraagTekst || '(Er is geen vrije tekst bij de aanvraag. Vraag de belangrijkste ontbrekende gegevens aan de aanvrager.)',
       '"""',
       '',
-      'Geef eerst een regel "ONDERWERP: ..." met een korte onderwerpregel in dezelfde taal, dan een lege regel, dan de mailtekst. Geen handtekening en geen afsluitgroet.',
+      'Geef eerst een regel "ONDERWERP: ..." met een korte onderwerpregel in dezelfde taal, dan een lege regel, dan de mailtekst. Gebruik de kopjes zoals beschreven in de opmaakregels. Geen handtekening en geen afsluitgroet.',
     ].filter(x => x !== '').join('\n')
 
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: MODEL, max_tokens: 1400, system: systeem, messages: [{ role: 'user', content: gebruiker }] }),
+      body: JSON.stringify({ model: MODEL, max_tokens: 1800, system: systeem, messages: [{ role: 'user', content: gebruiker }] }),
     })
     const data = await res.json()
     if (!res.ok) return json(res.status, { error: (data.error && data.error.message) || 'Fout ' + res.status })
@@ -102,7 +99,8 @@ exports.handler = async (event) => {
     let onderwerp = ''
     const m = tekst.match(/^ONDERWERP:\s*(.+)\n+/i)
     if (m) { onderwerp = m[1].trim(); tekst = tekst.slice(m[0].length).trim() }
-    return json(200, { onderwerp, tekst, lang, bucket, model: MODEL })
+    const k = kopjesUitTekst(tekst)
+    return json(200, { onderwerp, tekst: k.tekst, kopjes: k.kopjes, lang, bucket, model: MODEL })
   } catch (err) {
     console.error('aanvragen-draft fout:', err.message)
     return json(err.code === 'NO_PIPEDRIVE_TOKEN' ? 500 : 502, { error: err.message, code: err.code || null })
