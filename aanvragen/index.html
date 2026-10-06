@@ -110,6 +110,13 @@
   .file .acts { display: flex; gap: 8px; }
   .file img.thumb { grid-column: 1 / -1; max-width: 100%; max-height: 260px; border-radius: 10px; border: 1px solid var(--rule); }
   .file .err { grid-column: 1 / -1; font-size: .78rem; color: var(--alert); }
+  .photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .photo { background: var(--paper); border-radius: 14px; padding: 8px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .photo .ph { width: 100%; aspect-ratio: 4 / 3; border-radius: 10px; background: var(--rule-2); display: flex; align-items: center; justify-content: center; font-size: .74rem; color: var(--mute); text-align: center; padding: 6px; overflow: hidden; }
+  .photo img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; cursor: zoom-in; display: block; }
+  .photo .cap { font-size: .72rem; color: var(--mute); word-break: break-word; display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
+  .photo .cap button { background: none; border: none; color: var(--link); font-size: .72rem; padding: 0; text-decoration: underline; }
+  .note-item .q { font-weight: 600; margin-top: 4px; }
   .notes { display: flex; flex-direction: column; gap: 8px; }
   .note-item { background: var(--paper); border-radius: 14px; padding: 10px 14px; font-size: .86rem; color: var(--ink); white-space: pre-wrap; word-break: break-word; }
   .note-item .meta { font-size: .72rem; color: var(--mute); margin-bottom: 3px; }
@@ -229,9 +236,27 @@
   const fmtSize = n => !n ? '' : n < 1048576 ? Math.max(1, Math.round(n / 1024)) + ' kB' : (n / 1048576).toFixed(1) + ' MB'
   function setStatus(t, err) { const el = document.getElementById('status'); el.textContent = t; el.className = 'status-line' + (err ? ' err' : '') }
 
+  let lastRefresh = null, lastFailed = false, loading = false
+  const hm = d => d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })
+  function agoText() {
+    const m = Math.floor((Date.now() - lastRefresh) / 60000)
+    return m < 1 ? 'zojuist' : m < 60 ? m + ' min geleden' : Math.floor(m / 60) + ' uur geleden'
+  }
+  function updateStatus() {
+    if (!lastRefresh || lastFailed || loading) return
+    setStatus('Laatst ververst om ' + hm(new Date(lastRefresh)) + ' (' + agoText() + ').')
+  }
+  setInterval(updateStatus, 30000)
+  // Terug in het tabblad na meer dan 30 minuten: automatisch verversen.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && lastRefresh && Date.now() - lastRefresh > 30 * 60000 && document.getElementById('app').style.display === 'block') load(true)
+  })
+
   async function load(isRefresh) {
+    if (loading) return
     const headers = await authHeader(); if (!headers) return
     const btn = document.getElementById('btnRefresh')
+    loading = true; lastFailed = false
     btn.disabled = true; btn.classList.add('spin')
     setStatus('Ophalen uit Pipedrive...')
     try {
@@ -240,12 +265,28 @@
       if (res.status === 403) throw new Error('Dit account heeft geen toegang tot deze tool.')
       if (!res.ok) throw new Error(body.error || ('De server antwoordde met status ' + res.status + '.'))
       data = body
-      Object.keys(details).forEach(k => delete details[k])
-      setStatus('Ververst om ' + new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }) + '.')
+      Object.keys(details).forEach(k => { (details[k].cache ? Object.values(details[k].cache) : []).forEach(e => { if (e.url) URL.revokeObjectURL(e.url) }); delete details[k] })
+      // Wat niet meer in "Form ingevuld" staat (verplaatst of afgehandeld) valt ook hier weg, inclusief concepten en handmatige bakjes.
+      const ids = new Set(data.items.map(x => x.id))
+      Object.keys(drafts).forEach(k => { if (!ids.has(Number(k))) delete drafts[k] })
+      let changed = false
+      Object.keys(overrides).forEach(k => { if (!ids.has(Number(k))) { delete overrides[k]; changed = true } })
+      if (changed) localStorage.setItem('aanvragen_override', JSON.stringify(overrides))
+      if (selectedId && !ids.has(selectedId)) selectedId = null
+      // "nieuw": niet gezien bij het vorige bezoek of de vorige verversing
+      let seen = null
+      try { seen = JSON.parse(localStorage.getItem('aanvragen_seen') || 'null') } catch (_) { seen = null }
+      data.items.forEach(x => { x.isNew = Array.isArray(seen) && !seen.includes(x.id) })
+      try { localStorage.setItem('aanvragen_seen', JSON.stringify([...ids].slice(0, 500))) } catch (_) { /* geen opslag beschikbaar */ }
+      lastRefresh = Date.now()
+      loading = false
+      updateStatus()
       render()
     } catch (err) {
+      lastFailed = true
       setStatus(err.message, true)
     }
+    loading = false
     btn.disabled = false; btn.classList.remove('spin')
   }
 
@@ -278,7 +319,7 @@
     let h = `<h2>${esc(b.naam)}</h2><p class="hint">${esc(b.uitleg)}</p>`
     if (!items.length) h += '<p class="empty">Geen aanvragen in dit bakje.</p>'
     h += items.map(i => {
-      const tags = (i.noGo ? '<span class="tag red">no-go</span>' : '') + (i.flags.length && !i.noGo ? '<span class="tag">let op</span>' : '') + (drafts[i.id] ? '<span class="tag green">concept</span>' : '')
+      const tags = (i.noGo ? '<span class="tag red">no-go</span>' : '') + (i.flags.length && !i.noGo ? '<span class="tag">let op</span>' : '') + (i.isNew ? '<span class="tag green">nieuw</span>' : '') + (drafts[i.id] ? '<span class="tag green">concept</span>' : '')
       const l2 = [i.org, i.land.naam, i.m2 !== null ? i.m2 + ' m²' : 'm² onbekend'].filter(Boolean).join(' · ')
       return `<button class="row" data-id="${i.id}" aria-current="${i.id === selectedId}"><div class="l1"><span>${esc(i.person.name || i.title)}${tags}</span><span>${esc(dt(i.addTime))}</span></div><div class="l2">${esc(l2)}</div></button>`
     }).join('')
@@ -338,6 +379,13 @@
   }
 
   // ---- Bijlagen en notities ----
+  const MIME_EXT = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', pdf: 'application/pdf' }
+  const extOf = n => ((String(n || '').match(/\.([a-z0-9]+)$/i) || [])[1] || '').toLowerCase()
+  const isImg = f => (MIME_EXT[extOf(f.name)] || '').startsWith('image/')
+  const isPdf = f => extOf(f.name) === 'pdf' || f.type === 'pdf'
+  const MAX_FILE = 4.5 * 1048576
+  const tooBig = f => f.size && f.size > MAX_FILE
+
   async function loadDetail(i) {
     if (!details[i.id]) {
       const headers = await authHeader(); if (!headers) return
@@ -358,52 +406,99 @@
     if (selectedId === i.id) renderDetailExtras(i)
   }
 
+  // Haalt het bestand op (eenmalig per sessie) en bewaart het in het geheugen.
+  function getFile(i, f) {
+    const det = details[i.id]
+    det.cache = det.cache || {}; det.pending = det.pending || {}
+    if (det.cache[f.id]) return Promise.resolve(det.cache[f.id])
+    if (!det.pending[f.id]) {
+      det.pending[f.id] = (async () => {
+        const headers = await authHeader(); if (!headers) throw new Error('Niet ingelogd.')
+        const res = await fetch(FN_FILE + '?dealId=' + i.id + '&fileId=' + f.id, { headers })
+        if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || ('Fout ' + res.status)) }
+        const ct = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase()
+        const blob = await res.blob()
+        const mime = IMG_TYPES.includes(ct) ? ct : (MIME_EXT[extOf(f.name)] || ct)
+        det.cache[f.id] = { blob, mime }
+        return det.cache[f.id]
+      })().finally(() => { delete det.pending[f.id] })
+    }
+    return det.pending[f.id]
+  }
+
+  function saveBlob(entry, name) {
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([entry.blob], { type: 'application/octet-stream' })); a.download = name
+    document.body.appendChild(a); a.click(); a.remove()
+  }
+
+  async function runPool(tasks, n) {
+    let k = 0
+    await Promise.all(Array.from({ length: Math.min(n, tasks.length) }, async () => { while (k < tasks.length) { const t = tasks[k++]; await t() } }))
+  }
+
+  const noteHtml = n => {
+    const when = n.addTime ? new Date(n.addTime.replace(' ', 'T') + 'Z').toLocaleString('nl-NL', { dateStyle: 'medium', timeStyle: 'short' }) : ''
+    const body = n.items
+      ? n.items.map(it => '<div class="q">' + esc(it.nr + '. ' + it.vraag) + '</div><div>' + esc(it.antwoord) + '</div>').join('')
+      : esc(n.text)
+    return '<div class="note-item"><div class="meta">' + esc(when) + '</div>' + body + '</div>'
+  }
+
   function renderDetailExtras(i) {
     const det = details[i.id]
     const fb = document.getElementById('filesBox'), nb = document.getElementById('notesBox')
     if (!fb || !nb || !det) return
-    if (!det.files.length) fb.innerHTML = '<p class="note">Geen bijlagen bij deze aanvraag.</p>'
+    const files = det.files || []
+    if (!files.length) fb.innerHTML = '<p class="note">Geen bijlagen bij deze aanvraag.</p>'
     else {
-      fb.innerHTML = det.files.map(f => {
-        const isImg = IMG_TYPES.includes(f.type)
-        const isPdf = f.type === 'application/pdf' || /\.pdf$/i.test(f.name)
-        const acts = f.remote
-          ? '<a class="btn small ghost" href="https://app.pipedrive.com/deal/' + i.id + '" target="_blank" rel="noopener">Open in Pipedrive</a>'
-          : (isImg ? '<button class="btn small ghost" data-act="show" data-id="' + f.id + '">Toon</button>' : '') +
-            (isPdf ? '<button class="btn small ghost" data-act="open" data-id="' + f.id + '">Open</button>' : '') +
-            '<button class="btn small ghost" data-act="dl" data-id="' + f.id + '">Download</button>'
-        return '<div class="file" data-fid="' + f.id + '"><div><div class="nm">' + esc(f.name) + '</div><div class="meta">' + esc([f.type, fmtSize(f.size), f.addTime ? new Date(f.addTime.replace(' ', 'T') + 'Z').toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }) : ''].filter(Boolean).join(' · ')) + '</div></div><div class="acts">' + acts + '</div></div>'
-      }).join('') + '<p class="note">Bijlagen komen van de aanvrager. Open alleen wat je herkent. Documenten (Word, Excel en dergelijke) worden gedownload en niet in de pagina geopend.</p>'
+      const photos = files.filter(f => !f.remote && isImg(f) && !tooBig(f))
+      const others = files.filter(f => !photos.includes(f))
+      let h = ''
+      if (photos.length) {
+        h += '<div class="photos">' + photos.map(f => '<div class="photo" data-fid="' + f.id + '"><div class="ph">Laden...</div><div class="cap"><span>' + esc(f.name) + '</span><button data-act="dl" data-id="' + f.id + '">Download</button></div></div>').join('') + '</div>'
+      }
+      if (others.length) {
+        h += '<div class="files" style="margin-top:' + (photos.length ? '10' : '0') + 'px">' + others.map(f => {
+          let acts
+          if (f.remote) acts = '<a class="btn small ghost" href="https://app.pipedrive.com/deal/' + i.id + '" target="_blank" rel="noopener">Open in Pipedrive</a>'
+          else if (tooBig(f)) acts = '<a class="btn small ghost" href="https://app.pipedrive.com/deal/' + i.id + '" target="_blank" rel="noopener">Te groot, open in Pipedrive</a>'
+          else acts = (isPdf(f) ? '<button class="btn small ghost" data-act="open" data-id="' + f.id + '">Open</button>' : '') + '<button class="btn small ghost" data-act="dl" data-id="' + f.id + '">Download</button>'
+          return '<div class="file" data-fid="' + f.id + '"><div><div class="nm">' + esc(f.name) + '</div><div class="meta">' + esc([extOf(f.name).toUpperCase(), fmtSize(f.size)].filter(Boolean).join(' · ')) + '</div></div><div class="acts">' + acts + '</div></div>'
+        }).join('') + '</div>'
+      }
+      h += '<p class="note">Bijlagen komen van de aanvrager. Foto\'s worden hier direct getoond. PDF\'s open je met de knop. Word, Excel en andere documenten worden alleen gedownload en nooit in de pagina geopend.</p>'
+      fb.innerHTML = h
       fb.querySelectorAll('button[data-act]').forEach(b => b.addEventListener('click', () => fileAction(i, b.dataset.act, Number(b.dataset.id), b)))
+      runPool(photos.map(f => async () => {
+        const holder = fb.querySelector('.photo[data-fid="' + f.id + '"] .ph')
+        try {
+          const entry = await getFile(i, f)
+          if (selectedId !== i.id || !holder.isConnected) return
+          holder.innerHTML = ''
+          const img = document.createElement('img'); img.alt = f.name
+          const url = (entry.url = entry.url || URL.createObjectURL(new Blob([entry.blob], { type: entry.mime })))
+          img.src = url
+          img.addEventListener('click', () => window.open(url, '_blank', 'noopener'))
+          holder.appendChild(img)
+        } catch (err) { if (holder.isConnected) holder.textContent = err.message }
+      }), 3)
     }
-    nb.innerHTML = det.notes.length
-      ? det.notes.map(n => '<div class="note-item"><div class="meta">' + esc(n.addTime ? new Date(n.addTime.replace(' ', 'T') + 'Z').toLocaleString('nl-NL', { dateStyle: 'medium', timeStyle: 'short' }) : '') + '</div>' + esc(n.text) + '</div>').join('')
-      : '<p class="note">Geen notities bij deze aanvraag.</p>'
+    nb.innerHTML = det.notes.length ? det.notes.map(noteHtml).join('') : '<p class="note">Geen eigen notities bij deze aanvraag.</p>'
+    if (det.verborgen) nb.innerHTML += '<p class="note">Het ingevulde formulier staat ook als notitie in Pipedrive. Wat daar dubbel is met de velden hierboven is weggelaten.</p>'
   }
 
   async function fileAction(i, act, fileId, btn) {
-    const holder = document.querySelector('.file[data-fid="' + fileId + '"]')
     const f = details[i.id].files.find(x => x.id === fileId)
+    const holder = btn.closest('.file, .photo')
     const old = btn.textContent
     btn.disabled = true; btn.textContent = '...'
-    const prevErr = holder.querySelector('.err'); if (prevErr) prevErr.remove()
+    const prev = holder.querySelector('.err'); if (prev) prev.remove()
     try {
-      const headers = await authHeader(); if (!headers) return
-      const res = await fetch(FN_FILE + '?dealId=' + i.id + '&fileId=' + fileId, { headers })
-      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || ('Fout ' + res.status)) }
-      const type = (res.headers.get('content-type') || f.type || '').split(';')[0].trim().toLowerCase()
-      const blob = await res.blob()
-      if (act === 'show' && IMG_TYPES.includes(type)) {
-        const old2 = holder.querySelector('img.thumb'); if (old2) old2.remove()
-        const img = document.createElement('img'); img.className = 'thumb'; img.alt = f.name
-        img.src = URL.createObjectURL(new Blob([blob], { type }))
-        holder.appendChild(img)
-      } else if (act === 'open' && type === 'application/pdf') {
-        window.open(URL.createObjectURL(new Blob([blob], { type: 'application/pdf' })), '_blank', 'noopener')
-      } else {
-        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([blob], { type: 'application/octet-stream' })); a.download = f.name
-        document.body.appendChild(a); a.click(); a.remove()
-      }
+      const entry = await getFile(i, f)
+      if (act === 'open' && (entry.mime === 'application/pdf' || isPdf(f))) {
+        window.open(URL.createObjectURL(new Blob([entry.blob], { type: 'application/pdf' })), '_blank', 'noopener')
+      } else saveBlob(entry, f.name)
     } catch (err) {
       const p = document.createElement('div'); p.className = 'err'; p.textContent = err.message; holder.appendChild(p)
     }
@@ -417,10 +512,11 @@
       <label class="lbl" for="dBody" style="margin-top:10px">Tekst (aan te passen)</label><textarea id="dBody">${esc(d.tekst)}</textarea>
       <div class="actions">
         <button class="btn" id="btnMail" ${i.person.email ? '' : 'disabled'}>Open in e-mail</button>
+        <button class="btn ghost" id="btnCopyRich">Kopieer opgemaakt</button>
         <button class="btn ghost" id="btnCopy">Kopieer tekst</button>
         <span class="status-line" id="copyStatus"></span>
       </div>
-      <p class="note">Geen handtekening en geen afsluitgroet, die voeg je zelf toe. Controleer prijzen en details voor je verstuurt. Bakje: ${esc(data.buckets[d.bucket].naam)}, model: ${esc(d.model)}.${i.person.email ? '' : ' Er is geen e-mailadres bij deze aanvraag, dus alleen kopiëren kan.'}</p>
+      <p class="note">Geen handtekening en geen afsluitgroet, die voeg je zelf toe. Kopieer opgemaakt plakt de kopjes vet in je mail. Past je een kopje aan, dan wordt die regel niet meer vet. Controleer prijzen en details voor je verstuurt. Bakje: ${esc(data.buckets[d.bucket].naam)}, model: ${esc(d.model)}.${i.person.email ? '' : ' Er is geen e-mailadres bij deze aanvraag, dus alleen kopiëren kan.'}</p>
     </div>`
   }
   function bindDraft(i) {
@@ -434,6 +530,20 @@
     btnCopy.addEventListener('click', async () => {
       const el = document.getElementById('copyStatus')
       try { await navigator.clipboard.writeText(body()); el.textContent = 'Gekopieerd.' } catch (_) { el.textContent = 'Kopiëren lukt niet in deze browser.' }
+    })
+    document.getElementById('btnCopyRich').addEventListener('click', async () => {
+      const el = document.getElementById('copyStatus')
+      const kop = new Set((drafts[i.id].kopjes || []).map(k => k.trim()))
+      const html = '<div style="font-family:Calibri,Arial,sans-serif;font-size:11pt">' + body().split('\n').map(l => {
+        if (!l.trim()) return '<p style="margin:0"><br></p>'
+        return kop.has(l.trim()) ? '<p style="margin:0"><b>' + esc(l) + '</b></p>' : '<p style="margin:0">' + esc(l) + '</p>'
+      }).join('') + '</div>'
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([html], { type: 'text/html' }), 'text/plain': new Blob([body()], { type: 'text/plain' }) })])
+        el.textContent = 'Gekopieerd met vette kopjes.'
+      } catch (_) {
+        try { await navigator.clipboard.writeText(body()); el.textContent = 'Opgemaakt kopiëren lukt hier niet, de gewone tekst is gekopieerd.' } catch (__) { el.textContent = 'Kopiëren lukt niet in deze browser.' }
+      }
     })
     if (btnMail) btnMail.addEventListener('click', () => {
       const text = body().replace(/\r?\n/g, '\r\n')
