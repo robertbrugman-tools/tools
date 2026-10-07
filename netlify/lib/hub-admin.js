@@ -24,6 +24,23 @@ async function requireAdmin(event) {
   return { user }
 }
 
+// Geeft { user, isAdmin } terug voor de admin of een gebruiker met het recht appKey, anders { denied }.
+async function requireAccess(event, appKey) {
+  const auth = event.headers.authorization || event.headers.Authorization || ''
+  const token = auth.replace(/^Bearer\s+/i, '')
+  if (!token) return { denied: json(401, { error: 'Niet ingelogd.' }) }
+  const res = await fetch(`${HUB_URL}/auth/v1/user`, { headers: { apikey: HUB_ANON, Authorization: `Bearer ${token}` } })
+  if (!res.ok) return { denied: json(401, { error: 'Niet ingelogd.' }) }
+  const user = await res.json()
+  if (!user || !user.id || !user.email) return { denied: json(401, { error: 'Niet ingelogd.' }) }
+  const isAdmin = user.email.toLowerCase() === ADMIN_EMAIL
+  if (!isAdmin) {
+    const r = await sb(`/rest/v1/hub_permissions?select=app_key&user_id=eq.${encodeURIComponent(user.id)}&app_key=eq.${encodeURIComponent(appKey)}`)
+    if (!r.ok || !Array.isArray(r.data) || !r.data.length) return { denied: json(403, { error: 'Geen toegang.' }) }
+  }
+  return { user: { id: user.id, email: user.email }, isAdmin }
+}
+
 function serviceKey() {
   const k = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!k) {
@@ -61,4 +78,4 @@ function foutTekst(r) {
   return d.msg || d.message || d.error_description || d.error || ('Fout ' + r.status)
 }
 
-module.exports = { json, requireAdmin, sb, siteBase, foutTekst, APP_KEYS, ADMIN_EMAIL }
+module.exports = { json, requireAdmin, requireAccess, sb, siteBase, foutTekst, APP_KEYS, ADMIN_EMAIL }
