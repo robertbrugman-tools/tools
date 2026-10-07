@@ -9,6 +9,7 @@ const { KENNIS, STIJL, REGELS, BUCKET_REGELS, regioRegels } = require('../lib/aa
 const { F, fetchDeal, fetchByIds, fetchNotesFull, fetchAllFiles } = require('../lib/pipedrive')
 const { rawFields } = require('../lib/aanvragen-raw')
 const { filterNotes, notesVoorPrompt } = require('../lib/aanvragen-notes')
+const { actieveRegels, regelsVoorPrompt } = require('../lib/aanvragen-regels')
 const { OPMAAK, schoon, kopjesUitTekst, zonderIrrigatiekosten } = require('../lib/aanvragen-opmaak')
 
 const APP_KEY = 'aanvragen'
@@ -69,8 +70,9 @@ exports.handler = async (event) => {
     const systeem = [
       'Je schrijft een CONCEPT van een e-mailantwoord namens Robert Brugman, Account Manager bij Respyre, op een binnengekomen aanvraag. Je bent niet Robert zelf en voegt niets toe wat niet in de kennis of aanvraag staat.',
       REGELS, STIJL, OPMAAK, BUCKET_REGELS[bucket], regioRegels(c.land.code),
+      regelsVoorPrompt(await actieveRegels(), bucket),
       `=== KENNIS ===\n${KENNIS}\n=== EINDE KENNIS ===`,
-    ].join('\n\n')
+    ].filter(Boolean).join('\n\n')
 
     const gebruiker = [
       `Schrijf het concept in het ${taalNaam}.`,
