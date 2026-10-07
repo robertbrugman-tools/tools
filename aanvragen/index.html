@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>@media (pointer:coarse){input,select,textarea{font-size:16px!important}}</style>
+<title>Aanvragen | Respyre</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  /* Designtaal van gorespyre.com: warm gebroken wit, mosgroen, zachte serif voor koppen, IBM Plex Sans voor tekst, ronde groene knoppen */
+  :root {
+    --paper: #f7f4f0; --surface: #ffffff; --ink: #212121; --body: #4d4d4d; --mute: #7d7a74;
+    --rule: #e6e0d7; --rule-2: #efeae2;
+    --green: #3f6944; --green-d: #2f5234; --green-l: #e7efe5; --link: #379237;
+    --warn: #8a5300; --warn-bg: #fff3dc; --alert: #b3261e; --alert-bg: #fde7e5;
+    --serif: 'Fraunces', 'Recoleta', Georgia, serif;
+    --sans: 'IBM Plex Sans', ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --btn: 'Montserrat', 'IBM Plex Sans', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: var(--paper); color: var(--body); min-height: 100vh; -webkit-font-smoothing: antialiased; line-height: 1.5; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  a { color: var(--link); }
+  :focus-visible { outline: 2px solid var(--green); outline-offset: 2px; border-radius: 6px; }
+  .logo { display: block; height: 34px; width: auto; }
+
+  #authScreen { position: fixed; inset: 0; background: var(--paper); display: flex; flex-direction: column; gap: 28px; align-items: center; justify-content: center; padding: 24px; z-index: 300; }
+  #authScreen .logo { height: 44px; }
+  .auth-box { background: var(--surface); border: 1px solid var(--rule); border-radius: 22px; padding: 36px 34px; width: 100%; max-width: 380px; }
+  .auth-box h1 { font-family: var(--serif); font-size: 1.6rem; font-weight: 500; color: var(--green); margin-bottom: 4px; }
+  .auth-box > p { font-size: 0.9rem; color: var(--mute); margin-bottom: 24px; }
+  .fg { margin-bottom: 14px; }
+  .fg label, .lbl { display: block; font-size: 0.78rem; font-weight: 500; color: var(--mute); margin-bottom: 5px; }
+  input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 12px; font: inherit; font-size: 0.9rem; background: #fff; color: var(--ink); }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 3px var(--green-l); }
+  textarea { resize: vertical; line-height: 1.55; }
+  .submit-btn { width: 100%; padding: 13px; margin-top: 6px; }
+  .msg { font-size: .84rem; text-align: center; margin-top: 10px; min-height: 1.2em; color: var(--alert); }
+
+  #app { display: none; padding: 22px 24px 64px; }
+  .wrap { max-width: 1320px; margin: 0 auto; }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--rule); border-radius: 999px; padding: 10px 14px 10px 24px; }
+  .brand { display: flex; align-items: center; gap: 16px; }
+  .brand h1 { font-family: var(--serif); font-size: 1.25rem; font-weight: 500; color: var(--green); letter-spacing: -0.01em; }
+  .brand .sub { font-size: .84rem; color: var(--mute); }
+  .top-right { display: flex; align-items: center; gap: 14px; }
+  .back-link { font-size: .84rem; color: var(--mute); text-decoration: none; }
+  .back-link:hover { color: var(--green); }
+
+  .btn { font-family: var(--btn); font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; background: var(--green); color: #fff; border: 1px solid var(--green); border-radius: 999px; padding: 10px 20px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: background .15s; }
+  .btn:hover { background: var(--green-d); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn.ghost { background: transparent; color: var(--green); }
+  .btn.ghost:hover { background: var(--green-l); }
+  .btn.small { padding: 6px 14px; font-size: .66rem; }
+  .btn svg { width: 14px; height: 14px; }
+  .btn.spin svg { animation: spin .9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .status-line { font-size: .82rem; color: var(--mute); }
+  .status-line.err { color: var(--alert); font-weight: 500; }
+
+  .layout { display: grid; grid-template-columns: 260px minmax(280px, 1fr) minmax(380px, 1.25fr); gap: 16px; align-items: start; }
+  .panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 22px; }
+
+  .buckets { padding: 10px; position: sticky; top: 14px; }
+  .bk { width: 100%; text-align: left; background: none; border: none; border-radius: 14px; padding: 10px 12px; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; color: var(--body); }
+  .bk:hover { background: var(--paper); }
+  .bk[aria-pressed="true"] { background: var(--green); color: #fff; }
+  .bk .n { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .bk .nm { font-size: .88rem; line-height: 1.3; font-weight: 500; }
+  .bk small { display: block; font-size: .72rem; color: var(--mute); margin-top: 2px; font-weight: 400; }
+  .bk[aria-pressed="true"] small { color: #d3e2d1; }
+  .bk.zero .n { color: var(--mute); font-weight: 400; }
+  .bk[aria-pressed="true"].zero .n { color: #d3e2d1; }
+
+  .list { padding: 8px; min-height: 120px; }
+  .list h2 { font-family: var(--serif); font-size: 1.1rem; font-weight: 500; color: var(--green); padding: 12px 12px 2px; }
+  .list .hint { font-size: .8rem; color: var(--mute); padding: 0 12px 10px; }
+  .row { width: 100%; text-align: left; background: none; border: none; border-radius: 14px; padding: 11px 12px; display: block; border-top: 1px solid var(--rule-2); }
+  .row:first-of-type { border-top: none; }
+  .row:hover { background: var(--paper); }
+  .row[aria-current="true"] { background: var(--green-l); }
+  .row .l1 { display: flex; justify-content: space-between; gap: 10px; font-size: .92rem; font-weight: 600; color: var(--ink); }
+  .row .l1 span:last-child { font-weight: 400; color: var(--mute); font-size: .78rem; white-space: nowrap; }
+  .row .l2 { font-size: .82rem; color: var(--body); margin-top: 2px; }
+  .tag { display: inline-block; font-size: .68rem; border-radius: 999px; padding: 1px 8px; background: var(--warn-bg); color: var(--warn); margin-left: 6px; font-weight: 500; vertical-align: 1px; }
+  .tag.red { background: var(--alert-bg); color: var(--alert); }
+  .tag.green { background: var(--green-l); color: var(--green-d); }
+  .empty { padding: 18px 12px; color: var(--mute); font-size: .9rem; line-height: 1.6; }
+
+  .detail { padding: 26px; position: sticky; top: 14px; max-height: calc(100vh - 28px); overflow: auto; }
+  .detail h2 { font-family: var(--serif); font-size: 1.45rem; font-weight: 500; color: var(--green); letter-spacing: -.01em; }
+  .detail .org { color: var(--mute); font-size: .92rem; margin-top: 2px; }
+  .sec { font-family: var(--btn); font-size: .66rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--mute); margin: 22px 0 8px; }
+  dl.facts { display: grid; grid-template-columns: 120px 1fr; gap: 7px 14px; margin: 14px 0; font-size: .88rem; }
+  dl.facts dt { color: var(--mute); }
+  dl.facts dd { word-break: break-word; white-space: pre-wrap; color: var(--ink); }
+  dl.facts.raw { background: var(--paper); border-radius: 14px; padding: 14px 16px; margin-top: 4px; }
+  .why { background: var(--green-l); border-radius: 14px; padding: 11px 14px; font-size: .84rem; color: var(--green-d); line-height: 1.5; margin-bottom: 10px; }
+  .flag { background: var(--warn-bg); color: var(--warn); border-radius: 14px; padding: 10px 14px; font-size: .86rem; margin-bottom: 8px; font-weight: 500; }
+  .flag.red { background: var(--alert-bg); color: var(--alert); }
+
+  .files { display: flex; flex-direction: column; gap: 8px; }
+  .file { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center; background: var(--paper); border-radius: 14px; padding: 10px 14px; }
+  .file .nm { font-size: .88rem; color: var(--ink); word-break: break-word; }
+  .file .meta { font-size: .74rem; color: var(--mute); }
+  .file .acts { display: flex; gap: 8px; }
+  .file img.thumb { grid-column: 1 / -1; max-width: 100%; max-height: 260px; border-radius: 10px; border: 1px solid var(--rule); }
+  .file .err { grid-column: 1 / -1; font-size: .78rem; color: var(--alert); }
+  .photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .photo { background: var(--paper); border-radius: 14px; padding: 8px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .photo .ph { width: 100%; aspect-ratio: 4 / 3; border-radius: 10px; background: var(--rule-2); display: flex; align-items: center; justify-content: center; font-size: .74rem; color: var(--mute); text-align: center; padding: 6px; overflow: hidden; }
+  .photo img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; cursor: zoom-in; display: block; }
+  .photo .cap { font-size: .72rem; color: var(--mute); word-break: break-word; display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
+  .photo .cap button { background: none; border: none; color: var(--link); font-size: .72rem; padding: 0; text-decoration: underline; }
+  .note-item .q { font-weight: 600; margin-top: 4px; }
+  .notes { display: flex; flex-direction: column; gap: 8px; }
+  .note-item { background: var(--paper); border-radius: 14px; padding: 10px 14px; font-size: .86rem; color: var(--ink); white-space: pre-wrap; word-break: break-word; }
+  .note-item .meta { font-size: .72rem; color: var(--mute); margin-bottom: 3px; }
+
+  .ctrl { display: grid; grid-template-columns: 1fr 120px; gap: 10px; margin-bottom: 10px; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0; align-items: center; }
+  .draft { margin-top: 20px; border-top: 1px solid var(--rule); padding-top: 18px; }
+  #dBody { min-height: 300px; }
+  .note { font-size: .78rem; color: var(--mute); margin-top: 6px; line-height: 1.5; }
+
+  @media (max-width: 1100px) { .layout { grid-template-columns: 230px 1fr; } .detail { grid-column: 1 / -1; position: static; max-height: none; } }
+  @media (max-width: 720px) { .layout { grid-template-columns: 1fr; } .buckets { position: static; } #app { padding: 14px 12px 48px; } .top { border-radius: 24px; padding: 12px 16px; } }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="respyre-logo" viewBox="0 0 1000 299"><path fill="#40774f" fill-rule="evenodd" d="M23 244Q20 245 17 245Q14 245 10 244Q7 242 4 239Q2 236 1 233Q0 229 0 133Q1 37 2 30Q2 24 3 20Q4 17 7 13Q9 9 12 7Q14 5 18 3Q21 1 25 0Q29 0 67 0Q106 0 112 2Q119 3 124 4Q129 6 135 10Q141 13 146 18Q152 24 156 30Q160 36 164 44Q167 51 169 59Q171 66 171 74Q172 81 170 89Q169 96 167 104Q164 111 160 119Q155 126 149 133Q142 140 140 142Q137 143 135 144Q133 144 130 144Q127 144 125 143Q123 142 119 139Q116 135 115 132Q114 130 114 126Q114 123 116 120Q117 117 121 112Q126 108 129 104Q132 99 134 94Q136 89 136 84Q137 79 137 75Q137 71 136 66Q134 62 132 58Q130 53 128 50Q126 46 121 42Q116 38 110 37Q104 35 70 35Q36 34 35 132Q34 231 33 233Q32 236 31 238Q30 240 28 242Q26 243 23 244ZM157 245Q156 246 148 240Q139 235 120 220Q101 206 93 199Q85 192 80 186Q74 180 69 171Q64 162 62 154Q59 146 59 135Q58 125 59 120Q60 115 61 114Q61 112 63 112Q64 113 82 131Q100 150 112 161Q124 172 132 180Q139 189 143 196Q148 204 151 212Q154 221 156 230Q158 239 158 242Q158 244 157 245Z"/><path fill="#4d4e4e" fill-rule="evenodd" d="M276 242Q268 244 262 244Q256 244 250 243Q245 242 240 240Q235 239 230 236Q226 233 221 229Q217 225 214 220Q210 216 208 210Q205 204 204 198Q203 191 202 185Q202 179 203 172Q204 166 205 161Q207 155 210 150Q213 145 216 141Q220 136 224 133Q229 129 234 126Q240 123 246 122Q251 120 261 120Q271 120 276 122Q280 123 284 124Q288 126 294 132Q300 137 302 141Q304 144 306 148Q307 151 306 157Q306 163 303 166Q299 170 263 182Q227 194 229 201Q232 207 235 212Q239 216 244 220Q249 224 254 226Q259 227 265 228Q271 228 279 226Q286 224 290 221Q295 218 300 211Q304 205 306 205Q307 204 308 205Q309 205 310 207Q310 209 309 213Q307 217 302 224Q298 230 294 233Q291 235 288 237Q284 240 276 242ZM404 243Q399 244 390 243Q380 243 371 240Q362 238 359 236Q355 234 351 231Q348 228 346 226Q345 224 344 221Q343 218 343 215Q343 212 344 210Q345 208 348 207Q350 206 353 206Q356 207 358 209Q360 211 366 220Q371 229 376 232Q380 234 385 236Q391 236 396 236Q401 236 405 234Q409 233 413 230Q416 228 418 225Q420 221 421 218Q421 215 421 212Q420 209 419 206Q418 204 416 202Q414 200 408 197Q401 193 386 190Q371 186 367 184Q364 183 358 179Q353 175 350 170Q347 166 346 162Q345 159 345 154Q345 149 346 146Q347 144 349 140Q350 137 354 134Q357 130 360 128Q364 126 368 124Q371 123 376 122Q381 120 390 120Q399 120 408 122Q418 124 421 126Q425 128 429 131Q433 134 436 137Q438 140 439 143Q440 146 440 149Q440 151 439 153Q438 155 436 156Q434 157 431 157Q429 157 426 155Q423 153 420 146Q417 139 414 137Q412 134 409 132Q405 130 400 129Q396 128 391 128Q386 128 382 130Q379 131 376 133Q373 135 371 138Q369 141 368 143Q368 146 368 149Q368 153 369 156Q370 159 372 161Q374 163 380 166Q386 170 401 174Q417 178 421 179Q426 181 431 186Q437 190 439 195Q442 199 442 204Q443 208 443 212Q442 216 441 220Q440 224 437 226Q435 230 431 232Q428 235 424 237Q419 240 414 241Q409 242 404 243ZM517 297Q516 298 499 298Q481 298 480 297Q478 296 478 294Q478 293 482 289Q485 286 486 284Q487 281 487 215Q487 149 486 146Q484 143 481 139Q477 136 477 134Q477 133 478 131Q480 130 490 125Q499 120 501 120Q504 120 505 121Q506 123 506 131Q506 140 511 134Q516 129 522 126Q528 123 535 121Q543 120 551 120Q559 121 565 123Q571 126 576 129Q581 133 585 137Q589 141 593 146Q596 151 598 156Q600 162 601 169Q602 175 602 180Q602 185 601 192Q600 199 597 206Q594 214 590 220Q586 226 580 230Q575 235 569 238Q562 242 555 243Q547 244 539 243Q531 242 526 240Q520 237 514 232Q509 228 509 255Q509 281 510 284Q511 286 514 290Q518 293 518 295Q518 296 517 297ZM822 241Q821 242 804 242Q787 242 785 240Q783 239 783 238Q783 236 787 233Q790 230 791 228Q792 225 792 186Q792 148 792 146Q791 144 787 140Q784 136 783 135Q782 133 784 131Q786 129 796 125Q806 120 808 120Q809 120 810 122Q812 124 812 133Q812 142 815 137Q818 132 822 128Q826 124 833 122Q839 120 845 120Q851 121 855 122Q859 124 862 128Q865 131 866 136Q867 141 865 145Q863 149 861 150Q858 151 855 150Q852 150 850 148Q848 146 847 143Q846 140 844 138Q842 136 840 134Q837 133 835 133Q832 133 829 134Q826 135 824 138Q821 140 819 143Q818 146 816 150Q815 154 814 160Q814 165 814 195Q814 225 815 227Q816 230 820 234Q824 237 824 238Q824 240 822 241ZM964 242Q957 244 951 244Q945 244 940 243Q934 242 929 241Q924 239 920 236Q915 233 911 229Q906 225 903 220Q900 216 897 210Q895 205 894 199Q892 192 892 185Q891 179 892 172Q893 166 894 161Q896 155 899 150Q901 146 904 142Q908 138 913 134Q918 129 922 127Q927 124 934 122Q940 120 950 120Q961 120 965 122Q969 123 973 124Q977 126 983 132Q990 137 992 141Q994 144 995 148Q996 152 996 158Q995 163 992 166Q989 170 952 182Q916 194 918 200Q921 206 924 211Q928 216 933 220Q938 224 943 226Q949 227 955 228Q961 228 968 226Q975 224 980 221Q984 218 989 211Q994 205 995 204Q996 204 998 205Q999 206 999 209Q999 211 997 215Q995 219 990 226Q984 232 978 236Q971 240 964 242ZM661 292Q656 294 650 294Q644 294 640 293Q636 292 633 290Q630 288 628 286Q626 284 623 281Q621 278 621 275Q620 271 621 269Q621 266 624 264Q626 263 628 262Q630 262 632 263Q634 263 636 265Q638 267 640 272Q642 277 644 280Q646 282 649 284Q651 285 654 285Q657 285 660 283Q664 282 667 278Q671 274 674 268Q678 261 681 254Q684 246 661 194Q637 142 636 139Q634 136 630 132Q626 128 626 126Q625 124 627 123Q628 122 645 122Q661 122 663 123Q664 124 664 125Q664 127 662 131Q659 135 660 138Q660 141 678 183Q696 225 714 183Q732 141 732 138Q732 135 727 131Q723 128 723 126Q723 124 724 123Q725 122 739 122Q753 123 754 124Q754 125 754 126Q754 128 750 131Q747 135 745 138Q743 141 714 204Q685 268 679 276Q674 284 669 287Q665 290 661 292ZM226 185Q226 185 252 176Q278 167 281 165Q283 164 285 161Q286 159 286 155Q285 151 284 148Q282 144 279 140Q276 137 272 134Q269 130 264 129Q259 128 252 129Q246 130 242 133Q237 136 234 141Q230 146 228 152Q225 158 225 166Q224 175 224 180Q225 185 226 185ZM915 185Q916 185 942 176Q969 166 971 165Q973 164 974 161Q975 159 975 155Q975 151 973 148Q972 144 969 140Q966 137 962 134Q958 130 953 129Q948 128 942 129Q936 130 931 133Q926 136 923 141Q919 146 917 153Q914 160 914 170Q913 181 914 183Q914 185 915 185ZM543 236Q547 236 551 235Q555 234 559 232Q563 230 566 226Q570 223 572 220Q574 216 576 212Q577 207 578 202Q580 197 580 186Q580 174 577 164Q574 154 572 150Q570 145 567 142Q564 139 562 136Q559 134 555 132Q551 130 545 129Q538 128 534 129Q529 130 525 132Q521 134 518 137Q515 141 513 144Q510 148 510 152Q509 156 509 179Q509 203 511 210Q513 216 518 223Q524 229 529 232Q534 235 536 235Q539 236 543 236Z"/></symbol>
+</svg>
+
+<div id="authScreen">
+  <svg class="logo" viewBox="0 0 1000 299" role="img" aria-label="Respyre"><use href="#respyre-logo"/></svg>
+  <div class="auth-box">
+    <h1>Aanvragen</h1>
+    <p>Log in met je Hub-account</p>
+    <div class="fg"><label for="authEmail">E-mailadres</label><input type="email" id="authEmail" placeholder="jouw@email.nl" onkeydown="if(event.key==='Enter')login()"></div>
+    <div class="fg"><label for="authPw">Wachtwoord</label><input type="password" id="authPw" placeholder="••••••••" onkeydown="if(event.key==='Enter')login()"></div>
+    <button class="btn submit-btn" id="btnLogin" onclick="login()">Inloggen</button>
+    <p class="msg" id="authMsg"></p>
+  </div>
+</div>
+
+<div id="app">
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <svg class="logo" viewBox="0 0 1000 299" role="img" aria-label="Respyre"><use href="#respyre-logo"/></svg>
+        <h1>Aanvragen</h1><span class="sub" id="sub"></span>
+      </div>
+      <div class="top-right">
+        <span class="status-line" id="status" role="status"></span>
+        <button class="btn" id="btnRefresh" onclick="load(true)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
+          Ververs
+        </button>
+        <a class="back-link" href="/">← Tools</a>
+      </div>
+    </div>
+
+    <div class="layout">
+      <nav class="panel buckets" id="buckets" aria-label="Bakjes"></nav>
+      <section class="panel list" id="list" aria-live="polite"></section>
+      <section class="panel detail" id="detail"><p class="empty">Kies een aanvraag.</p></section>
+    </div>
+  </div>
+</div>
+
+<script>
+  const HUB_URL = 'https://swrunlzeydmcskceqdju.supabase.co'
+  const HUB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3cnVubHpleWRtY3NrY2VxZGp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNjE2MDgsImV4cCI6MjA5MjkzNzYwOH0.V7haNdFPFJuvJJTbjhiUzKrWG8trW4UeRIJveAhFOgs'
+  const sb = supabase.createClient(HUB_URL, HUB_KEY)
+  const FN_LIST = '/.netlify/functions/aanvragen-list'
+  const FN_DRAFT = '/.netlify/functions/aanvragen-draft'
+  const FN_DETAIL = '/.netlify/functions/aanvragen-detail'
+  const FN_FILE = '/.netlify/functions/aanvragen-file'
+  const ORDER = ['p_klein','p_nl','p_buiten','b_benelux_de','b_europa','b_wereld','grens','betonproducent','samenwerking','handmatig']
+  const IMG_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
+
+  let data = null
+  let current = localStorage.getItem('aanvragen_bucket') || 'b_benelux_de'
+  let selectedId = null
+  const drafts = {}
+  const details = {}
+  let overrides = {}
+  try { overrides = JSON.parse(localStorage.getItem('aanvragen_override') || '{}') } catch (_) { overrides = {} }
+
+  ;(async () => {
+    const { data: { session } } = await sb.auth.getSession()
+    if (session) enter()
+  })()
+
+  async function login() {
+    const email = document.getElementById('authEmail').value.trim()
+    const pw = document.getElementById('authPw').value
+    const btn = document.getElementById('btnLogin'), msg = document.getElementById('authMsg')
+    if (!email || !pw) { msg.textContent = 'Vul e-mail en wachtwoord in.'; return }
+    btn.disabled = true; btn.textContent = 'Bezig...'
+    const { error } = await sb.auth.signInWithPassword({ email, password: pw })
+    btn.disabled = false; btn.textContent = 'Inloggen'
+    if (error) msg.textContent = 'Inloggen mislukt. Controleer je gegevens.'
+    else enter()
+  }
+  function enter() {
+    document.getElementById('authScreen').style.display = 'none'
+    document.getElementById('app').style.display = 'block'
+    load(false)
+  }
+  async function authHeader() {
+    const { data: { session } } = await sb.auth.getSession()
+    if (!session) {
+      document.getElementById('authScreen').style.display = 'flex'
+      document.getElementById('app').style.display = 'none'
+      return null
+    }
+    return { Authorization: 'Bearer ' + session.access_token }
+  }
+
+  const esc = s => String(s === null || s === undefined ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+  const dt = iso => {
+    const d = new Date(iso), now = new Date()
+    const days = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5)
+    const t = d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })
+    if (days === 0) return 'vandaag ' + t
+    if (days === 1) return 'gisteren ' + t
+    return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
+  }
+  const fmtSize = n => !n ? '' : n < 1048576 ? Math.max(1, Math.round(n / 1024)) + ' kB' : (n / 1048576).toFixed(1) + ' MB'
+  function setStatus(t, err) { const el = document.getElementById('status'); el.textContent = t; el.className = 'status-line' + (err ? ' err' : '') }
+
+  let lastRefresh = null, lastFailed = false, loading = false
+  const hm = d => d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })
+  function agoText() {
+    const m = Math.floor((Date.now() - lastRefresh) / 60000)
+    return m < 1 ? 'zojuist' : m < 60 ? m + ' min geleden' : Math.floor(m / 60) + ' uur geleden'
+  }
+  function updateStatus() {
+    if (!lastRefresh || lastFailed || loading) return
+    setStatus('Laatst ververst om ' + hm(new Date(lastRefresh)) + ' (' + agoText() + ').')
+  }
+  setInterval(updateStatus, 30000)
+  // Terug in het tabblad na meer dan 30 minuten: automatisch verversen.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && lastRefresh && Date.now() - lastRefresh > 30 * 60000 && document.getElementById('app').style.display === 'block') load(true)
+  })
+
+  async function load(isRefresh) {
+    if (loading) return
+    const headers = await authHeader(); if (!headers) return
+    const btn = document.getElementById('btnRefresh')
+    loading = true; lastFailed = false
+    btn.disabled = true; btn.classList.add('spin')
+    setStatus('Ophalen uit Pipedrive...')
+    try {
+      const res = await fetch(FN_LIST, { headers })
+      const body = await res.json().catch(() => ({}))
+      if (res.status === 403) throw new Error('Dit account heeft geen toegang tot deze tool.')
+      if (!res.ok) throw new Error(body.error || ('De server antwoordde met status ' + res.status + '.'))
+      data = body
+      Object.keys(details).forEach(k => { (details[k].cache ? Object.values(details[k].cache) : []).forEach(e => { if (e.url) URL.revokeObjectURL(e.url) }); delete details[k] })
+      // Wat niet meer in "Form ingevuld" staat (verplaatst of afgehandeld) valt ook hier weg, inclusief concepten en handmatige bakjes.
+      const ids = new Set(data.items.map(x => x.id))
+      Object.keys(drafts).forEach(k => { if (!ids.has(Number(k))) delete drafts[k] })
+      let changed = false
+      Object.keys(overrides).forEach(k => { if (!ids.has(Number(k))) { delete overrides[k]; changed = true } })
+      if (changed) localStorage.setItem('aanvragen_override', JSON.stringify(overrides))
+      if (selectedId && !ids.has(selectedId)) selectedId = null
+      // "nieuw": niet gezien bij het vorige bezoek of de vorige verversing
+      let seen = null
+      try { seen = JSON.parse(localStorage.getItem('aanvragen_seen') || 'null') } catch (_) { seen = null }
+      data.items.forEach(x => { x.isNew = Array.isArray(seen) && !seen.includes(x.id) })
+      try { localStorage.setItem('aanvragen_seen', JSON.stringify([...ids].slice(0, 500))) } catch (_) { /* geen opslag beschikbaar */ }
+      lastRefresh = Date.now()
+      loading = false
+      updateStatus()
+      render()
+    } catch (err) {
+      lastFailed = true
+      setStatus(err.message, true)
+    }
+    loading = false
+    btn.disabled = false; btn.classList.remove('spin')
+  }
+
+  const bucketOf = i => overrides[i.id] && data.buckets[overrides[i.id]] ? overrides[i.id] : i.bucket
+  function counts() {
+    const c = {}; ORDER.forEach(k => c[k] = 0)
+    data.items.forEach(i => { c[bucketOf(i)]++ })
+    return c
+  }
+
+  function render() {
+    document.getElementById('sub').textContent = data.total + (data.total === 1 ? ' aanvraag' : ' aanvragen') + ' sinds 1 oktober 2026'
+    renderBuckets(); renderList(); renderDetail()
+  }
+
+  function renderBuckets() {
+    const c = counts()
+    document.getElementById('buckets').innerHTML = ORDER.map(k => {
+      const b = data.buckets[k]
+      return `<button class="bk ${c[k] ? '' : 'zero'}" data-k="${k}" aria-pressed="${k === current}"><span class="nm">${esc(b.nr)}. ${esc(b.naam)}<small>${esc(b.uitleg)}</small></span><span class="n">${c[k]}</span></button>`
+    }).join('')
+    document.querySelectorAll('.bk').forEach(el => el.addEventListener('click', () => {
+      current = el.dataset.k; localStorage.setItem('aanvragen_bucket', current); selectedId = null; render()
+    }))
+  }
+
+  function renderList() {
+    const b = data.buckets[current]
+    const items = data.items.filter(i => bucketOf(i) === current).sort((a, z) => new Date(z.addTime) - new Date(a.addTime))
+    let h = `<h2>${esc(b.naam)}</h2><p class="hint">${esc(b.uitleg)}</p>`
+    if (!items.length) h += '<p class="empty">Geen aanvragen in dit bakje.</p>'
+    h += items.map(i => {
+      const tags = (i.noGo ? '<span class="tag red">no-go</span>' : '') + (i.flags.length && !i.noGo ? '<span class="tag">let op</span>' : '') + (i.isNew ? '<span class="tag green">nieuw</span>' : '') + (drafts[i.id] ? '<span class="tag green">concept</span>' : '')
+      const l2 = [i.org, i.land.naam, i.m2 !== null ? i.m2 + ' m²' : 'm² onbekend'].filter(Boolean).join(' · ')
+      return `<button class="row" data-id="${i.id}" aria-current="${i.id === selectedId}"><div class="l1"><span>${esc(i.person.name || i.title)}${tags}</span><span>${esc(dt(i.addTime))}</span></div><div class="l2">${esc(l2)}</div></button>`
+    }).join('')
+    document.getElementById('list').innerHTML = h
+    document.querySelectorAll('.row').forEach(el => el.addEventListener('click', () => { selectedId = Number(el.dataset.id); renderList(); renderDetail() }))
+  }
+
+  function renderDetail() {
+    const el = document.getElementById('detail')
+    const i = data.items.find(x => x.id === selectedId)
+    if (!i) { el.innerHTML = '<p class="empty">Kies een aanvraag.</p>'; return }
+    const bk = bucketOf(i)
+    const raw = (i.raw || []).filter(r => r.value)
+    const d = drafts[i.id]
+    el.innerHTML = `
+      <h2>${esc(i.person.name || i.title)}</h2>
+      <div class="org">${esc(i.org || 'Geen organisatie')}</div>
+      <dl class="facts">
+        <dt>E-mail</dt><dd>${esc(i.person.email || 'onbekend')}${i.priveMail ? ' <span class="tag">privé-adres</span>' : ''}</dd>
+        <dt>Land</dt><dd>${esc(i.land.naam || i.land.raw || 'onbekend')}</dd>
+        <dt>Oppervlak</dt><dd>${i.m2 !== null ? esc(i.m2) + ' m²' : 'onbekend'}${i.grootteTekst ? ' (ingevuld: "' + esc(i.grootteTekst) + '")' : ''}</dd>
+        <dt>Soort</dt><dd>${esc(i.soort)}</dd>
+        <dt>Taal</dt><dd>${esc({ nl: 'Nederlands', en: 'Engels', de: 'Duits' }[i.lang])}</dd>
+        <dt>Binnen</dt><dd>${esc(new Date(i.addTime).toLocaleString('nl-NL', { dateStyle: 'medium', timeStyle: 'short' }))} · <a href="https://app.pipedrive.com/deal/${i.id}" target="_blank" rel="noopener">Pipedrive</a></dd>
+      </dl>
+      ${i.noGo ? '<div class="flag red">No-go: ' + esc(i.flags[0]) + '</div>' : ''}
+      ${i.flags.filter(x => !i.noGo || x !== i.flags[0]).map(x => '<div class="flag">' + esc(x) + '</div>').join('')}
+      <div class="why"><b>Waarom dit bakje:</b> ${esc(i.reasons.join('. '))}.</div>
+
+      <div class="sec">Zoals ingevuld in Pipedrive</div>
+      ${raw.length ? '<dl class="facts raw">' + raw.map(r => '<dt>' + esc(r.label) + '</dt><dd>' + esc(r.value) + '</dd>').join('') + '</dl>' : '<p class="note">Geen ingevulde velden bij de deal.</p>'}
+
+      <div class="sec">Bijlagen</div>
+      <div id="filesBox" class="files"><p class="note">Laden...</p></div>
+
+      <div class="sec">Notities in Pipedrive</div>
+      <div id="notesBox" class="notes"><p class="note">Laden...</p></div>
+
+      <div class="sec">Antwoord</div>
+      <div class="ctrl">
+        <div><label class="lbl" for="selBucket">Bakje voor het antwoord</label><select id="selBucket">${ORDER.map(k => `<option value="${k}" ${k === bk ? 'selected' : ''}>${esc(data.buckets[k].nr)}. ${esc(data.buckets[k].naam)}</option>`).join('')}</select></div>
+        <div><label class="lbl" for="selLang">Taal</label><select id="selLang"><option value="">Auto</option><option value="nl">NL</option><option value="en">EN</option><option value="de">DE</option></select></div>
+      </div>
+      <label class="lbl" for="extra">Extra instructie (optioneel)</label>
+      <input id="extra" type="text" placeholder="Bijvoorbeeld: noem ook de foto's van Utrecht" value="${esc(d ? d.extra : '')}">
+      <div class="actions"><button class="btn" id="btnGen">${d ? 'Genereer opnieuw' : 'Genereer antwoord'}</button><span class="status-line" id="genStatus"></span></div>
+      <div id="draftBox">${d ? draftHtml(i, d) : ''}</div>`
+    document.getElementById('selBucket').addEventListener('change', e => {
+      const v = e.target.value
+      if (v === i.bucket) delete overrides[i.id]; else overrides[i.id] = v
+      localStorage.setItem('aanvragen_override', JSON.stringify(overrides))
+      renderBuckets(); renderList()
+    })
+    document.getElementById('btnGen').addEventListener('click', () => generate(i))
+    bindDraft(i)
+    loadDetail(i)
+  }
+
+  // ---- Bijlagen en notities ----
+  const MIME_EXT = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', pdf: 'application/pdf' }
+  const extOf = n => ((String(n || '').match(/\.([a-z0-9]+)$/i) || [])[1] || '').toLowerCase()
+  const isImg = f => (MIME_EXT[extOf(f.name)] || '').startsWith('image/')
+  const isPdf = f => extOf(f.name) === 'pdf' || f.type === 'pdf'
+  const MAX_FILE = 4.5 * 1048576
+  const tooBig = f => f.size && f.size > MAX_FILE
+
+  async function loadDetail(i) {
+    if (!details[i.id]) {
+      const headers = await authHeader(); if (!headers) return
+      try {
+        const res = await fetch(FN_DETAIL + '?dealId=' + i.id, { headers })
+        const body = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(body.error || ('Fout ' + res.status))
+        details[i.id] = body
+      } catch (err) {
+        if (selectedId === i.id) {
+          const fb = document.getElementById('filesBox'), nb = document.getElementById('notesBox')
+          if (fb) fb.innerHTML = '<p class="note" style="color:var(--alert)">Bijlagen en notities laden mislukt: ' + esc(err.message) + '</p>'
+          if (nb) nb.innerHTML = ''
+        }
+        return
+      }
+    }
+    if (selectedId === i.id) renderDetailExtras(i)
+  }
+
+  // Haalt het bestand op (eenmalig per sessie) en bewaart het in het geheugen.
+  function getFile(i, f) {
+    const det = details[i.id]
+    det.cache = det.cache || {}; det.pending = det.pending || {}
+    if (det.cache[f.id]) return Promise.resolve(det.cache[f.id])
+    if (!det.pending[f.id]) {
+      det.pending[f.id] = (async () => {
+        const headers = await authHeader(); if (!headers) throw new Error('Niet ingelogd.')
+        const res = await fetch(FN_FILE + '?dealId=' + i.id + '&fileId=' + f.id, { headers })
+        if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || ('Fout ' + res.status)) }
+        const ct = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase()
+        const blob = await res.blob()
+        const mime = IMG_TYPES.includes(ct) ? ct : (MIME_EXT[extOf(f.name)] || ct)
+        det.cache[f.id] = { blob, mime }
+        return det.cache[f.id]
+      })().finally(() => { delete det.pending[f.id] })
+    }
+    return det.pending[f.id]
+  }
+
+  function saveBlob(entry, name) {
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([entry.blob], { type: 'application/octet-stream' })); a.download = name
+    document.body.appendChild(a); a.click(); a.remove()
+  }
+
+  async function runPool(tasks, n) {
+    let k = 0
+    await Promise.all(Array.from({ length: Math.min(n, tasks.length) }, async () => { while (k < tasks.length) { const t = tasks[k++]; await t() } }))
+  }
+
+  const noteHtml = n => {
+    const when = n.addTime ? new Date(n.addTime.replace(' ', 'T') + 'Z').toLocaleString('nl-NL', { dateStyle: 'medium', timeStyle: 'short' }) : ''
+    const body = n.items
+      ? n.items.map(it => '<div class="q">' + esc(it.nr + '. ' + it.vraag) + '</div><div>' + esc(it.antwoord) + '</div>').join('')
+      : esc(n.text)
+    return '<div class="note-item"><div class="meta">' + esc(when) + '</div>' + body + '</div>'
+  }
+
+  function renderDetailExtras(i) {
+    const det = details[i.id]
+    const fb = document.getElementById('filesBox'), nb = document.getElementById('notesBox')
+    if (!fb || !nb || !det) return
+    const files = det.files || []
+    if (!files.length) fb.innerHTML = '<p class="note">Geen bijlagen bij deze aanvraag.</p>'
+    else {
+      const photos = files.filter(f => !f.remote && isImg(f) && !tooBig(f))
+      const others = files.filter(f => !photos.includes(f))
+      let h = ''
+      if (photos.length) {
+        h += '<div class="photos">' + photos.map(f => '<div class="photo" data-fid="' + f.id + '"><div class="ph">Laden...</div><div class="cap"><span>' + esc(f.name) + '</span><button data-act="dl" data-id="' + f.id + '">Download</button></div></div>').join('') + '</div>'
+      }
+      if (others.length) {
+        h += '<div class="files" style="margin-top:' + (photos.length ? '10' : '0') + 'px">' + others.map(f => {
+          let acts
+          if (f.remote) acts = '<a class="btn small ghost" href="https://app.pipedrive.com/deal/' + i.id + '" target="_blank" rel="noopener">Open in Pipedrive</a>'
+          else if (tooBig(f)) acts = '<a class="btn small ghost" href="https://app.pipedrive.com/deal/' + i.id + '" target="_blank" rel="noopener">Te groot, open in Pipedrive</a>'
+          else acts = (isPdf(f) ? '<button class="btn small ghost" data-act="open" data-id="' + f.id + '">Open</button>' : '') + '<button class="btn small ghost" data-act="dl" data-id="' + f.id + '">Download</button>'
+          return '<div class="file" data-fid="' + f.id + '"><div><div class="nm">' + esc(f.name) + '</div><div class="meta">' + esc([extOf(f.name).toUpperCase(), fmtSize(f.size)].filter(Boolean).join(' · ')) + '</div></div><div class="acts">' + acts + '</div></div>'
+        }).join('') + '</div>'
+      }
+      h += '<p class="note">Bijlagen komen van de aanvrager. Foto\'s worden hier direct getoond. PDF\'s open je met de knop. Word, Excel en andere documenten worden alleen gedownload en nooit in de pagina geopend.</p>'
+      fb.innerHTML = h
+      fb.querySelectorAll('button[data-act]').forEach(b => b.addEventListener('click', () => fileAction(i, b.dataset.act, Number(b.dataset.id), b)))
+      runPool(photos.map(f => async () => {
+        const holder = fb.querySelector('.photo[data-fid="' + f.id + '"] .ph')
+        try {
+          const entry = await getFile(i, f)
+          if (selectedId !== i.id || !holder.isConnected) return
+          holder.innerHTML = ''
+          const img = document.createElement('img'); img.alt = f.name
+          const url = (entry.url = entry.url || URL.createObjectURL(new Blob([entry.blob], { type: entry.mime })))
+          img.src = url
+          img.addEventListener('click', () => window.open(url, '_blank', 'noopener'))
+          holder.appendChild(img)
+        } catch (err) { if (holder.isConnected) holder.textContent = err.message }
+      }), 3)
+    }
+    nb.innerHTML = det.notes.length ? det.notes.map(noteHtml).join('') : '<p class="note">Geen eigen notities bij deze aanvraag.</p>'
+    if (det.verborgen) nb.innerHTML += '<p class="note">Het ingevulde formulier staat ook als notitie in Pipedrive. Wat daar dubbel is met de velden hierboven is weggelaten.</p>'
+  }
+
+  async function fileAction(i, act, fileId, btn) {
+    const f = details[i.id].files.find(x => x.id === fileId)
+    const holder = btn.closest('.file, .photo')
+    const old = btn.textContent
+    btn.disabled = true; btn.textContent = '...'
+    const prev = holder.querySelector('.err'); if (prev) prev.remove()
+    try {
+      const entry = await getFile(i, f)
+      if (act === 'open' && (entry.mime === 'application/pdf' || isPdf(f))) {
+        window.open(URL.createObjectURL(new Blob([entry.blob], { type: 'application/pdf' })), '_blank', 'noopener')
+      } else saveBlob(entry, f.name)
+    } catch (err) {
+      const p = document.createElement('div'); p.className = 'err'; p.textContent = err.message; holder.appendChild(p)
+    }
+    btn.disabled = false; btn.textContent = old
+  }
+
+  // ---- Concept ----
+  function draftHtml(i, d) {
+    return `<div class="draft">
+      <label class="lbl" for="dSubj">Onderwerp</label><input id="dSubj" type="text" value="${esc(d.onderwerp)}">
+      <label class="lbl" for="dBody" style="margin-top:10px">Tekst (aan te passen)</label><textarea id="dBody">${esc(d.tekst)}</textarea>
+      <div class="actions">
+        <button class="btn" id="btnMail" ${i.person.email ? '' : 'disabled'}>Open in e-mail</button>
+        <button class="btn ghost" id="btnCopyRich">Kopieer opgemaakt</button>
+        <button class="btn ghost" id="btnCopy">Kopieer tekst</button>
+        <span class="status-line" id="copyStatus"></span>
+      </div>
+      <p class="note">Geen handtekening en geen afsluitgroet, die voeg je zelf toe. Kopieer opgemaakt plakt de kopjes vet in je mail. Past je een kopje aan, dan wordt die regel niet meer vet. Controleer prijzen en details voor je verstuurt. Bakje: ${esc(data.buckets[d.bucket].naam)}, model: ${esc(d.model)}.${i.person.email ? '' : ' Er is geen e-mailadres bij deze aanvraag, dus alleen kopiëren kan.'}</p>
+    </div>`
+  }
+  function bindDraft(i) {
+    const btnMail = document.getElementById('btnMail'), btnCopy = document.getElementById('btnCopy')
+    if (!btnCopy) return
+    const body = () => document.getElementById('dBody').value
+    const subj = () => document.getElementById('dSubj').value
+    const keep = () => { drafts[i.id].tekst = body(); drafts[i.id].onderwerp = subj() }
+    document.getElementById('dBody').addEventListener('input', keep)
+    document.getElementById('dSubj').addEventListener('input', keep)
+    btnCopy.addEventListener('click', async () => {
+      const el = document.getElementById('copyStatus')
+      try { await navigator.clipboard.writeText(body()); el.textContent = 'Gekopieerd.' } catch (_) { el.textContent = 'Kopiëren lukt niet in deze browser.' }
+    })
+    document.getElementById('btnCopyRich').addEventListener('click', async () => {
+      const el = document.getElementById('copyStatus')
+      const kop = new Set((drafts[i.id].kopjes || []).map(k => k.trim()))
+      const html = '<div style="font-family:Calibri,Arial,sans-serif;font-size:11pt">' + body().split('\n').map(l => {
+        if (!l.trim()) return '<p style="margin:0"><br></p>'
+        return kop.has(l.trim()) ? '<p style="margin:0"><b>' + esc(l) + '</b></p>' : '<p style="margin:0">' + esc(l) + '</p>'
+      }).join('') + '</div>'
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([html], { type: 'text/html' }), 'text/plain': new Blob([body()], { type: 'text/plain' }) })])
+        el.textContent = 'Gekopieerd met vette kopjes.'
+      } catch (_) {
+        try { await navigator.clipboard.writeText(body()); el.textContent = 'Opgemaakt kopiëren lukt hier niet, de gewone tekst is gekopieerd.' } catch (__) { el.textContent = 'Kopiëren lukt niet in deze browser.' }
+      }
+    })
+    if (btnMail) btnMail.addEventListener('click', () => {
+      const text = body().replace(/\r?\n/g, '\r\n')
+      const url = 'mailto:' + encodeURIComponent(i.person.email) + '?subject=' + encodeURIComponent(subj()) + '&body=' + encodeURIComponent(text)
+      if (url.length > 7000) { document.getElementById('copyStatus').textContent = 'De tekst is te lang voor een e-maillink. Gebruik Kopieer tekst.'; return }
+      window.location.href = url
+    })
+  }
+
+  async function generate(i) {
+    const headers = await authHeader(); if (!headers) return
+    const btn = document.getElementById('btnGen'), st = document.getElementById('genStatus')
+    const bucket = document.getElementById('selBucket').value
+    const lang = document.getElementById('selLang').value
+    const extra = document.getElementById('extra').value.trim()
+    if (bucket === 'handmatig') { st.textContent = 'Kies eerst een ander bakje voor het antwoord.'; st.className = 'status-line err'; return }
+    btn.disabled = true; st.className = 'status-line'; st.textContent = 'Concept wordt geschreven, dit duurt ongeveer 10 seconden...'
+    try {
+      const res = await fetch(FN_DRAFT, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ dealId: i.id, bucket, lang: lang || undefined, extra }) })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || ('Fout ' + res.status))
+      drafts[i.id] = { ...body, extra }
+      renderList(); renderDetail()
+    } catch (err) {
+      st.textContent = err.message; st.className = 'status-line err'
+    }
+    const b2 = document.getElementById('btnGen'); if (b2) b2.disabled = false
+  }
+</script>
+</body>
+</html>

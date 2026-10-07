@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<style>@media (pointer:coarse){input,select,textarea{font-size:16px!important}}</style>
+<title>Gebruikersbeheer</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f4f0; color: #1a1a1a; min-height: 100vh; padding: 40px 24px 64px; }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 28px; gap: 12px; }
+  h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em; }
+  a.back { font-size: .85rem; color: #777; text-decoration: none; }
+  a.back:hover { color: #1a1a1a; }
+  .card { background: #fff; border: 1px solid #e8e6e1; border-radius: 12px; padding: 22px; margin-bottom: 18px; }
+  h2 { font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #999; margin-bottom: 14px; }
+  .fg { margin-bottom: 14px; }
+  label { display: block; font-size: .78rem; font-weight: 500; color: #555; margin-bottom: 5px; }
+  input[type=email] { width: 100%; padding: 9px 11px; border: 1px solid #e0ddd8; border-radius: 8px; font-size: .9rem; background: #fafaf8; outline: none; }
+  input[type=email]:focus { border-color: #1a1a1a; background: #fff; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: .76rem; padding: 4px 11px; border-radius: 20px; cursor: pointer; border: 1px solid #e0ddd8; background: #f5f4f0; color: #888; user-select: none; }
+  .chip.on { background: #1a1a1a; border-color: #1a1a1a; color: #fff; }
+  .chip.busy { opacity: .5; pointer-events: none; }
+  .btn { padding: 10px 16px; background: #1a1a1a; color: #fff; border: none; border-radius: 8px; font-size: .85rem; font-weight: 500; cursor: pointer; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn.ghost { background: #f0ede8; color: #333; }
+  .btn.danger { background: #fff; color: #c0392b; border: 1px solid #e8c9c5; }
+  .btn.small { padding: 6px 11px; font-size: .78rem; }
+  .user { border-top: 1px solid #f0ede8; padding: 16px 0; }
+  .user:first-of-type { border-top: none; padding-top: 0; }
+  .user-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; margin-bottom: 10px; flex-wrap: wrap; }
+  .email { font-size: .92rem; font-weight: 500; word-break: break-all; }
+  .meta { font-size: .76rem; color: #999; margin-top: 2px; }
+  .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+  .linkbox { background: #edf4ef; border: 1px solid #cfe0d3; border-radius: 10px; padding: 14px; margin-top: 14px; }
+  .linkbox p { font-size: .82rem; color: #2f5234; margin-bottom: 8px; line-height: 1.5; }
+  .linkbox textarea { width: 100%; font-size: .78rem; padding: 8px; border: 1px solid #cfe0d3; border-radius: 8px; background: #fff; resize: none; word-break: break-all; height: 74px; }
+  .msg { font-size: .84rem; margin-top: 10px; min-height: 1.2em; color: #c0392b; }
+  .msg.ok { color: #4a7c59; }
+  .empty { font-size: .88rem; color: #999; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>Gebruikersbeheer</h1><a class="back" href="/">← Tools</a></header>
+  <div id="gate" class="card" style="display:none"><p class="empty" id="gateMsg"></p></div>
+  <div id="main" style="display:none">
+    <div class="card">
+      <h2>Iemand uitnodigen</h2>
+      <div class="fg"><label for="invEmail">E-mailadres</label><input type="email" id="invEmail" placeholder="naam@bedrijf.nl" autocomplete="off"></div>
+      <div class="fg"><label>Toegang tot</label><div class="chips" id="invChips"></div></div>
+      <button class="btn" id="btnInvite">Uitnodiging maken</button>
+      <p class="msg" id="invMsg"></p>
+      <div id="invResult"></div>
+    </div>
+    <div class="card">
+      <h2>Gebruikers</h2>
+      <div id="users"><p class="empty">Laden...</p></div>
+      <p class="msg" id="listMsg"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+  const HUB_URL = 'https://swrunlzeydmcskceqdju.supabase.co'
+  const HUB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3cnVubHpleWRtY3NrY2VxZGp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNjE2MDgsImV4cCI6MjA5MjkzNzYwOH0.V7haNdFPFJuvJJTbjhiUzKrWG8trW4UeRIJveAhFOgs'
+  const sb = supabase.createClient(HUB_URL, HUB_KEY)
+  const ADMIN_EMAIL = 'robert@circe-advies.nl'
+  // Houd gelijk aan APPS in index.html en APP_KEYS in netlify/lib/hub-admin.js.
+  const APPS = [
+    ['daglicht', 'Daglicht'], ['claude', 'Claude gebruik'], ['uren', 'Uren schrijven'], ['taken', 'Taken'],
+    ['docs', 'Documenten naar tekst'], ['rijradius', 'Rijradius'], ['bewaard', 'Bewaard'], ['linkbeheer', 'Linkbeheer'],
+    ['e208', 'Peugeot e208'], ['respyre', 'Respyre antwoorden'], ['aanvragen', 'Aanvragen'],
+  ]
+  const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
+  function say(id, text, ok) { const el = document.getElementById(id); el.textContent = text; el.className = 'msg' + (ok ? ' ok' : '') }
+
+  async function api(body) {
+    const { data: { session } } = await sb.auth.getSession()
+    if (!session) throw new Error('Je bent uitgelogd. Log opnieuw in via de Hub.')
+    const res = await fetch('/.netlify/functions/admin-users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+      body: JSON.stringify(body),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data.error || ('Fout ' + res.status))
+    return data
+  }
+
+  function gate(text) {
+    document.getElementById('main').style.display = 'none'
+    document.getElementById('gate').style.display = 'block'
+    document.getElementById('gateMsg').innerHTML = text
+  }
+
+  ;(async () => {
+    const { data: { session } } = await sb.auth.getSession()
+    if (!session) return gate('Je bent niet ingelogd. <a href="/">Log eerst in via de Hub</a> en open daarna deze pagina opnieuw.')
+    if ((session.user.email || '').toLowerCase() !== ADMIN_EMAIL) return gate('Alleen de beheerder heeft toegang tot deze pagina.')
+    document.getElementById('main').style.display = 'block'
+    renderInviteChips()
+    loadUsers()
+  })()
+
+  function renderInviteChips() {
+    document.getElementById('invChips').innerHTML = APPS.map(([k, t]) => `<span class="chip" data-app="${k}">${esc(t)}</span>`).join('')
+    document.querySelectorAll('#invChips .chip').forEach(c => c.addEventListener('click', () => c.classList.toggle('on')))
+  }
+
+  function linkBox(email, link, extra) {
+    return `<div class="linkbox"><p><b>${esc(email)}</b>: stuur deze link via WhatsApp, Signal of een andere chat. De ontvanger kiest zelf een wachtwoord. De link werkt één keer en verloopt na ongeveer een uur. ${extra || ''}</p>
+      <textarea readonly onclick="this.select()">${esc(link)}</textarea>
+      <div class="acts" style="margin-top:8px"><button class="btn small" onclick="copyLink(this)">Kopieer link</button></div></div>`
+  }
+  async function copyLink(btn) {
+    const ta = btn.closest('.linkbox').querySelector('textarea')
+    try { await navigator.clipboard.writeText(ta.value); btn.textContent = 'Gekopieerd' } catch (_) { ta.select(); btn.textContent = 'Selecteer en kopieer zelf' }
+  }
+
+  document.getElementById('btnInvite').addEventListener('click', async () => {
+    const email = document.getElementById('invEmail').value.trim()
+    const apps = [...document.querySelectorAll('#invChips .chip.on')].map(c => c.dataset.app)
+    const btn = document.getElementById('btnInvite')
+    document.getElementById('invResult').innerHTML = ''
+    if (!email) { say('invMsg', 'Vul een e-mailadres in.'); return }
+    btn.disabled = true; say('invMsg', 'Bezig...', true)
+    try {
+      const r = await api({ action: 'invite', email, apps })
+      say('invMsg', r.waarschuwing || 'Account aangemaakt.', !r.waarschuwing)
+      document.getElementById('invResult').innerHTML = linkBox(r.email, r.link)
+      document.getElementById('invEmail').value = ''
+      renderInviteChips()
+      loadUsers()
+    } catch (err) { say('invMsg', err.message) }
+    btn.disabled = false
+  })
+
+  let current = []
+  async function loadUsers() {
+    try {
+      const r = await api({ action: 'list' })
+      current = r.users
+      renderUsers()
+    } catch (err) { document.getElementById('users').innerHTML = ''; say('listMsg', err.message) }
+  }
+
+  function datum(iso) { return iso ? new Date(iso).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' }) : '' }
+
+  function renderUsers() {
+    const box = document.getElementById('users')
+    if (!current.length) { box.innerHTML = '<p class="empty">Nog geen gebruikers.</p>'; return }
+    box.innerHTML = current.map(u => {
+      const chips = u.isAdmin
+        ? '<span class="meta">Beheerder, heeft altijd alles.</span>'
+        : `<div class="chips">${APPS.map(([k, t]) => `<span class="chip ${u.apps.includes(k) ? 'on' : ''}" data-uid="${u.id}" data-app="${k}">${esc(t)}</span>`).join('')}</div>`
+      const acts = u.isAdmin ? '' : `<div class="acts">
+          <button class="btn ghost small" data-act="link" data-uid="${u.id}">Nieuwe link</button>
+          <button class="btn danger small" data-act="remove" data-uid="${u.id}">Verwijderen</button></div>`
+      const meta = [u.status, u.lastSignInAt ? 'laatst ingelogd ' + datum(u.lastSignInAt) : ''].filter(Boolean).join(' · ')
+      return `<div class="user" data-uid="${u.id}"><div class="user-head"><div><div class="email">${esc(u.email)}</div><div class="meta">${esc(meta)}</div></div>${acts}</div>${chips}<div class="linkslot"></div></div>`
+    }).join('')
+    box.querySelectorAll('.chip[data-uid]').forEach(c => c.addEventListener('click', () => togglePerm(c)))
+    box.querySelectorAll('button[data-act]').forEach(b => b.addEventListener('click', () => userAction(b)))
+  }
+
+  async function togglePerm(chip) {
+    const u = current.find(x => x.id === chip.dataset.uid)
+    if (!u) return
+    const app = chip.dataset.app
+    const next = u.apps.includes(app) ? u.apps.filter(a => a !== app) : [...u.apps, app]
+    chip.classList.add('busy')
+    try {
+      const r = await api({ action: 'setApps', userId: u.id, apps: next })
+      u.apps = r.apps
+      chip.classList.toggle('on', u.apps.includes(app))
+      say('listMsg', '')
+    } catch (err) { say('listMsg', err.message) }
+    chip.classList.remove('busy')
+  }
+
+  async function userAction(btn) {
+    const u = current.find(x => x.id === btn.dataset.uid)
+    if (!u) return
+    const slot = btn.closest('.user').querySelector('.linkslot')
+    btn.disabled = true
+    try {
+      if (btn.dataset.act === 'link') {
+        const r = await api({ action: 'newlink', userId: u.id })
+        slot.innerHTML = linkBox(r.email, r.link, 'Een eerdere link van deze gebruiker is hiermee niet altijd meer geldig.')
+        say('listMsg', '')
+      } else if (btn.dataset.act === 'remove') {
+        if (!confirm('Het account van ' + u.email + ' definitief verwijderen? Dit kan niet ongedaan worden gemaakt.')) { btn.disabled = false; return }
+        await api({ action: 'remove', userId: u.id })
+        say('listMsg', u.email + ' is verwijderd.', true)
+        await loadUsers()
+        return
+      }
+    } catch (err) { say('listMsg', err.message) }
+    btn.disabled = false
+  }
+</script>
+</body>
+</html>
