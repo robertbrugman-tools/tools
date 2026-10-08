@@ -37,19 +37,37 @@
 
   window.statsOpen = async function () {
     const back = document.createElement('div'); back.id = 'stBack'
-    back.innerHTML = '<div id="stBox" role="dialog" aria-label="Aanvragen per dag"><h2>Aanvragen per dag</h2><p class="note">Binnengekomen in Pipeline incoming sinds 1 oktober 2026, per kalenderdag (Nederlandse tijd). Afgehandelde aanvragen tellen mee.</p><div id="stBody"><p class="note">Laden...</p></div><div class="actions"><button class="btn ghost" id="stClose">Sluiten</button></div></div>'
+    back.innerHTML = '<div id="stBox" role="dialog" aria-label="Aanvragen per dag"><h2>Aanvragen per dag</h2><p class="note">Binnengekomen in Pipeline incoming sinds 1 oktober 2026, per kalenderdag (Nederlandse tijd). Een aanvraag blijft geteld, ook als je hem afhandelt of verplaatst. Nieuwe aanvragen worden om 08:00, 11:00, 14:00, 17:00 en 00:00 bijgeteld.</p><div id="stBody"><p class="note">Laden...</p></div><div class="actions"><button class="btn" id="stNow">Nu bijwerken</button><button class="btn ghost" id="stClose">Sluiten</button><span class="status-line" id="stStatus"></span></div></div>'
     document.body.appendChild(back)
     const close = () => { back.remove(); document.removeEventListener('keydown', onKey) }
     const onKey = e => { if (e.key === 'Escape') close() }
     document.addEventListener('keydown', onKey)
     back.addEventListener('click', e => { if (e.target === back) close() })
     back.querySelector('#stClose').addEventListener('click', close)
-    const body = back.querySelector('#stBody')
-    try {
+    const body = back.querySelector('#stBody'), st = back.querySelector('#stStatus'), btnNow = back.querySelector('#stNow')
+    const hm = iso => new Date(iso).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', timeZone: TZ })
+    const dm = iso => new Date(iso).toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short', timeZone: TZ })
+    async function haal(method) {
       const h = await authHeader(); if (!h) { close(); return }
-      const res = await fetch(FN, { headers: h })
-      const r = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(r.error || ('Fout ' + res.status))
+      btnNow.disabled = true; st.className = 'status-line'
+      st.textContent = method === 'POST' ? 'Bijwerken...' : ''
+      try {
+        const res = await fetch(FN, { method, headers: h })
+        const r = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(r.error || ('Fout ' + res.status))
+        teken(r)
+        const kort = r.laatstBijgewerkt ? 'Bijgewerkt om ' + hm(r.laatstBijgewerkt) + '.' : ''
+        const nieuw = method === 'POST' || r.nieuw !== undefined ? (r.nieuw ? ' ' + r.nieuw + ' nieuwe aanvra' + (r.nieuw === 1 ? 'ag' : 'gen') + ' bijgeteld.' : ' Niets nieuws.') : ''
+        const volg = r.volgendeControle ? ' Volgende controle: ' + (new Date(r.volgendeControle).toDateString() === new Date().toDateString() ? '' : dm(r.volgendeControle) + ' ') + hm(r.volgendeControle) + '.' : ''
+        st.textContent = kort + nieuw + volg
+        if (r.laatsteFout) { st.textContent += ' Laatste automatische controle mislukte: ' + r.laatsteFout; st.className = 'status-line err' }
+      } catch (err) {
+        if (!body.querySelector('.st-row')) body.innerHTML = ''
+        st.textContent = err.message; st.className = 'status-line err'
+      }
+      btnNow.disabled = false
+    }
+    function teken(r) {
       const open = {}
       ;((typeof data !== 'undefined' && data && data.items) || []).forEach(i => { const k = dagKey(new Date(i.addTime)); open[k] = (open[k] || 0) + 1 })
       const dagen = r.dagen.slice().reverse() // nieuwste bovenaan
@@ -68,8 +86,8 @@
           <span class="st-bar"><i style="width:${Math.round(d.aantal / max * 100)}%"></i></span>
           <span class="n ${d.aantal ? '' : 'nul'}">${d.aantal}</span>
           <span class="o">${open[d.dag] ? open[d.dag] + ' open' : ''}</span></div>`).join('')
-    } catch (err) {
-      body.innerHTML = `<p class="note" style="color:var(--alert)">${esc(err.message)}</p>`
     }
+    btnNow.addEventListener('click', () => haal('POST'))
+    haal('GET')
   }
 })()

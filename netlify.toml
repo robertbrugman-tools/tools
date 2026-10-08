@@ -1,0 +1,4 @@
+# Alleen het schema voor de geplande functie. Bouwinstellingen blijven zoals ze in Netlify staan.
+# Elk uur; de functie zelf beslist of het een controlemoment is (00, 08, 11, 14, 17 uur Nederlandse tijd).
+[functions."aanvragen-sync"]
+  schedule = "0 * * * *"
