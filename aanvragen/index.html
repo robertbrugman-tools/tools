@@ -158,6 +158,7 @@
       </div>
       <div class="top-right">
         <span class="status-line" id="status" role="status"></span>
+        <button class="btn ghost" id="btnStats" onclick="statsOpen()"><span>Per dag</span></button>
         <button class="btn ghost" id="btnRegels" style="display:none" onclick="regelsOpen()"><span>Leerregels</span></button>
         <button class="btn" id="btnRefresh" onclick="load(true)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
@@ -577,5 +578,6 @@
   }
 </script>
 <script src="feedback.js"></script>
+<script src="stats.js"></script>
 </body>
 </html>
