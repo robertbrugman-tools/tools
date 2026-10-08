@@ -158,6 +158,8 @@
       </div>
       <div class="top-right">
         <span class="status-line" id="status" role="status"></span>
+        <button class="btn ghost" id="btnStats" onclick="statsOpen()"><span>Per dag</span></button>
+        <button class="btn ghost" id="btnRegels" style="display:none" onclick="regelsOpen()"><span>Leerregels</span></button>
         <button class="btn" id="btnRefresh" onclick="load(true)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
           Ververs
@@ -327,30 +329,36 @@
     document.querySelectorAll('.row').forEach(el => el.addEventListener('click', () => { selectedId = Number(el.dataset.id); renderList(); renderDetail() }))
   }
 
+  // Eén lijst met gegevens: locatie en oppervlak samengevoegd, de rest van de ingevulde velden eronder.
+  const norm = t => String(t || '').toLowerCase().replace(/²/g, '2').replace(/\s+/g, '')
+  function factsHtml(i) {
+    const raw = {}; (i.raw || []).forEach(r => { if (r.value) raw[r.label] = r.value })
+    const rows = []
+    rows.push(['E-mail', esc(i.person.email || 'onbekend') + (i.priveMail ? ' <span class="tag">privé-adres</span>' : '')])
+    rows.push(['Locatie', esc(raw['Locatie'] || i.land.naam || i.land.raw || 'onbekend')])
+    const ingevuld = raw['Grootte'] || i.grootteTekst
+    let opp
+    if (i.m2 !== null) opp = esc(i.m2) + ' m²' + (ingevuld && norm(ingevuld) !== norm(i.m2 + ' m²') ? ' (ingevuld: "' + esc(ingevuld) + '")' : '')
+    else opp = ingevuld ? esc(ingevuld) + ' (niet als getal te lezen)' : 'onbekend'
+    rows.push(['Oppervlak', opp])
+    const skip = ['Locatie', 'Grootte', 'Project name']
+    ;(i.raw || []).filter(r => r.value && !skip.includes(r.label)).forEach(r => rows.push([r.label, esc(r.value)]))
+    return rows.map(([k, v]) => '<dt>' + esc(k) + '</dt><dd>' + v + '</dd>').join('')
+  }
+
   function renderDetail() {
     const el = document.getElementById('detail')
     const i = data.items.find(x => x.id === selectedId)
     if (!i) { el.innerHTML = '<p class="empty">Kies een aanvraag.</p>'; return }
     const bk = bucketOf(i)
-    const raw = (i.raw || []).filter(r => r.value)
     const d = drafts[i.id]
     el.innerHTML = `
       <h2>${esc(i.person.name || i.title)}</h2>
-      <div class="org">${esc(i.org || 'Geen organisatie')}</div>
-      <dl class="facts">
-        <dt>E-mail</dt><dd>${esc(i.person.email || 'onbekend')}${i.priveMail ? ' <span class="tag">privé-adres</span>' : ''}</dd>
-        <dt>Land</dt><dd>${esc(i.land.naam || i.land.raw || 'onbekend')}</dd>
-        <dt>Oppervlak</dt><dd>${i.m2 !== null ? esc(i.m2) + ' m²' : 'onbekend'}${i.grootteTekst ? ' (ingevuld: "' + esc(i.grootteTekst) + '")' : ''}</dd>
-        <dt>Soort</dt><dd>${esc(i.soort)}</dd>
-        <dt>Taal</dt><dd>${esc({ nl: 'Nederlands', en: 'Engels', de: 'Duits' }[i.lang])}</dd>
-        <dt>Binnen</dt><dd>${esc(new Date(i.addTime).toLocaleString('nl-NL', { dateStyle: 'medium', timeStyle: 'short' }))} · <a href="https://app.pipedrive.com/deal/${i.id}" target="_blank" rel="noopener">Pipedrive</a></dd>
-      </dl>
+      <div class="org">${esc(i.org || 'Geen organisatie')} · <a href="https://app.pipedrive.com/deal/${i.id}" target="_blank" rel="noopener">Pipedrive</a></div>
+      <dl class="facts">${factsHtml(i)}</dl>
       ${i.noGo ? '<div class="flag red">No-go: ' + esc(i.flags[0]) + '</div>' : ''}
       ${i.flags.filter(x => !i.noGo || x !== i.flags[0]).map(x => '<div class="flag">' + esc(x) + '</div>').join('')}
       <div class="why"><b>Waarom dit bakje:</b> ${esc(i.reasons.join('. '))}.</div>
-
-      <div class="sec">Zoals ingevuld in Pipedrive</div>
-      ${raw.length ? '<dl class="facts raw">' + raw.map(r => '<dt>' + esc(r.label) + '</dt><dd>' + esc(r.value) + '</dd>').join('') + '</dl>' : '<p class="note">Geen ingevulde velden bij de deal.</p>'}
 
       <div class="sec">Bijlagen</div>
       <div id="filesBox" class="files"><p class="note">Laden...</p></div>
@@ -517,11 +525,13 @@
         <span class="status-line" id="copyStatus"></span>
       </div>
       <p class="note">Geen handtekening en geen afsluitgroet, die voeg je zelf toe. Kopieer opgemaakt plakt de kopjes vet in je mail. Past je een kopje aan, dan wordt die regel niet meer vet. Controleer prijzen en details voor je verstuurt. Bakje: ${esc(data.buckets[d.bucket].naam)}, model: ${esc(d.model)}.${i.person.email ? '' : ' Er is geen e-mailadres bij deze aanvraag, dus alleen kopiëren kan.'}</p>
+      <div id="fbBox"></div>
     </div>`
   }
   function bindDraft(i) {
     const btnMail = document.getElementById('btnMail'), btnCopy = document.getElementById('btnCopy')
     if (!btnCopy) return
+    if (window.fbInit) fbInit(i, drafts[i.id])
     const body = () => document.getElementById('dBody').value
     const subj = () => document.getElementById('dSubj').value
     const keep = () => { drafts[i.id].tekst = body(); drafts[i.id].onderwerp = subj() }
@@ -573,5 +583,7 @@
     const b2 = document.getElementById('btnGen'); if (b2) b2.disabled = false
   }
 </script>
+<script src="feedback.js"></script>
+<script src="stats.js"></script>
 </body>
 </html>
