@@ -130,6 +130,8 @@
   .actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0; align-items: center; }
   .draft { margin-top: 20px; border-top: 1px solid var(--rule); padding-top: 18px; }
   #dBody { min-height: 300px; }
+  .chk { display: flex; align-items: center; gap: 8px; font-size: .8rem; color: var(--mute); margin: 0 0 10px; cursor: pointer; }
+  .chk input { width: auto; padding: 0; margin: 0; }
   .note { font-size: .78rem; color: var(--mute); margin-top: 6px; line-height: 1.5; }
 
   @media (max-width: 1100px) { .layout { grid-template-columns: 230px 1fr; } .detail { grid-column: 1 / -1; position: static; max-height: none; } }
@@ -193,6 +195,9 @@
   let selectedId = null
   const drafts = {}
   const details = {}
+  const pendingDrafts = {} // concepten die nu geschreven worden, per aanvraag
+  const autoFout = {} // automatisch schrijven mislukt, niet blijven herhalen
+  const autoOn = () => localStorage.getItem('aanvragen_auto') !== '0'
   let overrides = {} // handmatig gekozen bakjes, bewaard op de server (voor iedereen met toegang gelijk)
 
   ;(async () => {
@@ -335,6 +340,7 @@
     const raw = {}; (i.raw || []).forEach(r => { if (r.value) raw[r.label] = r.value })
     const rows = []
     rows.push(['E-mail', esc(i.person.email || 'onbekend') + (i.priveMail ? ' <span class="tag">privé-adres</span>' : '')])
+    if (i.website) rows.push(['Website', '<a href="' + esc(i.website.url) + '" target="_blank" rel="noopener noreferrer">' + esc(i.website.label) + '</a> <span class="tag">afgeleid van e-mailadres</span>'])
     rows.push(['Locatie', esc(raw['Locatie'] || i.land.naam || i.land.raw || 'onbekend')])
     const ingevuld = raw['Grootte'] || i.grootteTekst
     let opp
@@ -363,9 +369,59 @@
       if (n) { n.textContent = 'Verplaatsen is niet gelukt: ' + err.message; n.className = 'note err' }
       return
     }
-    // Het bakje van het antwoord volgt het nieuwe bakje, tenzij dat Handmatig is.
+    // Het concept hoort bij het bakje. Ongewijzigde concepten worden opnieuw geschreven, aangepaste blijven staan.
+    delete autoFout[i.id]
+    let behouden = false
+    const dr = drafts[i.id]
+    if (dr && dr.bucket !== bucketOf(i)) {
+      if (dr.tekst !== dr.orig || dr.onderwerp !== dr.origOnderwerp) behouden = true
+      else delete drafts[i.id]
+    }
     current = bucketOf(i); localStorage.setItem('aanvragen_bucket', current)
     render()
+    if (behouden) { const n = document.getElementById('moveNote'); if (n) n.textContent += ' Het aangepaste concept is bewaard. Klik op Genereer opnieuw voor een concept bij dit bakje.' }
+  }
+
+  // Een concept ophalen of schrijven. Altijd maar een tegelijk per aanvraag, het resultaat blijft bewaard bij de aanvraag.
+  function requestDraft(i, o) {
+    if (pendingDrafts[i.id]) return pendingDrafts[i.id]
+    pendingDrafts[i.id] = (async () => {
+      const headers = await authHeader(); if (!headers) throw new Error('Niet ingelogd.')
+      const res = await fetch(FN_DRAFT, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ dealId: i.id, bucket: o.bucket, lang: o.lang || undefined, extra: o.extra || '', auto: !!o.auto, force: !!o.force }) })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || ('Fout ' + res.status))
+      drafts[i.id] = { ...body, extra: body.extra || o.extra || '', orig: body.tekst, origOnderwerp: body.onderwerp }
+      return drafts[i.id]
+    })().finally(() => { delete pendingDrafts[i.id] })
+    return pendingDrafts[i.id]
+  }
+
+  // Verversen van alleen het conceptdeel, zodat wat je intussen typt in andere velden blijft staan.
+  function showDraft(i) {
+    renderList()
+    if (selectedId !== i.id) return
+    const d = drafts[i.id]
+    const box = document.getElementById('draftBox'); if (!box || !d) return
+    box.innerHTML = draftHtml(i, d)
+    bindDraft(i)
+    const g = document.getElementById('btnGen'); if (g) g.textContent = 'Genereer opnieuw'
+    const st = document.getElementById('genStatus'); if (st) { st.className = 'status-line'; st.textContent = d.cached ? 'Bewaard concept geladen.' : '' }
+    const ex = document.getElementById('extra'); if (ex && !ex.value && d.extra) ex.value = d.extra
+  }
+
+  function startAuto(i) {
+    const st = document.getElementById('genStatus')
+    if (!autoOn() || drafts[i.id] || autoFout[i.id]) return
+    const bk = bucketOf(i)
+    if (bk === 'handmatig') { if (st) { st.className = 'status-line'; st.textContent = 'Kies eerst een bakje voor deze aanvraag om een concept te laten schrijven.' } return }
+    if (st) { st.className = 'status-line'; st.textContent = 'Concept wordt automatisch geschreven...' }
+    requestDraft(i, { bucket: bk, auto: true }).then(d => {
+      if (d.bucket !== bucketOf(i)) { delete drafts[i.id]; if (selectedId === i.id) startAuto(i); return }
+      showDraft(i)
+    }).catch(err => {
+      autoFout[i.id] = err.message
+      if (selectedId === i.id) { const s2 = document.getElementById('genStatus'); if (s2) { s2.textContent = 'Automatisch concept mislukt: ' + err.message; s2.className = 'status-line err' } }
+    })
   }
 
   function renderDetail() {
@@ -392,6 +448,7 @@
       <div id="filesBox" class="files"><p class="note">Laden...</p></div>
 
       <div class="sec">Antwoord</div>
+      <label class="chk"><input type="checkbox" id="autoConcept" ${autoOn() ? 'checked' : ''}> Concept automatisch schrijven bij het openen van een aanvraag</label>
       <div class="ctrl">
         <div><label class="lbl" for="selBucket">Bakje voor het antwoord</label><select id="selBucket">${ORDER.map(k => `<option value="${k}" ${k === bk ? 'selected' : ''}>${esc(data.buckets[k].nr)}. ${esc(data.buckets[k].naam)}</option>`).join('')}</select></div>
         <div><label class="lbl" for="selLang">Taal</label><select id="selLang"><option value="">Auto</option><option value="nl">NL</option><option value="en">EN</option><option value="de">DE</option></select></div>
@@ -404,8 +461,14 @@
     const btnAuto = document.getElementById('btnAuto')
     if (btnAuto) btnAuto.addEventListener('click', () => moveTo(i, null))
     document.getElementById('btnGen').addEventListener('click', () => generate(i))
+    document.getElementById('autoConcept').addEventListener('change', e => {
+      localStorage.setItem('aanvragen_auto', e.target.checked ? '1' : '0')
+      if (e.target.checked) { delete autoFout[i.id]; startAuto(i) }
+    })
     bindDraft(i)
     loadDetail(i)
+    if (pendingDrafts[i.id]) { const st = document.getElementById('genStatus'); if (st) st.textContent = 'Concept wordt geschreven...' }
+    else startAuto(i)
   }
 
   // ---- Bijlagen ----
@@ -634,11 +697,10 @@
     if (bucket === 'handmatig') { st.textContent = 'Kies eerst een ander bakje voor het antwoord.'; st.className = 'status-line err'; return }
     btn.disabled = true; st.className = 'status-line'; st.textContent = 'Concept wordt geschreven, dit duurt ongeveer 10 seconden...'
     try {
-      const res = await fetch(FN_DRAFT, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ dealId: i.id, bucket, lang: lang || undefined, extra }) })
-      const body = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(body.error || ('Fout ' + res.status))
-      drafts[i.id] = { ...body, extra }
-      renderList(); renderDetail()
+      if (pendingDrafts[i.id]) { try { await pendingDrafts[i.id] } catch (_) { /* uitkomst maakt niet uit, hieronder wordt opnieuw geschreven */ } }
+      delete autoFout[i.id]
+      await requestDraft(i, { bucket, lang, extra, force: true })
+      renderList(); if (selectedId === i.id) renderDetail()
     } catch (err) {
       st.textContent = err.message; st.className = 'status-line err'
     }

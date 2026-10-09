@@ -1,9 +1,13 @@
 // Netlify function: conceptantwoord op een aanvraag, op basis van het bakje.
-//   POST { dealId, bucket?, extra? } -> { onderwerp, tekst, lang, bucket }
+//   POST { dealId, bucket?, extra?, auto?, force? } -> { onderwerp, tekst, lang, bucket, extra, cached }
+// Het laatste concept per aanvraag wordt bewaard (tabel aanvragen_concept). Met auto: true komt het bewaarde concept terug als de
+// aanvraag, het bakje en de taal niet zijn veranderd, zonder nieuwe aanroep naar het model. Met force: true wordt altijd opnieuw geschreven.
 // De deal wordt server-side opnieuw uit Pipedrive gehaald; de browser levert geen aanvraagtekst aan.
 // Sleutel: RESPYRE_ANTHROPIC_KEY (of ANTHROPIC_API_KEY) in Netlify. Model: RESPYRE_MODEL, anders claude-sonnet-5-5.
 
+const crypto = require('crypto')
 const { checkAccess } = require('../lib/hub-auth')
+const { sb } = require('../lib/hub-admin')
 const { classify, BUCKETS } = require('../lib/aanvragen-classify')
 const { KENNIS, STIJL, REGELS, BUCKET_REGELS, regioRegels } = require('../lib/aanvragen-kennis')
 const { F, fetchDeal, fetchByIds, fetchNotesFull, fetchAllFiles } = require('../lib/pipedrive')
@@ -67,6 +71,16 @@ exports.handler = async (event) => {
       ['Bijlagen die de aanvrager heeft meegestuurd (alleen de namen, de inhoud heb je niet gezien)', files.map(f => f.name || f.file_name).filter(Boolean).join(', ')],
     ].filter(([, v]) => v && String(v).trim()).map(([k, v]) => `${k}: ${v}`).join('\n')
 
+    // Zelfde aanvraag, bakje en taal als bij het bewaarde concept: dat hergebruiken.
+    const hash = crypto.createHash('sha1').update([bucket, lang, aanvraagTekst, (person && person.name) || '', c.orgName, c.m2, c.land.code, c.flags.join('|')].join('\u0001')).digest('hex')
+    if (payload.auto && !payload.force) {
+      try {
+        const r = await sb(`/rest/v1/aanvragen_concept?select=hash,onderwerp,tekst,kopjes,extra,model&deal_id=eq.${dealId}&limit=1`)
+        const rij = r.ok && Array.isArray(r.data) ? r.data[0] : null
+        if (rij && rij.hash === hash) return json(200, { onderwerp: rij.onderwerp || '', tekst: rij.tekst, kopjes: rij.kopjes || [], lang, bucket, model: rij.model || MODEL, extra: rij.extra || '', cached: true })
+      } catch (_) { /* geen tabel of geen sleutel: gewoon opnieuw schrijven */ }
+    }
+
     const systeem = [
       'Je schrijft een CONCEPT van een e-mailantwoord namens Robert Brugman, Account Manager bij Respyre, op een binnengekomen aanvraag. Je bent niet Robert zelf en voegt niets toe wat niet in de kennis of aanvraag staat.',
       REGELS, STIJL, OPMAAK, BUCKET_REGELS[bucket], regioRegels(c.land.code),
@@ -104,7 +118,14 @@ exports.handler = async (event) => {
     const m = tekst.match(/^ONDERWERP:\s*(.+)\n+/i)
     if (m) { onderwerp = m[1].trim(); tekst = tekst.slice(m[0].length).trim() }
     const k = kopjesUitTekst(tekst)
-    return json(200, { onderwerp, tekst: k.tekst, kopjes: k.kopjes, lang, bucket, model: MODEL })
+    try {
+      await sb('/rest/v1/aanvragen_concept?on_conflict=deal_id', {
+        method: 'POST',
+        headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: { deal_id: dealId, hash, bucket, lang, extra, onderwerp, tekst: k.tekst, kopjes: k.kopjes, model: MODEL, bijgewerkt: new Date().toISOString() },
+      })
+    } catch (_) { /* bewaren mislukt: het concept zelf is wel gelukt */ }
+    return json(200, { onderwerp, tekst: k.tekst, kopjes: k.kopjes, lang, bucket, model: MODEL, extra, cached: false })
   } catch (err) {
     console.error('aanvragen-draft fout:', err.message)
     return json(err.code === 'NO_PIPEDRIVE_TOKEN' ? 500 : 502, { error: err.message, code: err.code || null })
