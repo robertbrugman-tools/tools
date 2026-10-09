@@ -4,6 +4,7 @@
 
 const { checkAccess } = require('../lib/hub-auth')
 const { fetchDeal, fetchAllFiles, pdBinary } = require('../lib/pipedrive')
+const { isExternBestand } = require('../lib/aanvragen-raw')
 
 const APP_KEY = 'aanvragen'
 const MAX_BYTES = 4.5 * 1024 * 1024
@@ -28,7 +29,7 @@ exports.handler = async (event) => {
     const files = await fetchAllFiles(dealId, pid)
     const meta = files.find(f => Number(f.id) === fileId)
     if (!meta) return json(404, { error: 'Dit bestand hoort niet bij deze aanvraag.' })
-    if (meta.remote_location) return json(422, { error: 'Dit is een gekoppeld extern bestand. Open het in Pipedrive.' })
+    if (isExternBestand(meta)) return json(422, { error: 'Dit is een gekoppeld extern bestand. Open het in Pipedrive.' })
     if (meta.file_size && meta.file_size > MAX_BYTES) return json(413, { error: 'Het bestand is te groot om hier te tonen (' + Math.round(meta.file_size / 1048576 * 10) / 10 + ' MB). Open het in Pipedrive.' })
 
     const { buf, type } = await pdBinary('/v1/files/' + fileId + '/download')

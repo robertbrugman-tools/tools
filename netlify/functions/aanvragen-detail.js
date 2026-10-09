@@ -1,8 +1,9 @@
 // Netlify function: bijlagen van een aanvraag, zodat je het totale plaatje ziet.
-//   GET ?dealId=123 -> { files: [{id, name, type, size, addTime, remote}] }
+//   GET ?dealId=123 -> { files: [{id, name, type, size, addTime, remote, remoteLocation}] }
 
 const { checkAccess } = require('../lib/hub-auth')
 const { fetchDeal, fetchAllFiles } = require('../lib/pipedrive')
+const { isExternBestand } = require('../lib/aanvragen-raw')
 
 const APP_KEY = 'aanvragen'
 
@@ -29,7 +30,8 @@ exports.handler = async (event) => {
         type: f.file_type || '',
         size: f.file_size || 0,
         addTime: f.add_time || null,
-        remote: !!f.remote_location,
+        remote: isExternBestand(f),
+        remoteLocation: f.remote_location || null,
       })),
     })
   } catch (err) {
