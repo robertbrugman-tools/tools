@@ -100,6 +100,7 @@ exports.handler = async (event) => {
       aanvraagTekst || '(Er is geen vrije tekst bij de aanvraag. Vraag de belangrijkste ontbrekende gegevens aan de aanvrager.)',
       '"""',
       '',
+      'Neem wat de aanvrager zelf in het formulier heeft geschreven serieus. Specifieke kenmerken, wensen, voorkeuren en de opmerking over hoe de aanvrager ons heeft gevonden horen in het antwoord terug te komen: reageer er kort en concreet op, in plaats van ze te negeren. Past een wens niet bij het bakje of is hij onduidelijk, benoem dat dan of vraag door.',
       'Geef eerst een regel "ONDERWERP: ..." met een korte onderwerpregel in dezelfde taal, dan een lege regel, dan de mailtekst. Gebruik de kopjes zoals beschreven in de opmaakregels. Geen handtekening en geen afsluitgroet.',
     ].filter(x => x !== '').join('\n')
 

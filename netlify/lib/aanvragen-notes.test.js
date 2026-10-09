@@ -14,19 +14,19 @@ const formulier = [
 let r = filterNotes([{ id: 1, addTime: 'x', text: formulier }, { id: 2, addTime: 'y', text: 'Gebeld, wil een afspraak.' }])
 assert.strictEqual(r.verborgen, 1)
 assert.strictEqual(r.notes.length, 2)
-assert.deepStrictEqual(r.notes[0].items.map(i => i.nr), [11])
+assert.deepStrictEqual(r.notes[0].items.map(i => i.nr), [11, 14])
 assert.strictEqual(r.notes[0].items[0].antwoord, 'walls')
 assert.strictEqual(r.notes[1].text, 'Gebeld, wil een afspraak.')
-console.log('OK formulier: alleen 11 met antwoord, eigen notitie blijft')
+console.log('OK formulier: vanaf 11 met antwoord, eigen notitie blijft')
 
 // Beide ingevuld
 r = filterNotes([{ id: 1, text: formulier.replace('(Blank)14.', 'Strak en donker\n14.') }])
-assert.deepStrictEqual(r.notes[0].items.map(i => i.nr), [11, 12])
+assert.deepStrictEqual(r.notes[0].items.map(i => i.nr), [11, 12, 14])
 assert.strictEqual(r.notes[0].items[1].antwoord, 'Strak en donker')
 console.log('OK formulier: 11 en 12 beide ingevuld')
 
 // Alles leeg: de notitie verdwijnt
-r = filterNotes([{ id: 1, text: formulier.replace('walls', '(Blank)') }])
+r = filterNotes([{ id: 1, text: formulier.replace('walls', '(Blank)').replace('Nederlands', '(Blank)') }])
 assert.strictEqual(r.notes.length, 0)
 assert.strictEqual(r.verborgen, 1)
 console.log('OK formulier: niets ingevuld, notitie verborgen')
@@ -41,5 +41,17 @@ r = filterNotes([{ id: 1, text: '1. bellen\n2. mailen\n3. offerte' }])
 assert.strictEqual(r.notes[0].text, '1. bellen\n2. mailen\n3. offerte')
 console.log('OK eigen genummerde notitie blijft staan')
 
-assert.strictEqual(notesVoorPrompt(filterNotes([{ id: 1, text: formulier }])), 'Specifieke kenmerken waarmee we rekening moeten houden?: walls')
+assert.strictEqual(notesVoorPrompt(filterNotes([{ id: 1, text: formulier }])), 'Specifieke kenmerken waarmee we rekening moeten houden?: walls\nTaal voorkeur in communicatie: Nederlands')
 console.log('OK prompttekst')
+
+// Echte vorm uit Pipedrive: antwoord direct voor de volgende vraag en een vraag zonder nummer
+const echt = [
+  '1. Naam | Name', 'Furio', '', '2. Bedrijf | Company', 'Costruzioni', '', '3. Locatie | Location', 'Italie', '', '4. Oppervlakte | Surface', '60', '',
+  '11. Specifieke kenmerken waarmee we rekening moeten houden? | Specific features that should be taken into account?', 'First floor', '',
+  '12. Beschrijf uw esthetische en ontwerp voorkeuren voor de gevel | Describe your aesthetic and design preferences for the facade', 'To be discussed14. Taal voorkeur in communicatie | Preferred language for communication', 'English', '',
+  'Hoe heeft u ons gevonden? | How did you find us?', "I know you since the beginning, but you weren't willing to do it in Italy. I hope we can do it now.",
+].join('\n')
+r = filterNotes([{ id: 1, text: echt }])
+assert.deepStrictEqual(r.notes[0].items.map(i => i.antwoord), ['First floor', 'To be discussed', 'English', "I know you since the beginning, but you weren't willing to do it in Italy. I hope we can do it now."])
+assert.strictEqual(r.notes[0].items[3].vraag, 'Hoe heeft u ons gevonden?')
+console.log('OK echte formulier: kenmerken, voorkeur, taal en hoe gevonden blijven behouden')
