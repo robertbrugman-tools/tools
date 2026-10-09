@@ -1,5 +1,7 @@
 // Indeling van aanvragen in bakjes. Pure functies, geen netwerk, goed te testen.
 
+const { priveMail } = require('./aanvragen-raw')
+
 const GRENS_M2 = 150 // particulier: onder deze waarde altijd afwijzen
 
 const BUCKETS = {
@@ -147,6 +149,8 @@ function detectLang(text, countryIso) {
 // ---------- soort aanvrager ----------
 // Wordt toegepast op tekst zonder accenten (strip), want \b werkt niet na een letter met accent zoals de é in "Privé".
 const PRIVE_ORG_TERMEN = /\b(privat|private|privaat|prive|privato|particulier|individual|personal|self[\s-]?employed|freelancer|no company|geen bedrijf)\b/i
+// Zwakke signalen voor een particulier: omschrijvingen van een klein of zelf uit te voeren project.
+const KLEIN_TERMEN = /\b(klein(?:e)? (?:stukje|stuk|beetje|oppervlak|project|muurtje|wandje|gevel|tuinmuur)|een (?:klein )?beetje|paar (?:m2|vierkante meter)|zelf (?:aanbrengen|aanbrengt|doen|plaatsen)|kan ik zelf|small (?:area|piece|patch|wall|part|bit)|a (?:little|small) bit|do it myself|diy)\b/i
 const PRODUCENT_TERMEN = /(betonproducent|beton ?fabriek|betoncentrale|prefab ?(producent|fabrikant|bedrijf)|concrete (producer|manufacturer|plant)|precast (producer|manufacturer|plant|company)|ready[\s-]?mix (producer|plant|company)|cement (producer|plant|company|manufacturer)|betonwarenfabriek|betonindustrie)/i
 const SAMENWERKING_TERMEN = /(partnership|samenwerking|collaborat|distribut|reseller|wederverkoper|licen[sc]e|licentie|joint venture|agent for|vertegenwoordig|representative|franchise|white label|co-?develop|strategic partner|strategische partner)/i
 
@@ -202,11 +206,17 @@ function classify(deal, person, org, F, extraText) {
   const privaatLabel = labels.includes(LABEL_PRIVAAT)
   const priveInOrg = PRIVE_ORG_TERMEN.test(strip(orgName))
   const priveInTekst = /\b(private person|particulier|prive|privat(?:e)? (?:person|individual|home|house|use)|for my (?:own )?(?:house|home|garden)|voor mijn (?:eigen )?(?:huis|woning|tuin)|mijn (?:huis|woning|tuin))\b/i.test(strip([deal.title, fields.projectnaam, fields.specifics, fields.opmerkingen].join(' ')))
+  const kleinTekst = KLEIN_TERMEN.test(strip([deal.title, fields.projectnaam, fields.grootte, fields.specifics, fields.opmerkingen].join(' ')))
+  const email = person && Array.isArray(person.emails) && person.emails.length ? (person.emails.find(e => e.primary) || person.emails[0]).value : null
+  const priveAdres = priveMail(email)
   const orgLeeg = !orgName || strip(orgName) === strip(personName) || /^(-|\.|n\/?a|none|geen|nvt|x+)$/i.test(orgName)
   let soort = 'onbekend'
+  let zwak = false // alleen afgeleid uit tekst of e-mailadres, niet uit label of organisatienaam
   if (privaatLabel) { soort = 'particulier'; reasons.push('Label "Privaat" in Pipedrive') }
   else if (priveInOrg) { soort = 'particulier'; reasons.push('Organisatienaam wijst op privé: "' + orgName + '"') }
   else if (priveInTekst) { soort = 'particulier'; reasons.push('Tekst van de aanvraag wijst op privé') }
+  else if (kleinTekst) { soort = 'particulier'; zwak = true; reasons.push('Tekst wijst op een klein of zelf uit te voeren project') }
+  else if (priveAdres) { soort = 'particulier'; zwak = true; reasons.push('Privé e-mailadres' + (orgLeeg ? '' : ' bij organisatie "' + orgName + '", controleer of dit echt een particulier is')) }
   else if (!orgLeeg) { soort = 'bedrijf'; reasons.push('Organisatie: ' + orgName) }
   else reasons.push('Organisatie ontbreekt of lijkt een persoonsnaam')
 
@@ -226,7 +236,7 @@ function classify(deal, person, org, F, extraText) {
     return out
   }
   // 2. samenwerking (alleen als het geen particulier is)
-  if (soort !== 'particulier' && SAMENWERKING_TERMEN.test(textBlob)) {
+  if ((soort !== 'particulier' || zwak) && SAMENWERKING_TERMEN.test(textBlob)) {
     out.bucket = 'samenwerking'
     out.reasons.push('Tekst wijst op samenwerking of distributie')
     return out
@@ -240,6 +250,8 @@ function classify(deal, person, org, F, extraText) {
   }
 
   if (soort === 'particulier') {
+    if (zwak && !privaatLabel && !orgLeeg) out.flags.push('Bedrijfsnaam met privé-signaal: controleer of dit een particulier is')
+    if (m2 === null && kleinTekst) { out.bucket = 'p_klein'; out.reasons.push('m² niet als getal te lezen, maar de tekst wijst op een klein project'); return out }
     if (m2 === null) { out.reasons.push('m² ontbreekt'); out.bucket = 'handmatig'; return out }
     if (m2Onzeker) { out.reasons.push('m² is een bereik rond de grens van ' + GRENS_M2 + ': "' + fields.grootte + '"'); out.bucket = 'handmatig'; return out }
     if (m2 < GRENS_M2) { out.bucket = 'p_klein'; out.reasons.push(m2 + ' m² is onder ' + GRENS_M2 + ' m²'); return out }
