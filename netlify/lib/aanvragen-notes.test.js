@@ -68,3 +68,18 @@ for (const extra of ['\nreCAPTCHA bot score | score\n0.9', '\nRecaptcha bot scor
   assert.ok(!/recaptcha|0\.9/i.test(laatste.antwoord), laatste.antwoord)
 }
 console.log('OK reCAPTCHA-score komt niet in het antwoord terecht')
+
+// "Hoe gevonden" alleen als het een duidelijke opmerking is, niet een kanaal; en de score hoort er nooit bij
+const basis = echt.split('\nHoe heeft u ons gevonden?')[0]
+const score = '1.00 (0.0 = likely bot, 1.0 = likely human)'
+for (const kanaal of ['facebook', 'Google', 'via een collega', 'LinkedIn post']) {
+  r = filterNotes([{ id: 1, text: basis + '\nHoe heeft u ons gevonden? | How did you find us?\n' + kanaal + '\n' + score }])
+  const txt = JSON.stringify(r.notes[0].items)
+  assert.ok(!/gevonden/i.test(txt) && !/likely/i.test(txt) && !new RegExp(kanaal, 'i').test(txt), kanaal + ' ' + txt)
+}
+r = filterNotes([{ id: 1, text: basis + '\nHoe heeft u ons gevonden? | How did you find us?\nfacebook\n' + score }])
+assert.strictEqual(r.notes[0].items.length, 2)
+r = filterNotes([{ id: 1, text: basis + '\nHoe heeft u ons gevonden? | How did you find us?\nI know you since the beginning, but you were not willing.\n' + score }])
+const l = r.notes[0].items[2]
+assert.ok(l && /since the beginning/.test(l.antwoord) && !/likely|1\.00/.test(l.antwoord), JSON.stringify(l))
+console.log('OK hoe gevonden: kanaal valt weg, opmerking blijft, score nooit')
