@@ -50,6 +50,10 @@
   .back-link { font-size: .84rem; color: var(--mute); text-decoration: none; }
   .back-link:hover { color: var(--green); }
 
+  .move { margin: 12px 0 4px; }
+  .move-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .move-row select { flex: 1 1 220px; }
+  .note.err { color: #a33; }
   .btn { font-family: var(--btn); font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; background: var(--green); color: #fff; border: 1px solid var(--green); border-radius: 999px; padding: 10px 20px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: background .15s; }
   .btn:hover { background: var(--green-d); }
   .btn:disabled { opacity: .5; cursor: not-allowed; }
@@ -110,16 +114,17 @@
   .file .acts { display: flex; gap: 8px; }
   .file img.thumb { grid-column: 1 / -1; max-width: 100%; max-height: 260px; border-radius: 10px; border: 1px solid var(--rule); }
   .file .err { grid-column: 1 / -1; font-size: .78rem; color: var(--alert); }
+  .file .prev { grid-column: 1 / -1; }
+  .prev iframe { width: 100%; height: 480px; border: 1px solid var(--rule); border-radius: 10px; background: #fff; }
+  .prev pre { margin: 0; max-height: 320px; overflow: auto; white-space: pre-wrap; word-break: break-word; font-size: .78rem; background: #fff; border: 1px solid var(--rule); border-radius: 10px; padding: 10px; }
+  .prev video { max-width: 100%; max-height: 320px; border-radius: 10px; display: block; }
+  .prev audio { width: 100%; display: block; }
   .photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
   .photo { background: var(--paper); border-radius: 14px; padding: 8px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
   .photo .ph { width: 100%; aspect-ratio: 4 / 3; border-radius: 10px; background: var(--rule-2); display: flex; align-items: center; justify-content: center; font-size: .74rem; color: var(--mute); text-align: center; padding: 6px; overflow: hidden; }
   .photo img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; cursor: zoom-in; display: block; }
   .photo .cap { font-size: .72rem; color: var(--mute); word-break: break-word; display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
   .photo .cap button { background: none; border: none; color: var(--link); font-size: .72rem; padding: 0; text-decoration: underline; }
-  .note-item .q { font-weight: 600; margin-top: 4px; }
-  .notes { display: flex; flex-direction: column; gap: 8px; }
-  .note-item { background: var(--paper); border-radius: 14px; padding: 10px 14px; font-size: .86rem; color: var(--ink); white-space: pre-wrap; word-break: break-word; }
-  .note-item .meta { font-size: .72rem; color: var(--mute); margin-bottom: 3px; }
 
   .ctrl { display: grid; grid-template-columns: 1fr 120px; gap: 10px; margin-bottom: 10px; }
   .actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0; align-items: center; }
@@ -133,12 +138,8 @@
 </head>
 <body>
 
-<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
-  <symbol id="respyre-logo" viewBox="0 0 1000 299"><path fill="#40774f" fill-rule="evenodd" d="M23 244Q20 245 17 245Q14 245 10 244Q7 242 4 239Q2 236 1 233Q0 229 0 133Q1 37 2 30Q2 24 3 20Q4 17 7 13Q9 9 12 7Q14 5 18 3Q21 1 25 0Q29 0 67 0Q106 0 112 2Q119 3 124 4Q129 6 135 10Q141 13 146 18Q152 24 156 30Q160 36 164 44Q167 51 169 59Q171 66 171 74Q172 81 170 89Q169 96 167 104Q164 111 160 119Q155 126 149 133Q142 140 140 142Q137 143 135 144Q133 144 130 144Q127 144 125 143Q123 142 119 139Q116 135 115 132Q114 130 114 126Q114 123 116 120Q117 117 121 112Q126 108 129 104Q132 99 134 94Q136 89 136 84Q137 79 137 75Q137 71 136 66Q134 62 132 58Q130 53 128 50Q126 46 121 42Q116 38 110 37Q104 35 70 35Q36 34 35 132Q34 231 33 233Q32 236 31 238Q30 240 28 242Q26 243 23 244ZM157 245Q156 246 148 240Q139 235 120 220Q101 206 93 199Q85 192 80 186Q74 180 69 171Q64 162 62 154Q59 146 59 135Q58 125 59 120Q60 115 61 114Q61 112 63 112Q64 113 82 131Q100 150 112 161Q124 172 132 180Q139 189 143 196Q148 204 151 212Q154 221 156 230Q158 239 158 242Q158 244 157 245Z"/><path fill="#4d4e4e" fill-rule="evenodd" d="M276 242Q268 244 262 244Q256 244 250 243Q245 242 240 240Q235 239 230 236Q226 233 221 229Q217 225 214 220Q210 216 208 210Q205 204 204 198Q203 191 202 185Q202 179 203 172Q204 166 205 161Q207 155 210 150Q213 145 216 141Q220 136 224 133Q229 129 234 126Q240 123 246 122Q251 120 261 120Q271 120 276 122Q280 123 284 124Q288 126 294 132Q300 137 302 141Q304 144 306 148Q307 151 306 157Q306 163 303 166Q299 170 263 182Q227 194 229 201Q232 207 235 212Q239 216 244 220Q249 224 254 226Q259 227 265 228Q271 228 279 226Q286 224 290 221Q295 218 300 211Q304 205 306 205Q307 204 308 205Q309 205 310 207Q310 209 309 213Q307 217 302 224Q298 230 294 233Q291 235 288 237Q284 240 276 242ZM404 243Q399 244 390 243Q380 243 371 240Q362 238 359 236Q355 234 351 231Q348 228 346 226Q345 224 344 221Q343 218 343 215Q343 212 344 210Q345 208 348 207Q350 206 353 206Q356 207 358 209Q360 211 366 220Q371 229 376 232Q380 234 385 236Q391 236 396 236Q401 236 405 234Q409 233 413 230Q416 228 418 225Q420 221 421 218Q421 215 421 212Q420 209 419 206Q418 204 416 202Q414 200 408 197Q401 193 386 190Q371 186 367 184Q364 183 358 179Q353 175 350 170Q347 166 346 162Q345 159 345 154Q345 149 346 146Q347 144 349 140Q350 137 354 134Q357 130 360 128Q364 126 368 124Q371 123 376 122Q381 120 390 120Q399 120 408 122Q418 124 421 126Q425 128 429 131Q433 134 436 137Q438 140 439 143Q440 146 440 149Q440 151 439 153Q438 155 436 156Q434 157 431 157Q429 157 426 155Q423 153 420 146Q417 139 414 137Q412 134 409 132Q405 130 400 129Q396 128 391 128Q386 128 382 130Q379 131 376 133Q373 135 371 138Q369 141 368 143Q368 146 368 149Q368 153 369 156Q370 159 372 161Q374 163 380 166Q386 170 401 174Q417 178 421 179Q426 181 431 186Q437 190 439 195Q442 199 442 204Q443 208 443 212Q442 216 441 220Q440 224 437 226Q435 230 431 232Q428 235 424 237Q419 240 414 241Q409 242 404 243ZM517 297Q516 298 499 298Q481 298 480 297Q478 296 478 294Q478 293 482 289Q485 286 486 284Q487 281 487 215Q487 149 486 146Q484 143 481 139Q477 136 477 134Q477 133 478 131Q480 130 490 125Q499 120 501 120Q504 120 505 121Q506 123 506 131Q506 140 511 134Q516 129 522 126Q528 123 535 121Q543 120 551 120Q559 121 565 123Q571 126 576 129Q581 133 585 137Q589 141 593 146Q596 151 598 156Q600 162 601 169Q602 175 602 180Q602 185 601 192Q600 199 597 206Q594 214 590 220Q586 226 580 230Q575 235 569 238Q562 242 555 243Q547 244 539 243Q531 242 526 240Q520 237 514 232Q509 228 509 255Q509 281 510 284Q511 286 514 290Q518 293 518 295Q518 296 517 297ZM822 241Q821 242 804 242Q787 242 785 240Q783 239 783 238Q783 236 787 233Q790 230 791 228Q792 225 792 186Q792 148 792 146Q791 144 787 140Q784 136 783 135Q782 133 784 131Q786 129 796 125Q806 120 808 120Q809 120 810 122Q812 124 812 133Q812 142 815 137Q818 132 822 128Q826 124 833 122Q839 120 845 120Q851 121 855 122Q859 124 862 128Q865 131 866 136Q867 141 865 145Q863 149 861 150Q858 151 855 150Q852 150 850 148Q848 146 847 143Q846 140 844 138Q842 136 840 134Q837 133 835 133Q832 133 829 134Q826 135 824 138Q821 140 819 143Q818 146 816 150Q815 154 814 160Q814 165 814 195Q814 225 815 227Q816 230 820 234Q824 237 824 238Q824 240 822 241ZM964 242Q957 244 951 244Q945 244 940 243Q934 242 929 241Q924 239 920 236Q915 233 911 229Q906 225 903 220Q900 216 897 210Q895 205 894 199Q892 192 892 185Q891 179 892 172Q893 166 894 161Q896 155 899 150Q901 146 904 142Q908 138 913 134Q918 129 922 127Q927 124 934 122Q940 120 950 120Q961 120 965 122Q969 123 973 124Q977 126 983 132Q990 137 992 141Q994 144 995 148Q996 152 996 158Q995 163 992 166Q989 170 952 182Q916 194 918 200Q921 206 924 211Q928 216 933 220Q938 224 943 226Q949 227 955 228Q961 228 968 226Q975 224 980 221Q984 218 989 211Q994 205 995 204Q996 204 998 205Q999 206 999 209Q999 211 997 215Q995 219 990 226Q984 232 978 236Q971 240 964 242ZM661 292Q656 294 650 294Q644 294 640 293Q636 292 633 290Q630 288 628 286Q626 284 623 281Q621 278 621 275Q620 271 621 269Q621 266 624 264Q626 263 628 262Q630 262 632 263Q634 263 636 265Q638 267 640 272Q642 277 644 280Q646 282 649 284Q651 285 654 285Q657 285 660 283Q664 282 667 278Q671 274 674 268Q678 261 681 254Q684 246 661 194Q637 142 636 139Q634 136 630 132Q626 128 626 126Q625 124 627 123Q628 122 645 122Q661 122 663 123Q664 124 664 125Q664 127 662 131Q659 135 660 138Q660 141 678 183Q696 225 714 183Q732 141 732 138Q732 135 727 131Q723 128 723 126Q723 124 724 123Q725 122 739 122Q753 123 754 124Q754 125 754 126Q754 128 750 131Q747 135 745 138Q743 141 714 204Q685 268 679 276Q674 284 669 287Q665 290 661 292ZM226 185Q226 185 252 176Q278 167 281 165Q283 164 285 161Q286 159 286 155Q285 151 284 148Q282 144 279 140Q276 137 272 134Q269 130 264 129Q259 128 252 129Q246 130 242 133Q237 136 234 141Q230 146 228 152Q225 158 225 166Q224 175 224 180Q225 185 226 185ZM915 185Q916 185 942 176Q969 166 971 165Q973 164 974 161Q975 159 975 155Q975 151 973 148Q972 144 969 140Q966 137 962 134Q958 130 953 129Q948 128 942 129Q936 130 931 133Q926 136 923 141Q919 146 917 153Q914 160 914 170Q913 181 914 183Q914 185 915 185ZM543 236Q547 236 551 235Q555 234 559 232Q563 230 566 226Q570 223 572 220Q574 216 576 212Q577 207 578 202Q580 197 580 186Q580 174 577 164Q574 154 572 150Q570 145 567 142Q564 139 562 136Q559 134 555 132Q551 130 545 129Q538 128 534 129Q529 130 525 132Q521 134 518 137Q515 141 513 144Q510 148 510 152Q509 156 509 179Q509 203 511 210Q513 216 518 223Q524 229 529 232Q534 235 536 235Q539 236 543 236Z"/></symbol>
-</svg>
-
 <div id="authScreen">
-  <svg class="logo" viewBox="0 0 1000 299" role="img" aria-label="Respyre"><use href="#respyre-logo"/></svg>
+  <img class="logo" src="respyre-logo.svg" alt="Respyre">
   <div class="auth-box">
     <h1>Aanvragen</h1>
     <p>Log in met je Hub-account</p>
@@ -153,7 +154,7 @@
   <div class="wrap">
     <div class="top">
       <div class="brand">
-        <svg class="logo" viewBox="0 0 1000 299" role="img" aria-label="Respyre"><use href="#respyre-logo"/></svg>
+        <img class="logo" src="respyre-logo.svg" alt="Respyre">
         <h1>Aanvragen</h1><span class="sub" id="sub"></span>
       </div>
       <div class="top-right">
@@ -183,17 +184,16 @@
   const FN_LIST = '/.netlify/functions/aanvragen-list'
   const FN_DRAFT = '/.netlify/functions/aanvragen-draft'
   const FN_DETAIL = '/.netlify/functions/aanvragen-detail'
+  const FN_BAKJE = '/.netlify/functions/aanvragen-bakje'
   const FN_FILE = '/.netlify/functions/aanvragen-file'
   const ORDER = ['p_klein','p_nl','p_buiten','b_benelux_de','b_europa','b_wereld','grens','betonproducent','samenwerking','handmatig']
-  const IMG_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
 
   let data = null
   let current = localStorage.getItem('aanvragen_bucket') || 'b_benelux_de'
   let selectedId = null
   const drafts = {}
   const details = {}
-  let overrides = {}
-  try { overrides = JSON.parse(localStorage.getItem('aanvragen_override') || '{}') } catch (_) { overrides = {} }
+  let overrides = {} // handmatig gekozen bakjes, bewaard op de server (voor iedereen met toegang gelijk)
 
   ;(async () => {
     const { data: { session } } = await sb.auth.getSession()
@@ -271,9 +271,8 @@
       // Wat niet meer in "Form ingevuld" staat (verplaatst of afgehandeld) valt ook hier weg, inclusief concepten en handmatige bakjes.
       const ids = new Set(data.items.map(x => x.id))
       Object.keys(drafts).forEach(k => { if (!ids.has(Number(k))) delete drafts[k] })
-      let changed = false
-      Object.keys(overrides).forEach(k => { if (!ids.has(Number(k))) { delete overrides[k]; changed = true } })
-      if (changed) localStorage.setItem('aanvragen_override', JSON.stringify(overrides))
+      overrides = {}
+      Object.entries(data.overrides || {}).forEach(([k, v]) => { if (ids.has(Number(k)) && data.buckets[v.bucket]) overrides[k] = v.bucket })
       if (selectedId && !ids.has(selectedId)) selectedId = null
       // "nieuw": niet gezien bij het vorige bezoek of de vorige verversing
       let seen = null
@@ -284,6 +283,7 @@
       loading = false
       updateStatus()
       render()
+      if (data.overridesFout) setStatus(data.overridesFout, true)
     } catch (err) {
       lastFailed = true
       setStatus(err.message, true)
@@ -321,7 +321,7 @@
     let h = `<h2>${esc(b.naam)}</h2><p class="hint">${esc(b.uitleg)}</p>`
     if (!items.length) h += '<p class="empty">Geen aanvragen in dit bakje.</p>'
     h += items.map(i => {
-      const tags = (i.noGo ? '<span class="tag red">no-go</span>' : '') + (i.flags.length && !i.noGo ? '<span class="tag">let op</span>' : '') + (i.isNew ? '<span class="tag green">nieuw</span>' : '') + (drafts[i.id] ? '<span class="tag green">concept</span>' : '')
+      const tags = (i.noGo ? '<span class="tag red">no-go</span>' : '') + (i.flags.length && !i.noGo ? '<span class="tag">let op</span>' : '') + (i.isNew ? '<span class="tag green">nieuw</span>' : '') + (overrides[i.id] ? '<span class="tag">verplaatst</span>' : '') + (drafts[i.id] ? '<span class="tag green">concept</span>' : '')
       const l2 = [i.org, i.land.naam, i.m2 !== null ? i.m2 + ' m²' : 'm² onbekend'].filter(Boolean).join(' · ')
       return `<button class="row" data-id="${i.id}" aria-current="${i.id === selectedId}"><div class="l1"><span>${esc(i.person.name || i.title)}${tags}</span><span>${esc(dt(i.addTime))}</span></div><div class="l2">${esc(l2)}</div></button>`
     }).join('')
@@ -346,6 +346,28 @@
     return rows.map(([k, v]) => '<dt>' + esc(k) + '</dt><dd>' + v + '</dd>').join('')
   }
 
+  async function moveTo(i, bucket) {
+    const note = document.getElementById('moveNote')
+    const headers = await authHeader(); if (!headers) return
+    const vorige = overrides[i.id]
+    if (bucket === null) delete overrides[i.id]; else overrides[i.id] = bucket
+    if (note) { note.textContent = 'Opslaan...'; note.className = 'note' }
+    try {
+      const res = await fetch(FN_BAKJE, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ dealId: i.id, bucket, automatisch: i.bucket }) })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || ('De server antwoordde met status ' + res.status + '.'))
+    } catch (err) {
+      if (vorige === undefined) delete overrides[i.id]; else overrides[i.id] = vorige
+      renderBuckets(); renderList(); renderDetail()
+      const n = document.getElementById('moveNote')
+      if (n) { n.textContent = 'Verplaatsen is niet gelukt: ' + err.message; n.className = 'note err' }
+      return
+    }
+    // Het bakje van het antwoord volgt het nieuwe bakje, tenzij dat Handmatig is.
+    current = bucketOf(i); localStorage.setItem('aanvragen_bucket', current)
+    render()
+  }
+
   function renderDetail() {
     const el = document.getElementById('detail')
     const i = data.items.find(x => x.id === selectedId)
@@ -355,6 +377,12 @@
     el.innerHTML = `
       <h2>${esc(i.person.name || i.title)}</h2>
       <div class="org">${esc(i.org || 'Geen organisatie')} · <a href="https://app.pipedrive.com/deal/${i.id}" target="_blank" rel="noopener">Pipedrive</a></div>
+      <div class="move">
+        <label class="lbl" for="selMove">Bakje van deze aanvraag</label>
+        <div class="move-row"><select id="selMove">${ORDER.map(k => `<option value="${k}" ${k === bk ? 'selected' : ''}>${esc(data.buckets[k].nr)}. ${esc(data.buckets[k].naam)}</option>`).join('')}</select>
+        ${overrides[i.id] ? '<button class="btn ghost" id="btnAuto" type="button">Terug naar automatisch</button>' : ''}</div>
+        <p class="note" id="moveNote">${overrides[i.id] ? 'Handmatig verplaatst. Automatisch was: ' + esc(data.buckets[i.bucket].nr + '. ' + data.buckets[i.bucket].naam) + '.' : 'Automatisch ingedeeld. Kies een ander bakje om te verplaatsen. Dit past niets aan in Pipedrive.'}</p>
+      </div>
       <dl class="facts">${factsHtml(i)}</dl>
       ${i.noGo ? '<div class="flag red">No-go: ' + esc(i.flags[0]) + '</div>' : ''}
       ${i.flags.filter(x => !i.noGo || x !== i.flags[0]).map(x => '<div class="flag">' + esc(x) + '</div>').join('')}
@@ -362,9 +390,6 @@
 
       <div class="sec">Bijlagen</div>
       <div id="filesBox" class="files"><p class="note">Laden...</p></div>
-
-      <div class="sec">Notities in Pipedrive</div>
-      <div id="notesBox" class="notes"><p class="note">Laden...</p></div>
 
       <div class="sec">Antwoord</div>
       <div class="ctrl">
@@ -375,24 +400,40 @@
       <input id="extra" type="text" placeholder="Bijvoorbeeld: noem ook de foto's van Utrecht" value="${esc(d ? d.extra : '')}">
       <div class="actions"><button class="btn" id="btnGen">${d ? 'Genereer opnieuw' : 'Genereer antwoord'}</button><span class="status-line" id="genStatus"></span></div>
       <div id="draftBox">${d ? draftHtml(i, d) : ''}</div>`
-    document.getElementById('selBucket').addEventListener('change', e => {
-      const v = e.target.value
-      if (v === i.bucket) delete overrides[i.id]; else overrides[i.id] = v
-      localStorage.setItem('aanvragen_override', JSON.stringify(overrides))
-      renderBuckets(); renderList()
-    })
+    document.getElementById('selMove').addEventListener('change', e => moveTo(i, e.target.value === i.bucket ? null : e.target.value))
+    const btnAuto = document.getElementById('btnAuto')
+    if (btnAuto) btnAuto.addEventListener('click', () => moveTo(i, null))
     document.getElementById('btnGen').addEventListener('click', () => generate(i))
     bindDraft(i)
     loadDetail(i)
   }
 
-  // ---- Bijlagen en notities ----
-  const MIME_EXT = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', pdf: 'application/pdf' }
+  // ---- Bijlagen ----
+  // Welke bestanden hier te bekijken zijn: afbeeldingen, PDF, tekst, video en audio.
+  // Word, Excel en andere documenten worden alleen gedownload en nooit in de pagina geopend.
+  const EXT_MIME = {
+    png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', jpe: 'image/jpeg', gif: 'image/gif', webp: 'image/webp',
+    avif: 'image/avif', bmp: 'image/bmp', ico: 'image/x-icon', svg: 'image/svg+xml',
+    heic: 'image/heic', heif: 'image/heif', tif: 'image/tiff', tiff: 'image/tiff',
+    pdf: 'application/pdf',
+    txt: 'text/plain', csv: 'text/plain', tsv: 'text/plain', md: 'text/plain', json: 'text/plain', log: 'text/plain', xml: 'text/plain',
+    mp4: 'video/mp4', m4v: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime',
+    mp3: 'audio/mpeg', m4a: 'audio/mp4', wav: 'audio/wav', oga: 'audio/ogg', ogg: 'audio/ogg',
+  }
   const extOf = n => ((String(n || '').match(/\.([a-z0-9]+)$/i) || [])[1] || '').toLowerCase()
-  const isImg = f => (MIME_EXT[extOf(f.name)] || '').startsWith('image/')
-  const isPdf = f => extOf(f.name) === 'pdf' || f.type === 'pdf'
+  function kindOf(f) {
+    const m = EXT_MIME[extOf(f.name)] || ''
+    if (m.startsWith('image/')) return 'image'
+    if (m === 'application/pdf' || f.type === 'pdf') return 'pdf'
+    if (m.startsWith('text/')) return 'text'
+    if (m.startsWith('video/')) return 'video'
+    if (m.startsWith('audio/')) return 'audio'
+    if (f.type === 'img') return 'image'
+    return 'other'
+  }
   const MAX_FILE = 4.5 * 1048576
   const tooBig = f => f.size && f.size > MAX_FILE
+  const pdLink = (i, label) => '<a class="btn small ghost" href="https://app.pipedrive.com/deal/' + i.id + '" target="_blank" rel="noopener">' + label + '</a>'
 
   async function loadDetail(i) {
     if (!details[i.id]) {
@@ -404,9 +445,8 @@
         details[i.id] = body
       } catch (err) {
         if (selectedId === i.id) {
-          const fb = document.getElementById('filesBox'), nb = document.getElementById('notesBox')
-          if (fb) fb.innerHTML = '<p class="note" style="color:var(--alert)">Bijlagen en notities laden mislukt: ' + esc(err.message) + '</p>'
-          if (nb) nb.innerHTML = ''
+          const fb = document.getElementById('filesBox')
+          if (fb) fb.innerHTML = '<p class="note" style="color:var(--alert)">Bijlagen laden mislukt: ' + esc(err.message) + '</p>'
         }
         return
       }
@@ -426,13 +466,15 @@
         if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || ('Fout ' + res.status)) }
         const ct = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase()
         const blob = await res.blob()
-        const mime = IMG_TYPES.includes(ct) ? ct : (MIME_EXT[extOf(f.name)] || ct)
+        const mime = EXT_MIME[extOf(f.name)] || ct
         det.cache[f.id] = { blob, mime }
         return det.cache[f.id]
       })().finally(() => { delete det.pending[f.id] })
     }
     return det.pending[f.id]
   }
+
+  const blobUrl = entry => (entry.url = entry.url || URL.createObjectURL(new Blob([entry.blob], { type: entry.mime })))
 
   function saveBlob(entry, name) {
     const a = document.createElement('a')
@@ -445,55 +487,74 @@
     await Promise.all(Array.from({ length: Math.min(n, tasks.length) }, async () => { while (k < tasks.length) { const t = tasks[k++]; await t() } }))
   }
 
-  const noteHtml = n => {
-    const when = n.addTime ? new Date(n.addTime.replace(' ', 'T') + 'Z').toLocaleString('nl-NL', { dateStyle: 'medium', timeStyle: 'short' }) : ''
-    const body = n.items
-      ? n.items.map(it => '<div class="q">' + esc(it.nr + '. ' + it.vraag) + '</div><div>' + esc(it.antwoord) + '</div>').join('')
-      : esc(n.text)
-    return '<div class="note-item"><div class="meta">' + esc(when) + '</div>' + body + '</div>'
+  function fileRow(i, f) {
+    const k = kindOf(f)
+    let acts, extra = ''
+    if (f.remote) { acts = pdLink(i, 'Open in Pipedrive'); extra = 'gekoppeld extern bestand' }
+    else if (tooBig(f)) { acts = pdLink(i, 'Te groot, open in Pipedrive'); extra = 'te groot voor een voorbeeld' }
+    else {
+      acts = ''
+      if (k === 'pdf' || k === 'text' || k === 'video' || k === 'audio') acts += '<button class="btn small ghost" data-act="preview" data-label="Voorbeeld" data-id="' + f.id + '">Voorbeeld</button>'
+      if (k === 'pdf') acts += '<button class="btn small ghost" data-act="open" data-id="' + f.id + '">Open</button>'
+      acts += '<button class="btn small ghost" data-act="dl" data-id="' + f.id + '">Download</button>'
+      if (k === 'other') extra = 'geen voorbeeld mogelijk, alleen downloaden'
+    }
+    return '<div class="file" data-fid="' + f.id + '"><div><div class="nm">' + esc(f.name) + '</div><div class="meta">' + esc([extOf(f.name).toUpperCase(), fmtSize(f.size), extra].filter(Boolean).join(' · ')) + '</div></div><div class="acts">' + acts + '</div></div>'
   }
 
   function renderDetailExtras(i) {
     const det = details[i.id]
-    const fb = document.getElementById('filesBox'), nb = document.getElementById('notesBox')
-    if (!fb || !nb || !det) return
+    const fb = document.getElementById('filesBox')
+    if (!fb || !det) return
     const files = det.files || []
-    if (!files.length) fb.innerHTML = '<p class="note">Geen bijlagen bij deze aanvraag.</p>'
-    else {
-      const photos = files.filter(f => !f.remote && isImg(f) && !tooBig(f))
-      const others = files.filter(f => !photos.includes(f))
-      let h = ''
-      if (photos.length) {
-        h += '<div class="photos">' + photos.map(f => '<div class="photo" data-fid="' + f.id + '"><div class="ph">Laden...</div><div class="cap"><span>' + esc(f.name) + '</span><button data-act="dl" data-id="' + f.id + '">Download</button></div></div>').join('') + '</div>'
-      }
-      if (others.length) {
-        h += '<div class="files" style="margin-top:' + (photos.length ? '10' : '0') + 'px">' + others.map(f => {
-          let acts
-          if (f.remote) acts = '<a class="btn small ghost" href="https://app.pipedrive.com/deal/' + i.id + '" target="_blank" rel="noopener">Open in Pipedrive</a>'
-          else if (tooBig(f)) acts = '<a class="btn small ghost" href="https://app.pipedrive.com/deal/' + i.id + '" target="_blank" rel="noopener">Te groot, open in Pipedrive</a>'
-          else acts = (isPdf(f) ? '<button class="btn small ghost" data-act="open" data-id="' + f.id + '">Open</button>' : '') + '<button class="btn small ghost" data-act="dl" data-id="' + f.id + '">Download</button>'
-          return '<div class="file" data-fid="' + f.id + '"><div><div class="nm">' + esc(f.name) + '</div><div class="meta">' + esc([extOf(f.name).toUpperCase(), fmtSize(f.size)].filter(Boolean).join(' · ')) + '</div></div><div class="acts">' + acts + '</div></div>'
-        }).join('') + '</div>'
-      }
-      h += '<p class="note">Bijlagen komen van de aanvrager. Foto\'s worden hier direct getoond. PDF\'s open je met de knop. Word, Excel en andere documenten worden alleen gedownload en nooit in de pagina geopend.</p>'
-      fb.innerHTML = h
-      fb.querySelectorAll('button[data-act]').forEach(b => b.addEventListener('click', () => fileAction(i, b.dataset.act, Number(b.dataset.id), b)))
-      runPool(photos.map(f => async () => {
-        const holder = fb.querySelector('.photo[data-fid="' + f.id + '"] .ph')
-        try {
-          const entry = await getFile(i, f)
-          if (selectedId !== i.id || !holder.isConnected) return
-          holder.innerHTML = ''
-          const img = document.createElement('img'); img.alt = f.name
-          const url = (entry.url = entry.url || URL.createObjectURL(new Blob([entry.blob], { type: entry.mime })))
-          img.src = url
-          img.addEventListener('click', () => window.open(url, '_blank', 'noopener'))
-          holder.appendChild(img)
-        } catch (err) { if (holder.isConnected) holder.textContent = err.message }
-      }), 3)
+    if (!files.length) { fb.innerHTML = '<p class="note">Geen bijlagen bij deze aanvraag.</p>'; return }
+    const photos = files.filter(f => !f.remote && kindOf(f) === 'image' && !tooBig(f))
+    const others = files.filter(f => !photos.includes(f))
+    let h = ''
+    if (photos.length) {
+      h += '<div class="photos">' + photos.map(f => '<div class="photo" data-fid="' + f.id + '"><div class="ph">Laden...</div><div class="cap"><span>' + esc(f.name) + '</span><button data-act="dl" data-id="' + f.id + '">Download</button></div></div>').join('') + '</div>'
     }
-    nb.innerHTML = det.notes.length ? det.notes.map(noteHtml).join('') : '<p class="note">Geen eigen notities bij deze aanvraag.</p>'
-    if (det.verborgen) nb.innerHTML += '<p class="note">Het ingevulde formulier staat ook als notitie in Pipedrive. Wat daar dubbel is met de velden hierboven is weggelaten.</p>'
+    if (others.length) h += '<div class="files" style="margin-top:' + (photos.length ? '10' : '0') + 'px">' + others.map(f => fileRow(i, f)).join('') + '</div>'
+    h += '<p class="note">Bijlagen komen van de aanvrager. Afbeeldingen, PDF\'s, tekstbestanden, video en audio kun je hier bekijken. Word, Excel en andere documenten worden alleen gedownload en nooit in de pagina geopend.</p>'
+    fb.innerHTML = h
+    fb.querySelectorAll('button[data-act]').forEach(b => b.addEventListener('click', () => fileAction(i, b.dataset.act, Number(b.dataset.id), b)))
+    runPool(photos.map(f => async () => {
+      const holder = fb.querySelector('.photo[data-fid="' + f.id + '"] .ph')
+      try {
+        const entry = await getFile(i, f)
+        if (selectedId !== i.id || !holder.isConnected) return
+        holder.innerHTML = ''
+        const img = document.createElement('img'); img.alt = f.name
+        img.addEventListener('error', () => { holder.textContent = 'Deze browser kan dit formaat niet tonen. Download het bestand.' })
+        img.src = blobUrl(entry)
+        // Alleen gewone afbeeldingen openen groot in een nieuw tabblad. Een SVG als losse pagina kan scripts bevatten.
+        if (entry.mime !== 'image/svg+xml') img.addEventListener('click', () => window.open(blobUrl(entry), '_blank', 'noopener'))
+        else img.style.cursor = 'default'
+        holder.appendChild(img)
+      } catch (err) { if (holder.isConnected) holder.textContent = err.message }
+    }), 3)
+  }
+
+  async function togglePreview(holder, f, entry) {
+    const bestaand = holder.querySelector('.prev')
+    if (bestaand) { bestaand.remove(); return }
+    const k = kindOf(f)
+    const box = document.createElement('div'); box.className = 'prev'
+    if (k === 'text') {
+      const buf = await entry.blob.arrayBuffer()
+      let t
+      try { t = new TextDecoder('utf-8', { fatal: true }).decode(buf) } catch (_) { t = new TextDecoder('windows-1252').decode(buf) }
+      const pre = document.createElement('pre'); pre.textContent = t.length > 20000 ? t.slice(0, 20000) : t
+      box.appendChild(pre)
+      if (t.length > 20000) { const p = document.createElement('p'); p.className = 'note'; p.textContent = 'Alleen het begin wordt getoond. Download het bestand voor de rest.'; box.appendChild(p) }
+    } else if (k === 'pdf') {
+      const fr = document.createElement('iframe'); fr.title = f.name; fr.src = blobUrl(entry); box.appendChild(fr)
+    } else if (k === 'video') {
+      const v = document.createElement('video'); v.controls = true; v.preload = 'metadata'; v.src = blobUrl(entry); box.appendChild(v)
+    } else if (k === 'audio') {
+      const a = document.createElement('audio'); a.controls = true; a.src = blobUrl(entry); box.appendChild(a)
+    }
+    holder.appendChild(box)
   }
 
   async function fileAction(i, act, fileId, btn) {
@@ -504,13 +565,14 @@
     const prev = holder.querySelector('.err'); if (prev) prev.remove()
     try {
       const entry = await getFile(i, f)
-      if (act === 'open' && (entry.mime === 'application/pdf' || isPdf(f))) {
-        window.open(URL.createObjectURL(new Blob([entry.blob], { type: 'application/pdf' })), '_blank', 'noopener')
-      } else saveBlob(entry, f.name)
+      if (act === 'preview') await togglePreview(holder, f, entry)
+      else if (act === 'open' && kindOf(f) === 'pdf') window.open(blobUrl(entry), '_blank', 'noopener')
+      else saveBlob(entry, f.name)
     } catch (err) {
       const p = document.createElement('div'); p.className = 'err'; p.textContent = err.message; holder.appendChild(p)
     }
-    btn.disabled = false; btn.textContent = old
+    btn.disabled = false
+    btn.textContent = act === 'preview' ? (holder.querySelector('.prev') ? 'Verberg' : (btn.dataset.label || old)) : old
   }
 
   // ---- Concept ----

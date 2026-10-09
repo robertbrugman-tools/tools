@@ -127,6 +127,7 @@
     .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); transform: translateY(-2px); }
 
     .card-icon  { font-size: 1.6rem; line-height: 1; }
+    .card-icon img { height: 1.8rem; width: auto; display: block; }
     .card-title { font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; }
     .card-desc  { font-size: 0.82rem; color: #777; line-height: 1.5; }
     .card-tag   { margin-top: auto; font-size: 0.72rem; color: #4a7c59; text-transform: uppercase; letter-spacing: 0.04em; }
@@ -702,7 +703,7 @@
       { key: 'linkbeheer', category: 'prive', icon: '🔗', title: 'Linkbeheer', desc: 'Bewaar url\'s met label en samenvatting, in plaats van tabbladen open te houden.', href: '/linkbeheer/' },
       { key: 'e208', category: 'prive', icon: '🚗', title: 'Peugeot e208', desc: 'Bekijk hoe vol de accu van de e208 is en hoe het laadpercentage zich ontwikkelt.', href: '/e208/' },
       { key: 'respyre',  category: 'zakelijk', icon: '🌿', title: 'Respyre antwoorden', desc: 'Plak een binnengekomen aanvraag en genereer een concept-antwoord in jouw stijl.', href: '/respyre/' },
-      { key: 'aanvragen', category: 'zakelijk', icon: '📥', title: 'Aanvragen', desc: 'Nieuwe Pipedrive-aanvragen in bakjes, met een conceptantwoord.', href: '/aanvragen/' },
+      { key: 'aanvragen', category: 'zakelijk', icon: '📥', iconImg: '/aanvragen/respyre-logo.svg', title: 'Aanvragen', desc: 'Nieuwe Pipedrive-aanvragen in bakjes, met een conceptantwoord.', href: '/aanvragen/' },
     ]
 
     // ── State ──────────────────────────────────────────────────────────────
@@ -781,7 +782,7 @@
         a.href = app.href
         if (app.external) a.target = '_blank'
         a.innerHTML = `
-          <div class="card-icon">${app.icon}</div>
+          <div class="card-icon">${app.iconImg ? `<img src="${app.iconImg}" alt="">` : app.icon}</div>
           <div class="card-title">${app.title}</div>
           <div class="card-desc">${app.desc}</div>
           <div class="card-tag">Beschikbaar</div>`
@@ -791,7 +792,7 @@
       const div = document.createElement('div')
       div.className = 'card'
       div.innerHTML = `
-        <div class="card-icon">${app.icon}</div>
+        <div class="card-icon">${app.iconImg ? `<img src="${app.iconImg}" alt="">` : app.icon}</div>
         <div class="card-title">${app.title}</div>
         <div class="card-desc">${app.desc}</div>
         <button class="card-btn" onclick="openUrenModal()">+ Uren invoeren</button>`
