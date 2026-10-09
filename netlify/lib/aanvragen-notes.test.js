@@ -14,14 +14,14 @@ const formulier = [
 let r = filterNotes([{ id: 1, addTime: 'x', text: formulier }, { id: 2, addTime: 'y', text: 'Gebeld, wil een afspraak.' }])
 assert.strictEqual(r.verborgen, 1)
 assert.strictEqual(r.notes.length, 2)
-assert.deepStrictEqual(r.notes[0].items.map(i => i.nr), [11, 14])
+assert.deepStrictEqual(r.notes[0].items.map(i => i.nr), [11])
 assert.strictEqual(r.notes[0].items[0].antwoord, 'walls')
 assert.strictEqual(r.notes[1].text, 'Gebeld, wil een afspraak.')
-console.log('OK formulier: vanaf 11 met antwoord, eigen notitie blijft')
+console.log('OK formulier: alleen 11 met antwoord, eigen notitie blijft')
 
 // Beide ingevuld
 r = filterNotes([{ id: 1, text: formulier.replace('(Blank)14.', 'Strak en donker\n14.') }])
-assert.deepStrictEqual(r.notes[0].items.map(i => i.nr), [11, 12, 14])
+assert.deepStrictEqual(r.notes[0].items.map(i => i.nr), [11, 12])
 assert.strictEqual(r.notes[0].items[1].antwoord, 'Strak en donker')
 console.log('OK formulier: 11 en 12 beide ingevuld')
 
@@ -41,7 +41,7 @@ r = filterNotes([{ id: 1, text: '1. bellen\n2. mailen\n3. offerte' }])
 assert.strictEqual(r.notes[0].text, '1. bellen\n2. mailen\n3. offerte')
 console.log('OK eigen genummerde notitie blijft staan')
 
-assert.strictEqual(notesVoorPrompt(filterNotes([{ id: 1, text: formulier }])), 'Specifieke kenmerken waarmee we rekening moeten houden?: walls\nTaal voorkeur in communicatie: Nederlands')
+assert.strictEqual(notesVoorPrompt(filterNotes([{ id: 1, text: formulier }])), 'Specifieke kenmerken waarmee we rekening moeten houden?: walls')
 console.log('OK prompttekst')
 
 // Echte vorm uit Pipedrive: antwoord direct voor de volgende vraag en een vraag zonder nummer
@@ -52,6 +52,19 @@ const echt = [
   'Hoe heeft u ons gevonden? | How did you find us?', "I know you since the beginning, but you weren't willing to do it in Italy. I hope we can do it now.",
 ].join('\n')
 r = filterNotes([{ id: 1, text: echt }])
-assert.deepStrictEqual(r.notes[0].items.map(i => i.antwoord), ['First floor', 'To be discussed', 'English', "I know you since the beginning, but you weren't willing to do it in Italy. I hope we can do it now."])
-assert.strictEqual(r.notes[0].items[3].vraag, 'Hoe heeft u ons gevonden?')
-console.log('OK echte formulier: kenmerken, voorkeur, taal en hoe gevonden blijven behouden')
+assert.deepStrictEqual(r.notes[0].items.map(i => i.antwoord), ['First floor', 'To be discussed', "I know you since the beginning, but you weren't willing to do it in Italy. I hope we can do it now."])
+assert.strictEqual(r.notes[0].items[2].vraag, 'Hoe heeft u ons gevonden?')
+console.log('OK echte formulier: kenmerken, voorkeur en hoe gevonden blijven, taal valt weg')
+
+// Taalvoorkeur en reCAPTCHA-score horen er niet bij, ook niet met een hoog vraagnummer
+r = filterNotes([{ id: 1, text: echt + '\n15. reCAPTCHA bot score | Score\n0.9\n16. Iets anders | Other\nwaarde' }])
+assert.ok(!r.notes[0].items.some(i => /taal|recaptcha|anders/i.test(i.vraag)))
+console.log('OK taal en reCAPTCHA-score worden niet getoond')
+
+// reCAPTCHA-score direct na het laatste antwoord, met en zonder streepje: hoort niet bij het antwoord
+for (const extra of ['\nreCAPTCHA bot score | score\n0.9', '\nRecaptcha bot score: 0.9']) {
+  r = filterNotes([{ id: 1, text: echt + extra }])
+  const laatste = r.notes[0].items[r.notes[0].items.length - 1]
+  assert.ok(!/recaptcha|0\.9/i.test(laatste.antwoord), laatste.antwoord)
+}
+console.log('OK reCAPTCHA-score komt niet in het antwoord terecht')
