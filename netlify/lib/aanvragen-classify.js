@@ -145,7 +145,8 @@ function detectLang(text, countryIso) {
 }
 
 // ---------- soort aanvrager ----------
-const PRIVE_ORG_TERMEN = /\b(privat|private|privaat|prive|privé|privato|particulier|individual|personal|self[\s-]?employed|freelancer|no company|geen bedrijf)\b/i
+// Wordt toegepast op tekst zonder accenten (strip), want \b werkt niet na een letter met accent zoals de é in "Privé".
+const PRIVE_ORG_TERMEN = /\b(privat|private|privaat|prive|privato|particulier|individual|personal|self[\s-]?employed|freelancer|no company|geen bedrijf)\b/i
 const PRODUCENT_TERMEN = /(betonproducent|beton ?fabriek|betoncentrale|prefab ?(producent|fabrikant|bedrijf)|concrete (producer|manufacturer|plant)|precast (producer|manufacturer|plant|company)|ready[\s-]?mix (producer|plant|company)|cement (producer|plant|company|manufacturer)|betonwarenfabriek|betonindustrie)/i
 const SAMENWERKING_TERMEN = /(partnership|samenwerking|collaborat|distribut|reseller|wederverkoper|licen[sc]e|licentie|joint venture|agent for|vertegenwoordig|representative|franchise|white label|co-?develop|strategic partner|strategische partner)/i
 
@@ -199,8 +200,8 @@ function classify(deal, person, org, F, extraText) {
 
   // soort aanvrager
   const privaatLabel = labels.includes(LABEL_PRIVAAT)
-  const priveInOrg = PRIVE_ORG_TERMEN.test(orgName)
-  const priveInTekst = /\b(private person|particulier|privé|prive|privat(?:e)? (?:person|individual|home|house|use)|for my (?:own )?(?:house|home|garden)|voor mijn (?:eigen )?(?:huis|woning|tuin)|mijn (?:huis|woning|tuin))\b/i.test([deal.title, fields.projectnaam, fields.specifics, fields.opmerkingen].join(' '))
+  const priveInOrg = PRIVE_ORG_TERMEN.test(strip(orgName))
+  const priveInTekst = /\b(private person|particulier|prive|privat(?:e)? (?:person|individual|home|house|use)|for my (?:own )?(?:house|home|garden)|voor mijn (?:eigen )?(?:huis|woning|tuin)|mijn (?:huis|woning|tuin))\b/i.test(strip([deal.title, fields.projectnaam, fields.specifics, fields.opmerkingen].join(' ')))
   const orgLeeg = !orgName || strip(orgName) === strip(personName) || /^(-|\.|n\/?a|none|geen|nvt|x+)$/i.test(orgName)
   let soort = 'onbekend'
   if (privaatLabel) { soort = 'particulier'; reasons.push('Label "Privaat" in Pipedrive') }
