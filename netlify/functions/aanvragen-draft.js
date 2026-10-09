@@ -77,7 +77,7 @@ exports.handler = async (event) => {
       try {
         const r = await sb(`/rest/v1/aanvragen_concept?select=hash,onderwerp,tekst,kopjes,extra,model&deal_id=eq.${dealId}&limit=1`)
         const rij = r.ok && Array.isArray(r.data) ? r.data[0] : null
-        if (rij && rij.hash === hash) return json(200, { onderwerp: rij.onderwerp || '', tekst: rij.tekst, kopjes: rij.kopjes || [], lang, bucket, model: rij.model || MODEL, extra: rij.extra || '', cached: true })
+        if (rij && rij.hash === hash) return json(200, { onderwerp: rij.onderwerp || '', tekst: rij.tekst, kopjes: (rij.kopjes && rij.kopjes.length) ? rij.kopjes : kopjesUitTekst(rij.tekst).kopjes, lang, bucket, model: rij.model || MODEL, extra: rij.extra || '', cached: true })
       } catch (_) { /* geen tabel of geen sleutel: gewoon opnieuw schrijven */ }
     }
 
