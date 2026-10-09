@@ -106,6 +106,9 @@
   dl.facts dt { color: var(--mute); }
   dl.facts dd { word-break: break-word; white-space: pre-wrap; color: var(--ink); }
   dl.facts.raw { background: var(--paper); border-radius: 14px; padding: 14px 16px; margin-top: 4px; }
+  .ans { margin-bottom: 10px; }
+  .ans .q { font-size: .76rem; color: var(--mute); }
+  .ans .a { font-size: .88rem; color: var(--ink); white-space: pre-wrap; word-break: break-word; }
   .why { background: var(--green-l); border-radius: 14px; padding: 11px 14px; font-size: .84rem; color: var(--green-d); line-height: 1.5; margin-bottom: 10px; }
   .flag { background: var(--warn-bg); color: var(--warn); border-radius: 14px; padding: 10px 14px; font-size: .86rem; margin-bottom: 8px; font-weight: 500; }
   .flag.red { background: var(--alert-bg); color: var(--alert); }
@@ -490,6 +493,7 @@
       <div>
         <div class="sec">Aanvraag</div>
         <dl class="facts">${factsHtml(i)}</dl>
+        <div id="formBox"></div>
         ${i.noGo ? '<div class="flag red">No-go: ' + esc(i.flags[0]) + '</div>' : ''}
         ${i.flags.filter(x => !i.noGo || x !== i.flags[0]).map(x => '<div class="flag">' + esc(x) + '</div>').join('')}
         <div class="why"><b>Waarom dit bakje:</b> ${esc(i.reasons.join('. '))}.</div>
@@ -627,6 +631,10 @@
     const det = details[i.id]
     const fb = document.getElementById('filesBox')
     if (!fb || !det) return
+    const fbx = document.getElementById('formBox')
+    if (fbx) fbx.innerHTML = (det.formulier && det.formulier.length)
+      ? '<div class="sec">Uit het formulier</div>' + det.formulier.map(x => '<div class="ans"><div class="q">' + esc(x.vraag) + '</div><div class="a">' + esc(x.antwoord) + '</div></div>').join('')
+      : ''
     const files = det.files || []
     if (!files.length) { fb.innerHTML = '<p class="note">Geen bijlagen bij deze aanvraag.</p>'; return }
     const photos = files.filter(f => !f.remote && kindOf(f) === 'image' && !tooBig(f))
