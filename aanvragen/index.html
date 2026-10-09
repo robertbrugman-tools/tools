@@ -37,12 +37,16 @@
   input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 12px; font: inherit; font-size: 0.9rem; background: #fff; color: var(--ink); }
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 3px var(--green-l); }
   textarea { resize: vertical; line-height: 1.55; }
+  .pw { position: relative; }
+  .pw input { padding-right: 70px; }
+  .pw-toggle { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--green); font-size: .78rem; font-weight: 600; padding: 6px 10px; border-radius: 8px; }
+  .pw-toggle:hover { background: var(--green-l); }
   .submit-btn { width: 100%; padding: 13px; margin-top: 6px; }
   .msg { font-size: .84rem; text-align: center; margin-top: 10px; min-height: 1.2em; color: var(--alert); }
 
-  #app { display: none; padding: 22px 24px 64px; }
-  .wrap { max-width: 1320px; margin: 0 auto; }
-  .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--rule); border-radius: 999px; padding: 10px 14px 10px 24px; }
+  #app { display: none; padding: 16px 24px 16px; height: 100vh; }
+  .wrap { max-width: 1320px; margin: 0 auto; height: 100%; display: flex; flex-direction: column; }
+  .top { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--rule); border-radius: 999px; padding: 10px 14px 10px 24px; }
   .brand { display: flex; align-items: center; gap: 16px; }
   .brand h1 { font-family: var(--serif); font-size: 1.25rem; font-weight: 500; color: var(--green); letter-spacing: -0.01em; }
   .brand .sub { font-size: .84rem; color: var(--mute); }
@@ -66,10 +70,10 @@
   .status-line { font-size: .82rem; color: var(--mute); }
   .status-line.err { color: var(--alert); font-weight: 500; }
 
-  .layout { display: grid; grid-template-columns: 260px minmax(280px, 1fr) minmax(380px, 1.25fr); gap: 16px; align-items: start; }
+  .layout { flex: 1; min-height: 0; display: grid; grid-template-columns: 260px minmax(280px, 1fr) minmax(400px, 1.4fr); grid-template-rows: minmax(0, 1fr); gap: 16px; align-items: stretch; }
   .panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 22px; }
 
-  .buckets { padding: 10px; position: sticky; top: 14px; }
+  .buckets { padding: 10px; overflow: auto; min-height: 0; }
   .bk { width: 100%; text-align: left; background: none; border: none; border-radius: 14px; padding: 10px 12px; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; color: var(--body); }
   .bk:hover { background: var(--paper); }
   .bk[aria-pressed="true"] { background: var(--green); color: #fff; }
@@ -80,7 +84,7 @@
   .bk.zero .n { color: var(--mute); font-weight: 400; }
   .bk[aria-pressed="true"].zero .n { color: #d3e2d1; }
 
-  .list { padding: 8px; min-height: 120px; }
+  .list { padding: 8px; min-height: 0; overflow: auto; }
   .list h2 { font-family: var(--serif); font-size: 1.1rem; font-weight: 500; color: var(--green); padding: 12px 12px 2px; }
   .list .hint { font-size: .8rem; color: var(--mute); padding: 0 12px 10px; }
   .row { width: 100%; text-align: left; background: none; border: none; border-radius: 14px; padding: 11px 12px; display: block; border-top: 1px solid var(--rule-2); }
@@ -95,7 +99,7 @@
   .tag.green { background: var(--green-l); color: var(--green-d); }
   .empty { padding: 18px 12px; color: var(--mute); font-size: .9rem; line-height: 1.6; }
 
-  .detail { padding: 26px; position: sticky; top: 14px; max-height: calc(100vh - 28px); overflow: auto; }
+  .detail { padding: 22px 26px 26px; min-height: 0; overflow: auto; }
   .detail h2 { font-family: var(--serif); font-size: 1.45rem; font-weight: 500; color: var(--green); letter-spacing: -.01em; }
   .detail .org { color: var(--mute); font-size: .92rem; margin-top: 2px; }
   .sec { font-family: var(--btn); font-size: .66rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--mute); margin: 22px 0 8px; }
@@ -128,14 +132,30 @@
 
   .ctrl { display: grid; grid-template-columns: 1fr 120px; gap: 10px; margin-bottom: 10px; }
   .actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0; align-items: center; }
-  .draft { margin-top: 20px; border-top: 1px solid var(--rule); padding-top: 18px; }
-  #dBody { min-height: 300px; }
+  .draft { margin-top: 4px; }
+  .regen { margin-top: 18px; border-top: 1px solid var(--rule); padding-top: 12px; }
+  .regen summary { cursor: pointer; font-size: .82rem; font-weight: 600; color: var(--green); margin-bottom: 12px; }
+  #dBody { min-height: 300px; resize: none; overflow: hidden; }
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--rule); margin: 16px 0 14px; }
+  .tab { background: none; border: none; border-bottom: 3px solid transparent; margin-bottom: -1px; padding: 9px 14px; font-family: var(--btn); font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--mute); border-radius: 10px 10px 0 0; }
+  .tab:hover { color: var(--green); background: var(--paper); }
+  .tab[aria-selected="true"] { color: var(--green); border-bottom-color: var(--green); }
+  .tabst { display: inline-block; margin-left: 8px; font-size: .64rem; letter-spacing: .04em; text-transform: none; font-weight: 600; border-radius: 999px; padding: 1px 8px; background: var(--paper); color: var(--mute); }
+  .tabst.klaar { background: var(--green-l); color: var(--green-d); }
+  .tabst.fout { background: var(--alert-bg); color: var(--alert); }
+  [role="tabpanel"][hidden] { display: none; }
   .chk { display: flex; align-items: center; gap: 8px; font-size: .8rem; color: var(--mute); margin: 0 0 10px; cursor: pointer; }
   .chk input { width: auto; padding: 0; margin: 0; }
   .note { font-size: .78rem; color: var(--mute); margin-top: 6px; line-height: 1.5; }
 
-  @media (max-width: 1100px) { .layout { grid-template-columns: 230px 1fr; } .detail { grid-column: 1 / -1; position: static; max-height: none; } }
-  @media (max-width: 720px) { .layout { grid-template-columns: 1fr; } .buckets { position: static; } #app { padding: 14px 12px 48px; } .top { border-radius: 24px; padding: 12px 16px; } }
+  /* Smalle schermen: gewoon een pagina die scrolt, zonder vensters in vensters. */
+  @media (max-width: 1100px) {
+    #app { height: auto; } .wrap { height: auto; display: block; } .top { margin-bottom: 20px; }
+    .layout { display: grid; grid-template-columns: 230px 1fr; grid-template-rows: auto; align-items: start; }
+    .buckets, .list, .detail { overflow: visible; }
+    .detail { grid-column: 1 / -1; }
+  }
+  @media (max-width: 720px) { .layout { grid-template-columns: 1fr; } #app { padding: 14px 12px 48px; } .top { border-radius: 24px; padding: 12px 16px; } }
 </style>
 </head>
 <body>
@@ -145,8 +165,8 @@
   <div class="auth-box">
     <h1>Aanvragen</h1>
     <p>Log in met je Hub-account</p>
-    <div class="fg"><label for="authEmail">E-mailadres</label><input type="email" id="authEmail" placeholder="jouw@email.nl" onkeydown="if(event.key==='Enter')login()"></div>
-    <div class="fg"><label for="authPw">Wachtwoord</label><input type="password" id="authPw" placeholder="••••••••" onkeydown="if(event.key==='Enter')login()"></div>
+    <div class="fg"><label for="authEmail">E-mailadres</label><input type="email" id="authEmail" autocomplete="username" placeholder="jouw@email.nl" onkeydown="if(event.key==='Enter')login()"></div>
+    <div class="fg"><label for="authPw">Wachtwoord</label><div class="pw"><input type="password" id="authPw" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()"><button type="button" class="pw-toggle" id="pwToggle" aria-controls="authPw" aria-pressed="false">Toon</button></div></div>
     <button class="btn submit-btn" id="btnLogin" onclick="login()">Inloggen</button>
     <p class="msg" id="authMsg"></p>
   </div>
@@ -204,6 +224,13 @@
     const { data: { session } } = await sb.auth.getSession()
     if (session) enter()
   })()
+
+  document.getElementById('pwToggle').addEventListener('click', e => {
+    const f = document.getElementById('authPw'), toon = f.type === 'password'
+    f.type = toon ? 'text' : 'password'
+    e.currentTarget.textContent = toon ? 'Verberg' : 'Toon'
+    e.currentTarget.setAttribute('aria-pressed', toon ? 'true' : 'false')
+  })
 
   async function login() {
     const email = document.getElementById('authEmail').value.trim()
@@ -407,6 +434,8 @@
     const g = document.getElementById('btnGen'); if (g) g.textContent = 'Genereer opnieuw'
     const st = document.getElementById('genStatus'); if (st) { st.className = 'status-line'; st.textContent = d.cached ? 'Bewaard concept geladen.' : '' }
     const ex = document.getElementById('extra'); if (ex && !ex.value && d.extra) ex.value = d.extra
+    const rg = document.getElementById('regen'); if (rg) rg.open = false
+    updateTabStatus(i)
   }
 
   function startAuto(i) {
@@ -415,14 +444,62 @@
     const bk = bucketOf(i)
     if (bk === 'handmatig') { if (st) { st.className = 'status-line'; st.textContent = 'Kies eerst een bakje voor deze aanvraag om een concept te laten schrijven.' } return }
     if (st) { st.className = 'status-line'; st.textContent = 'Concept wordt automatisch geschreven...' }
-    requestDraft(i, { bucket: bk, auto: true }).then(d => {
+    const wacht = requestDraft(i, { bucket: bk, auto: true }); updateTabStatus(i)
+    wacht.then(d => {
       if (d.bucket !== bucketOf(i)) { delete drafts[i.id]; if (selectedId === i.id) startAuto(i); return }
       showDraft(i)
     }).catch(err => {
-      autoFout[i.id] = err.message
+      autoFout[i.id] = err.message; updateTabStatus(i)
+      if (selectedId === i.id) { const rg = document.getElementById('regen'); if (rg) rg.open = true }
       if (selectedId === i.id) { const s2 = document.getElementById('genStatus'); if (s2) { s2.textContent = 'Automatisch concept mislukt: ' + err.message; s2.className = 'status-line err' } }
     })
   }
+
+  // ---- Tabbladen in het detail: Aanvraag en Antwoord. De keuze blijft onthouden. ----
+  function showTab(which, focus) {
+    const a = which !== 'b'
+    const tA = document.getElementById('tabA'), tB = document.getElementById('tabB')
+    if (!tA || !tB) return
+    tA.setAttribute('aria-selected', a ? 'true' : 'false'); tB.setAttribute('aria-selected', a ? 'false' : 'true')
+    tA.tabIndex = a ? 0 : -1; tB.tabIndex = a ? -1 : 0
+    document.getElementById('panA').hidden = !a
+    document.getElementById('panB').hidden = a
+    try { localStorage.setItem('aanvragen_tab', a ? 'a' : 'b') } catch (_) { /* geen opslag beschikbaar */ }
+    if (focus) (a ? tA : tB).focus()
+    if (!a) fitDraft()
+  }
+  function initTabs() {
+    let pref = 'a'
+    try { pref = localStorage.getItem('aanvragen_tab') === 'b' ? 'b' : 'a' } catch (_) { pref = 'a' }
+    showTab(pref, false)
+    ;['tabA', 'tabB'].forEach(id => {
+      const t = document.getElementById(id)
+      t.addEventListener('click', () => showTab(id === 'tabB' ? 'b' : 'a', false))
+      t.addEventListener('keydown', e => {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'Home' || e.key === 'End') {
+          e.preventDefault()
+          showTab(e.key === 'ArrowRight' || e.key === 'End' ? 'b' : 'a', true)
+        }
+      })
+    })
+  }
+  // Toont op het tabblad Antwoord of het concept bezig is, klaar is of mislukte.
+  function updateTabStatus(i) {
+    const el = document.getElementById('tabStatus'); if (!el || selectedId !== i.id) return
+    let t = '', k = ''
+    if (pendingDrafts[i.id]) t = 'bezig...'
+    else if (drafts[i.id]) { t = 'klaar'; k = ' klaar' }
+    else if (autoFout[i.id]) { t = 'mislukt'; k = ' fout' }
+    el.textContent = t; el.className = 'tabst' + k; el.style.display = t ? '' : 'none'
+  }
+  // Het tekstvak groeit mee met de tekst, zodat het geen eigen schuifbalk krijgt.
+  function fitDraft() {
+    const t = document.getElementById('dBody')
+    if (!t || t.offsetParent === null) return
+    t.style.height = 'auto'
+    t.style.height = Math.max(300, t.scrollHeight + 2) + 'px'
+  }
+  window.addEventListener('resize', () => fitDraft())
 
   function renderDetail() {
     const el = document.getElementById('detail')
@@ -439,15 +516,24 @@
         ${overrides[i.id] ? '<button class="btn ghost" id="btnAuto" type="button">Terug naar automatisch</button>' : ''}</div>
         <p class="note" id="moveNote">${overrides[i.id] ? 'Handmatig verplaatst. Automatisch was: ' + esc(data.buckets[i.bucket].nr + '. ' + data.buckets[i.bucket].naam) + '.' : 'Automatisch ingedeeld. Kies een ander bakje om te verplaatsen. Dit past niets aan in Pipedrive.'}</p>
       </div>
-      <dl class="facts">${factsHtml(i)}</dl>
-      ${i.noGo ? '<div class="flag red">No-go: ' + esc(i.flags[0]) + '</div>' : ''}
-      ${i.flags.filter(x => !i.noGo || x !== i.flags[0]).map(x => '<div class="flag">' + esc(x) + '</div>').join('')}
-      <div class="why"><b>Waarom dit bakje:</b> ${esc(i.reasons.join('. '))}.</div>
+      <div class="tabs" role="tablist" aria-label="Onderdelen van de aanvraag">
+        <button class="tab" role="tab" id="tabA" aria-controls="panA" type="button">Aanvraag</button>
+        <button class="tab" role="tab" id="tabB" aria-controls="panB" type="button">Antwoord<span class="tabst" id="tabStatus"></span></button>
+      </div>
+      <div role="tabpanel" id="panA" aria-labelledby="tabA">
+        <dl class="facts">${factsHtml(i)}</dl>
+        ${i.noGo ? '<div class="flag red">No-go: ' + esc(i.flags[0]) + '</div>' : ''}
+        ${i.flags.filter(x => !i.noGo || x !== i.flags[0]).map(x => '<div class="flag">' + esc(x) + '</div>').join('')}
+        <div class="why"><b>Waarom dit bakje:</b> ${esc(i.reasons.join('. '))}.</div>
 
-      <div class="sec">Bijlagen</div>
-      <div id="filesBox" class="files"><p class="note">Laden...</p></div>
+        <div class="sec">Bijlagen</div>
+        <div id="filesBox" class="files"><p class="note">Laden...</p></div>
+      </div>
 
-      <div class="sec">Antwoord</div>
+      <div role="tabpanel" id="panB" aria-labelledby="tabB" hidden>
+      <div id="draftBox">${d ? draftHtml(i, d) : ''}</div>
+      <details class="regen" id="regen" ${d ? '' : 'open'}>
+      <summary>Opnieuw schrijven en instellingen</summary>
       <label class="chk"><input type="checkbox" id="autoConcept" ${autoOn() ? 'checked' : ''}> Concept automatisch schrijven bij het openen van een aanvraag</label>
       <div class="ctrl">
         <div><label class="lbl" for="selBucket">Bakje voor het antwoord</label><select id="selBucket">${ORDER.map(k => `<option value="${k}" ${k === bk ? 'selected' : ''}>${esc(data.buckets[k].nr)}. ${esc(data.buckets[k].naam)}</option>`).join('')}</select></div>
@@ -456,7 +542,8 @@
       <label class="lbl" for="extra">Extra instructie (optioneel)</label>
       <input id="extra" type="text" placeholder="Bijvoorbeeld: noem ook de foto's van Utrecht" value="${esc(d ? d.extra : '')}">
       <div class="actions"><button class="btn" id="btnGen">${d ? 'Genereer opnieuw' : 'Genereer antwoord'}</button><span class="status-line" id="genStatus"></span></div>
-      <div id="draftBox">${d ? draftHtml(i, d) : ''}</div>`
+      </details>
+      </div>`
     document.getElementById('selMove').addEventListener('change', e => moveTo(i, e.target.value === i.bucket ? null : e.target.value))
     const btnAuto = document.getElementById('btnAuto')
     if (btnAuto) btnAuto.addEventListener('click', () => moveTo(i, null))
@@ -467,6 +554,8 @@
     })
     bindDraft(i)
     loadDetail(i)
+    initTabs()
+    updateTabStatus(i)
     if (pendingDrafts[i.id]) { const st = document.getElementById('genStatus'); if (st) st.textContent = 'Concept wordt geschreven...' }
     else startAuto(i)
   }
@@ -660,7 +749,8 @@
     const body = () => document.getElementById('dBody').value
     const subj = () => document.getElementById('dSubj').value
     const keep = () => { drafts[i.id].tekst = body(); drafts[i.id].onderwerp = subj() }
-    document.getElementById('dBody').addEventListener('input', keep)
+    document.getElementById('dBody').addEventListener('input', () => { keep(); fitDraft() })
+    fitDraft()
     document.getElementById('dSubj').addEventListener('input', keep)
     btnCopy.addEventListener('click', async () => {
       const el = document.getElementById('copyStatus')
@@ -699,10 +789,12 @@
     try {
       if (pendingDrafts[i.id]) { try { await pendingDrafts[i.id] } catch (_) { /* uitkomst maakt niet uit, hieronder wordt opnieuw geschreven */ } }
       delete autoFout[i.id]
-      await requestDraft(i, { bucket, lang, extra, force: true })
+      const schrijf = requestDraft(i, { bucket, lang, extra, force: true }); updateTabStatus(i)
+      await schrijf
       renderList(); if (selectedId === i.id) renderDetail()
     } catch (err) {
       st.textContent = err.message; st.className = 'status-line err'
+      const rg = document.getElementById('regen'); if (rg) rg.open = true
     }
     const b2 = document.getElementById('btnGen'); if (b2) b2.disabled = false
   }
