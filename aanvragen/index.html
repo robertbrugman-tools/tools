@@ -50,6 +50,10 @@
   .back-link { font-size: .84rem; color: var(--mute); text-decoration: none; }
   .back-link:hover { color: var(--green); }
 
+  .move { margin: 12px 0 4px; }
+  .move-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .move-row select { flex: 1 1 220px; }
+  .note.err { color: #a33; }
   .btn { font-family: var(--btn); font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; background: var(--green); color: #fff; border: 1px solid var(--green); border-radius: 999px; padding: 10px 20px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: background .15s; }
   .btn:hover { background: var(--green-d); }
   .btn:disabled { opacity: .5; cursor: not-allowed; }
@@ -180,6 +184,7 @@
   const FN_LIST = '/.netlify/functions/aanvragen-list'
   const FN_DRAFT = '/.netlify/functions/aanvragen-draft'
   const FN_DETAIL = '/.netlify/functions/aanvragen-detail'
+  const FN_BAKJE = '/.netlify/functions/aanvragen-bakje'
   const FN_FILE = '/.netlify/functions/aanvragen-file'
   const ORDER = ['p_klein','p_nl','p_buiten','b_benelux_de','b_europa','b_wereld','grens','betonproducent','samenwerking','handmatig']
 
@@ -188,8 +193,7 @@
   let selectedId = null
   const drafts = {}
   const details = {}
-  let overrides = {}
-  try { overrides = JSON.parse(localStorage.getItem('aanvragen_override') || '{}') } catch (_) { overrides = {} }
+  let overrides = {} // handmatig gekozen bakjes, bewaard op de server (voor iedereen met toegang gelijk)
 
   ;(async () => {
     const { data: { session } } = await sb.auth.getSession()
@@ -267,9 +271,8 @@
       // Wat niet meer in "Form ingevuld" staat (verplaatst of afgehandeld) valt ook hier weg, inclusief concepten en handmatige bakjes.
       const ids = new Set(data.items.map(x => x.id))
       Object.keys(drafts).forEach(k => { if (!ids.has(Number(k))) delete drafts[k] })
-      let changed = false
-      Object.keys(overrides).forEach(k => { if (!ids.has(Number(k))) { delete overrides[k]; changed = true } })
-      if (changed) localStorage.setItem('aanvragen_override', JSON.stringify(overrides))
+      overrides = {}
+      Object.entries(data.overrides || {}).forEach(([k, v]) => { if (ids.has(Number(k)) && data.buckets[v.bucket]) overrides[k] = v.bucket })
       if (selectedId && !ids.has(selectedId)) selectedId = null
       // "nieuw": niet gezien bij het vorige bezoek of de vorige verversing
       let seen = null
@@ -280,6 +283,7 @@
       loading = false
       updateStatus()
       render()
+      if (data.overridesFout) setStatus(data.overridesFout, true)
     } catch (err) {
       lastFailed = true
       setStatus(err.message, true)
@@ -317,7 +321,7 @@
     let h = `<h2>${esc(b.naam)}</h2><p class="hint">${esc(b.uitleg)}</p>`
     if (!items.length) h += '<p class="empty">Geen aanvragen in dit bakje.</p>'
     h += items.map(i => {
-      const tags = (i.noGo ? '<span class="tag red">no-go</span>' : '') + (i.flags.length && !i.noGo ? '<span class="tag">let op</span>' : '') + (i.isNew ? '<span class="tag green">nieuw</span>' : '') + (drafts[i.id] ? '<span class="tag green">concept</span>' : '')
+      const tags = (i.noGo ? '<span class="tag red">no-go</span>' : '') + (i.flags.length && !i.noGo ? '<span class="tag">let op</span>' : '') + (i.isNew ? '<span class="tag green">nieuw</span>' : '') + (overrides[i.id] ? '<span class="tag">verplaatst</span>' : '') + (drafts[i.id] ? '<span class="tag green">concept</span>' : '')
       const l2 = [i.org, i.land.naam, i.m2 !== null ? i.m2 + ' m²' : 'm² onbekend'].filter(Boolean).join(' · ')
       return `<button class="row" data-id="${i.id}" aria-current="${i.id === selectedId}"><div class="l1"><span>${esc(i.person.name || i.title)}${tags}</span><span>${esc(dt(i.addTime))}</span></div><div class="l2">${esc(l2)}</div></button>`
     }).join('')
@@ -342,6 +346,28 @@
     return rows.map(([k, v]) => '<dt>' + esc(k) + '</dt><dd>' + v + '</dd>').join('')
   }
 
+  async function moveTo(i, bucket) {
+    const note = document.getElementById('moveNote')
+    const headers = await authHeader(); if (!headers) return
+    const vorige = overrides[i.id]
+    if (bucket === null) delete overrides[i.id]; else overrides[i.id] = bucket
+    if (note) { note.textContent = 'Opslaan...'; note.className = 'note' }
+    try {
+      const res = await fetch(FN_BAKJE, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ dealId: i.id, bucket, automatisch: i.bucket }) })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || ('De server antwoordde met status ' + res.status + '.'))
+    } catch (err) {
+      if (vorige === undefined) delete overrides[i.id]; else overrides[i.id] = vorige
+      renderBuckets(); renderList(); renderDetail()
+      const n = document.getElementById('moveNote')
+      if (n) { n.textContent = 'Verplaatsen is niet gelukt: ' + err.message; n.className = 'note err' }
+      return
+    }
+    // Het bakje van het antwoord volgt het nieuwe bakje, tenzij dat Handmatig is.
+    current = bucketOf(i); localStorage.setItem('aanvragen_bucket', current)
+    render()
+  }
+
   function renderDetail() {
     const el = document.getElementById('detail')
     const i = data.items.find(x => x.id === selectedId)
@@ -351,6 +377,12 @@
     el.innerHTML = `
       <h2>${esc(i.person.name || i.title)}</h2>
       <div class="org">${esc(i.org || 'Geen organisatie')} · <a href="https://app.pipedrive.com/deal/${i.id}" target="_blank" rel="noopener">Pipedrive</a></div>
+      <div class="move">
+        <label class="lbl" for="selMove">Bakje van deze aanvraag</label>
+        <div class="move-row"><select id="selMove">${ORDER.map(k => `<option value="${k}" ${k === bk ? 'selected' : ''}>${esc(data.buckets[k].nr)}. ${esc(data.buckets[k].naam)}</option>`).join('')}</select>
+        ${overrides[i.id] ? '<button class="btn ghost" id="btnAuto" type="button">Terug naar automatisch</button>' : ''}</div>
+        <p class="note" id="moveNote">${overrides[i.id] ? 'Handmatig verplaatst. Automatisch was: ' + esc(data.buckets[i.bucket].nr + '. ' + data.buckets[i.bucket].naam) + '.' : 'Automatisch ingedeeld. Kies een ander bakje om te verplaatsen. Dit past niets aan in Pipedrive.'}</p>
+      </div>
       <dl class="facts">${factsHtml(i)}</dl>
       ${i.noGo ? '<div class="flag red">No-go: ' + esc(i.flags[0]) + '</div>' : ''}
       ${i.flags.filter(x => !i.noGo || x !== i.flags[0]).map(x => '<div class="flag">' + esc(x) + '</div>').join('')}
@@ -368,12 +400,9 @@
       <input id="extra" type="text" placeholder="Bijvoorbeeld: noem ook de foto's van Utrecht" value="${esc(d ? d.extra : '')}">
       <div class="actions"><button class="btn" id="btnGen">${d ? 'Genereer opnieuw' : 'Genereer antwoord'}</button><span class="status-line" id="genStatus"></span></div>
       <div id="draftBox">${d ? draftHtml(i, d) : ''}</div>`
-    document.getElementById('selBucket').addEventListener('change', e => {
-      const v = e.target.value
-      if (v === i.bucket) delete overrides[i.id]; else overrides[i.id] = v
-      localStorage.setItem('aanvragen_override', JSON.stringify(overrides))
-      renderBuckets(); renderList()
-    })
+    document.getElementById('selMove').addEventListener('change', e => moveTo(i, e.target.value === i.bucket ? null : e.target.value))
+    const btnAuto = document.getElementById('btnAuto')
+    if (btnAuto) btnAuto.addEventListener('click', () => moveTo(i, null))
     document.getElementById('btnGen').addEventListener('click', () => generate(i))
     bindDraft(i)
     loadDetail(i)
