@@ -70,19 +70,18 @@
   .status-line { font-size: .82rem; color: var(--mute); }
   .status-line.err { color: var(--alert); font-weight: 500; }
 
-  .layout { flex: 1; min-height: 0; display: grid; grid-template-columns: 260px minmax(280px, 1fr) minmax(400px, 1.4fr); grid-template-rows: minmax(0, 1fr); gap: 16px; align-items: stretch; }
+  .layout { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 16px; align-items: stretch; }
   .panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 22px; }
 
-  .buckets { padding: 10px; overflow: auto; min-height: 0; }
-  .bk { width: 100%; text-align: left; background: none; border: none; border-radius: 14px; padding: 10px 12px; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; color: var(--body); }
+  .buckets { flex: none; display: flex; flex-wrap: wrap; gap: 6px; padding: 10px; margin-bottom: 14px; }
+  .bk { background: none; border: 1px solid var(--rule); border-radius: 999px; padding: 6px 8px 6px 14px; display: inline-flex; gap: 8px; align-items: center; color: var(--body); }
   .bk:hover { background: var(--paper); }
-  .bk[aria-pressed="true"] { background: var(--green); color: #fff; }
-  .bk .n { font-variant-numeric: tabular-nums; font-weight: 600; }
-  .bk .nm { font-size: .88rem; line-height: 1.3; font-weight: 500; }
-  .bk small { display: block; font-size: .72rem; color: var(--mute); margin-top: 2px; font-weight: 400; }
-  .bk[aria-pressed="true"] small { color: #d3e2d1; }
+  .bk[aria-pressed="true"] { background: var(--green); border-color: var(--green); color: #fff; }
+  .bk .n { font-variant-numeric: tabular-nums; font-weight: 600; font-size: .78rem; background: var(--paper); color: var(--ink); border-radius: 999px; min-width: 24px; text-align: center; padding: 1px 7px; }
+  .bk .nm { font-size: .84rem; line-height: 1.3; font-weight: 500; }
+  .bk.zero { opacity: .6; }
   .bk.zero .n { color: var(--mute); font-weight: 400; }
-  .bk[aria-pressed="true"].zero .n { color: #d3e2d1; }
+  .bk[aria-pressed="true"] .n { background: rgba(255,255,255,.2); color: #fff; }
 
   .list { padding: 8px; min-height: 0; overflow: auto; }
   .list h2 { font-family: var(--serif); font-size: 1.1rem; font-weight: 500; color: var(--green); padding: 12px 12px 2px; }
@@ -136,14 +135,12 @@
   .regen { margin-top: 18px; border-top: 1px solid var(--rule); padding-top: 12px; }
   .regen summary { cursor: pointer; font-size: .82rem; font-weight: 600; color: var(--green); margin-bottom: 12px; }
   #dBody { min-height: 300px; resize: none; overflow: hidden; }
-  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--rule); margin: 16px 0 14px; }
-  .tab { background: none; border: none; border-bottom: 3px solid transparent; margin-bottom: -1px; padding: 9px 14px; font-family: var(--btn); font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--mute); border-radius: 10px 10px 0 0; }
-  .tab:hover { color: var(--green); background: var(--paper); }
-  .tab[aria-selected="true"] { color: var(--green); border-bottom-color: var(--green); }
-  .tabst { display: inline-block; margin-left: 8px; font-size: .64rem; letter-spacing: .04em; text-transform: none; font-weight: 600; border-radius: 999px; padding: 1px 8px; background: var(--paper); color: var(--mute); }
+  .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 28px; align-items: start; margin-top: 6px; }
+  .cols .sec:first-child { margin-top: 14px; }
+  .cols dl.facts { margin-top: 4px; }
+  .tabst { display: inline-block; margin-left: 8px; vertical-align: 1px; font-size: .64rem; letter-spacing: .04em; text-transform: none; font-weight: 600; border-radius: 999px; padding: 1px 8px; background: var(--paper); color: var(--mute); }
   .tabst.klaar { background: var(--green-l); color: var(--green-d); }
   .tabst.fout { background: var(--alert-bg); color: var(--alert); }
-  [role="tabpanel"][hidden] { display: none; }
   .chk { display: flex; align-items: center; gap: 8px; font-size: .8rem; color: var(--mute); margin: 0 0 10px; cursor: pointer; }
   .chk input { width: auto; padding: 0; margin: 0; }
   .note { font-size: .78rem; color: var(--mute); margin-top: 6px; line-height: 1.5; }
@@ -151,11 +148,11 @@
   /* Smalle schermen: gewoon een pagina die scrolt, zonder vensters in vensters. */
   @media (max-width: 1100px) {
     #app { height: auto; } .wrap { height: auto; display: block; } .top { margin-bottom: 20px; }
-    .layout { display: grid; grid-template-columns: 230px 1fr; grid-template-rows: auto; align-items: start; }
-    .buckets, .list, .detail { overflow: visible; }
-    .detail { grid-column: 1 / -1; }
+    .layout { display: grid; grid-template-columns: 1fr; grid-template-rows: auto; align-items: start; }
+    .list, .detail { overflow: visible; }
   }
-  @media (max-width: 720px) { .layout { grid-template-columns: 1fr; } #app { padding: 14px 12px 48px; } .top { border-radius: 24px; padding: 12px 16px; } }
+  @media (max-width: 1280px) { .cols { grid-template-columns: minmax(0, 1fr); gap: 0; } }
+  @media (max-width: 720px) { #app { padding: 14px 12px 48px; } .top { border-radius: 24px; padding: 12px 16px; } }
 </style>
 </head>
 <body>
@@ -191,8 +188,9 @@
       </div>
     </div>
 
+    <nav class="panel buckets" id="buckets" aria-label="Bakjes"></nav>
+
     <div class="layout">
-      <nav class="panel buckets" id="buckets" aria-label="Bakjes"></nav>
       <section class="panel list" id="list" aria-live="polite"></section>
       <section class="panel detail" id="detail"><p class="empty">Kies een aanvraag.</p></section>
     </div>
@@ -340,7 +338,7 @@
     const c = counts()
     document.getElementById('buckets').innerHTML = ORDER.map(k => {
       const b = data.buckets[k]
-      return `<button class="bk ${c[k] ? '' : 'zero'}" data-k="${k}" aria-pressed="${k === current}"><span class="nm">${esc(b.nr)}. ${esc(b.naam)}<small>${esc(b.uitleg)}</small></span><span class="n">${c[k]}</span></button>`
+      return `<button class="bk ${c[k] ? '' : 'zero'}" data-k="${k}" title="${esc(b.uitleg)}" aria-pressed="${k === current}"><span class="nm">${esc(b.nr)}. ${esc(b.naam)}</span><span class="n">${c[k]}</span></button>`
     }).join('')
     document.querySelectorAll('.bk').forEach(el => el.addEventListener('click', () => {
       current = el.dataset.k; localStorage.setItem('aanvragen_bucket', current); selectedId = null; render()
@@ -455,35 +453,7 @@
     })
   }
 
-  // ---- Tabbladen in het detail: Aanvraag en Antwoord. De keuze blijft onthouden. ----
-  function showTab(which, focus) {
-    const a = which !== 'b'
-    const tA = document.getElementById('tabA'), tB = document.getElementById('tabB')
-    if (!tA || !tB) return
-    tA.setAttribute('aria-selected', a ? 'true' : 'false'); tB.setAttribute('aria-selected', a ? 'false' : 'true')
-    tA.tabIndex = a ? 0 : -1; tB.tabIndex = a ? -1 : 0
-    document.getElementById('panA').hidden = !a
-    document.getElementById('panB').hidden = a
-    try { localStorage.setItem('aanvragen_tab', a ? 'a' : 'b') } catch (_) { /* geen opslag beschikbaar */ }
-    if (focus) (a ? tA : tB).focus()
-    if (!a) fitDraft()
-  }
-  function initTabs() {
-    let pref = 'a'
-    try { pref = localStorage.getItem('aanvragen_tab') === 'b' ? 'b' : 'a' } catch (_) { pref = 'a' }
-    showTab(pref, false)
-    ;['tabA', 'tabB'].forEach(id => {
-      const t = document.getElementById(id)
-      t.addEventListener('click', () => showTab(id === 'tabB' ? 'b' : 'a', false))
-      t.addEventListener('keydown', e => {
-        if (e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'Home' || e.key === 'End') {
-          e.preventDefault()
-          showTab(e.key === 'ArrowRight' || e.key === 'End' ? 'b' : 'a', true)
-        }
-      })
-    })
-  }
-  // Toont op het tabblad Antwoord of het concept bezig is, klaar is of mislukte.
+  // Toont naast de kop Antwoord of het concept bezig is, klaar is of mislukt.
   function updateTabStatus(i) {
     const el = document.getElementById('tabStatus'); if (!el || selectedId !== i.id) return
     let t = '', k = ''
@@ -516,11 +486,9 @@
         ${overrides[i.id] ? '<button class="btn ghost" id="btnAuto" type="button">Terug naar automatisch</button>' : ''}</div>
         <p class="note" id="moveNote">${overrides[i.id] ? 'Handmatig verplaatst. Automatisch was: ' + esc(data.buckets[i.bucket].nr + '. ' + data.buckets[i.bucket].naam) + '.' : 'Automatisch ingedeeld. Kies een ander bakje om te verplaatsen. Dit past niets aan in Pipedrive.'}</p>
       </div>
-      <div class="tabs" role="tablist" aria-label="Onderdelen van de aanvraag">
-        <button class="tab" role="tab" id="tabA" aria-controls="panA" type="button">Aanvraag</button>
-        <button class="tab" role="tab" id="tabB" aria-controls="panB" type="button">Antwoord<span class="tabst" id="tabStatus"></span></button>
-      </div>
-      <div role="tabpanel" id="panA" aria-labelledby="tabA">
+      <div class="cols">
+      <div>
+        <div class="sec">Aanvraag</div>
         <dl class="facts">${factsHtml(i)}</dl>
         ${i.noGo ? '<div class="flag red">No-go: ' + esc(i.flags[0]) + '</div>' : ''}
         ${i.flags.filter(x => !i.noGo || x !== i.flags[0]).map(x => '<div class="flag">' + esc(x) + '</div>').join('')}
@@ -530,7 +498,8 @@
         <div id="filesBox" class="files"><p class="note">Laden...</p></div>
       </div>
 
-      <div role="tabpanel" id="panB" aria-labelledby="tabB" hidden>
+      <div>
+      <div class="sec">Antwoord<span class="tabst" id="tabStatus"></span></div>
       <div id="draftBox">${d ? draftHtml(i, d) : ''}</div>
       <details class="regen" id="regen" ${d ? '' : 'open'}>
       <summary>Opnieuw schrijven en instellingen</summary>
@@ -543,6 +512,7 @@
       <input id="extra" type="text" placeholder="Bijvoorbeeld: noem ook de foto's van Utrecht" value="${esc(d ? d.extra : '')}">
       <div class="actions"><button class="btn" id="btnGen">${d ? 'Genereer opnieuw' : 'Genereer antwoord'}</button><span class="status-line" id="genStatus"></span></div>
       </details>
+      </div>
       </div>`
     document.getElementById('selMove').addEventListener('change', e => moveTo(i, e.target.value === i.bucket ? null : e.target.value))
     const btnAuto = document.getElementById('btnAuto')
@@ -554,7 +524,6 @@
     })
     bindDraft(i)
     loadDetail(i)
-    initTabs()
     updateTabStatus(i)
     if (pendingDrafts[i.id]) { const st = document.getElementById('genStatus'); if (st) st.textContent = 'Concept wordt geschreven...' }
     else startAuto(i)
@@ -730,14 +699,14 @@
   // ---- Concept ----
   function draftHtml(i, d) {
     return `<div class="draft">
-      <label class="lbl" for="dSubj">Onderwerp</label><input id="dSubj" type="text" value="${esc(d.onderwerp)}">
-      <label class="lbl" for="dBody" style="margin-top:10px">Tekst (aan te passen)</label><textarea id="dBody">${esc(d.tekst)}</textarea>
-      <div class="actions">
+      <div class="actions" style="margin-top:0">
         <button class="btn" id="btnMail" ${i.person.email ? '' : 'disabled'}>Open in e-mail</button>
         <button class="btn ghost" id="btnCopyRich">Kopieer opgemaakt</button>
         <button class="btn ghost" id="btnCopy">Kopieer tekst</button>
         <span class="status-line" id="copyStatus"></span>
       </div>
+      <label class="lbl" for="dSubj">Onderwerp</label><input id="dSubj" type="text" value="${esc(d.onderwerp)}">
+      <label class="lbl" for="dBody" style="margin-top:10px">Tekst (aan te passen)</label><textarea id="dBody">${esc(d.tekst)}</textarea>
       <p class="note">Geen handtekening en geen afsluitgroet, die voeg je zelf toe. Kopieer opgemaakt plakt de kopjes vet in je mail. Past je een kopje aan, dan wordt die regel niet meer vet. Controleer prijzen en details voor je verstuurt. Bakje: ${esc(data.buckets[d.bucket].naam)}, model: ${esc(d.model)}.${i.person.email ? '' : ' Er is geen e-mailadres bij deze aanvraag, dus alleen kopiëren kan.'}</p>
       <div id="fbBox"></div>
     </div>`
