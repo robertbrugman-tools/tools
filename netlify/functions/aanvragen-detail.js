@@ -1,9 +1,8 @@
-// Netlify function: notities en bijlagen van een aanvraag, zodat je het totale plaatje ziet.
-//   GET ?dealId=123 -> { notes: [{id, addTime, text | items:[{nr,vraag,antwoord}]}], verborgen, files: [{id, name, type, size, addTime, remote}] }
+// Netlify function: bijlagen van een aanvraag, zodat je het totale plaatje ziet.
+//   GET ?dealId=123 -> { files: [{id, name, type, size, addTime, remote}] }
 
 const { checkAccess } = require('../lib/hub-auth')
-const { fetchDeal, fetchNotesFull, fetchAllFiles } = require('../lib/pipedrive')
-const { filterNotes } = require('../lib/aanvragen-notes')
+const { fetchDeal, fetchAllFiles } = require('../lib/pipedrive')
 
 const APP_KEY = 'aanvragen'
 
@@ -22,11 +21,8 @@ exports.handler = async (event) => {
   try {
     const deal = await fetchDeal(dealId)
     const pid = deal.person_id && (deal.person_id.value || deal.person_id)
-    const [notes, files] = await Promise.all([fetchNotesFull(dealId), fetchAllFiles(dealId, pid)])
-    const f = filterNotes(notes)
+    const files = await fetchAllFiles(dealId, pid)
     return json(200, {
-      notes: f.notes,
-      verborgen: f.verborgen,
       files: files.map(f => ({
         id: f.id,
         name: f.name || f.file_name || ('bestand ' + f.id),
