@@ -8,6 +8,7 @@ const { checkAccess } = require('../lib/hub-auth')
 const { classify, BUCKETS } = require('../lib/aanvragen-classify')
 const { F, SINCE_ISO, fetchNewDeals, fetchByIds } = require('../lib/pipedrive')
 const { rawFields, priveMail } = require('../lib/aanvragen-raw')
+const { sb } = require('../lib/hub-admin')
 
 const APP_KEY = 'aanvragen'
 
@@ -55,7 +56,16 @@ exports.handler = async (event) => {
     Object.keys(BUCKETS).forEach(k => { counts[k] = 0 })
     items.forEach(i => { counts[i.bucket] = (counts[i.bucket] || 0) + 1 })
 
-    return json(200, { fetchedAt: new Date().toISOString(), since: SINCE_ISO, total: items.length, counts, buckets: BUCKETS, items })
+    // Handmatig gekozen bakjes (tabel aanvragen_bakje). Lukt dit niet, dan werkt de lijst gewoon met de automatische indeling.
+    const overrides = {}
+    let overridesFout = null
+    try {
+      const r = await sb('/rest/v1/aanvragen_bakje?select=deal_id,bucket,door,bijgewerkt&limit=2000')
+      if (r.ok && Array.isArray(r.data)) r.data.forEach(o => { if (BUCKETS[o.bucket]) overrides[o.deal_id] = { bucket: o.bucket, door: o.door, bijgewerkt: o.bijgewerkt } })
+      else overridesFout = 'Handmatige bakjes konden niet worden opgehaald.'
+    } catch (e) { overridesFout = 'Handmatige bakjes konden niet worden opgehaald.' }
+
+    return json(200, { fetchedAt: new Date().toISOString(), since: SINCE_ISO, total: items.length, counts, buckets: BUCKETS, items, overrides, overridesFout })
   } catch (err) {
     console.error('aanvragen-list fout:', err.message)
     return json(err.code === 'NO_PIPEDRIVE_TOKEN' ? 500 : 502, { error: err.message, code: err.code || null })
