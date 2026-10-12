@@ -30,7 +30,8 @@ Regels voor jou:
 
 Geef je antwoord door via de functie leerregels. Schrijf geen tekst buiten die functie.`
 
-// Gestructureerd antwoord: het model hoeft geen JSON in tekst te schrijven, dus er is niets om te verknoeien.
+// Gestructureerd antwoord via een functie met vaste velden. Er wordt bewust geen tool_choice meegestuurd:
+// afdwingen wordt niet door elk model ondersteund. Zegt het model toch tekst, dan leest de terugval daaronder het.
 const TOOL = {
   name: 'leerregels',
   description: 'Geef de voorgestelde leerregels door.',
@@ -62,10 +63,9 @@ async function vraagModel(key, gebruiker) {
       headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 2000,
+        max_tokens: 4000,
         system: SYSTEEM,
         tools: [TOOL],
-        tool_choice: { type: 'tool', name: TOOL.name },
         messages: [{ role: 'user', content: gebruiker }],
       }),
     })
@@ -81,7 +81,7 @@ async function vraagModel(key, gebruiker) {
   const blok = (d.content || []).find(b => b.type === 'tool_use' && b.input && typeof b.input === 'object')
   if (blok) return { j: blok.input }
   // Terugval: JSON in tekst.
-  const tekst = ((d.content || []).find(b => b.type === 'text') || {}).text || ''
+  const tekst = (d.content || []).filter(b => b.type === 'text').map(b => b.text || '').join('\n')
   const m = tekst.match(/\{[\s\S]*\}/)
   try { return { j: m ? JSON.parse(m[0]) : null } } catch (_) { return { j: null } }
 }
