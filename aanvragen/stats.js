@@ -70,13 +70,17 @@
     function teken(r) {
       const open = {}
       ;((typeof data !== 'undefined' && data && data.items) || []).forEach(i => { const k = dagKey(new Date(i.addTime)); open[k] = (open[k] || 0) + 1 })
-      const dagen = r.dagen.slice().reverse() // nieuwste bovenaan
+      // De opgeslagen telling loopt tot de volgende controle achter op de live lijst.
+      // "Nieuw" mag daarom nooit lager zijn dan "Nog open".
+      const alle = r.dagen.map(d => ({ dag: d.dag, aantal: Math.max(d.aantal, open[d.dag] || 0) }))
+      const dagen = alle.slice().reverse() // nieuwste bovenaan
       const max = Math.max(1, ...dagen.map(d => d.aantal))
-      const werk = r.dagen.filter(d => !isWeekend(d.dag))
+      const werk = alle.filter(d => !isWeekend(d.dag))
       const gem = werk.length ? (werk.reduce((s, d) => s + d.aantal, 0) / werk.length) : 0
-      const top = r.dagen.reduce((a, d) => d.aantal > a.aantal ? d : a, { aantal: -1 })
+      const top = alle.reduce((a, d) => d.aantal > a.aantal ? d : a, { aantal: -1 })
+      const totaal = alle.reduce((s, d) => s + d.aantal, 0)
       body.innerHTML = `<div class="st-sum">
-          <div><b>${r.totaal}</b><span>totaal sinds 1 okt</span></div>
+          <div><b>${totaal}</b><span>totaal sinds 1 okt</span></div>
           <div><b>${gem.toFixed(1).replace('.', ',')}</b><span>gemiddeld per werkdag</span></div>
           <div><b>${top.aantal > 0 ? top.aantal : '-'}</b><span>${top.aantal > 0 ? 'drukste dag: ' + esc(label(top.dag)) : 'drukste dag'}</span></div>
         </div>
