@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Isolatie succes</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --bg:#0d1b2e; --panel:#12253d; --panel2:#0f2038; --grid:#1a3150;
+    --ink:#eef4fb; --sub:#8fa5c7; --line:#2c4a70;
+    --warm:#e8703a; --warm-dim:#5a3626; --cool:#48c0d9; --ok:#6bd68f;
+    --mono:"SF Mono","JetBrains Mono",ui-monospace,Consolas,monospace;
+    --sans:-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:
+      linear-gradient(var(--grid) 1px,transparent 1px) 0 0/32px 32px,
+      linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/32px 32px,var(--bg);
+    color:var(--ink);font-family:var(--sans);line-height:1.5;padding:24px 16px 80px;}
+  .wrap{max-width:1040px;margin:0 auto;}
+  a.back{color:var(--sub);font-family:var(--mono);font-size:12px;text-decoration:none;}
+  a.back:hover{color:var(--ink);}
+  .titleblock{border:1px solid var(--line);padding:18px 22px;margin:10px 0 18px;background:rgba(15,32,56,.6);}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--sub);margin:0 0 6px;}
+  h1{font-size:22px;margin:0 0 6px;}
+  .sub{color:var(--sub);font-size:13.5px;margin:0;max-width:760px;}
+  .status{display:flex;gap:8px;align-items:center;margin-top:10px;font-family:var(--mono);font-size:11px;color:var(--sub);}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--sub);}
+  .dot.ok{background:var(--ok);} .dot.err{background:var(--warm);}
+  .panel{border:1px solid var(--line);background:rgba(15,32,56,.55);padding:18px 20px;margin-bottom:16px;}
+  .panel h2{font-size:13px;margin:0 0 12px;text-transform:uppercase;letter-spacing:.1em;color:var(--sub);font-weight:600;display:flex;align-items:center;gap:8px;}
+  .n{font-family:var(--mono);color:var(--warm);border:1px solid var(--warm);width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;}
+  .explain{color:var(--sub);font-size:12.5px;margin:-4px 0 14px;max-width:780px;}
+  label{display:block;font-size:11px;color:var(--sub);margin:0 0 4px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em;}
+  input,select{width:100%;padding:8px 10px;background:var(--panel2);border:1px solid var(--line);color:var(--ink);font-family:var(--sans);font-size:13.5px;color-scheme:dark;}
+  input:focus,select:focus,button:focus-visible{outline:2px solid var(--warm);outline-offset:1px;}
+  .row{display:grid;grid-template-columns:1.3fr 1fr 1fr auto;gap:10px;align-items:end;border:1px solid var(--line);background:var(--panel2);padding:12px 14px;margin-bottom:10px;}
+  .row .tag{font-family:var(--mono);font-size:10px;color:var(--bg);background:var(--warm);padding:1px 6px;margin-left:6px;}
+  @media(max-width:720px){.row{grid-template-columns:1fr 1fr;} .row .wide{grid-column:1/-1;}}
+  .rooms{display:flex;gap:8px;flex-wrap:wrap;}
+  .chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel2);padding:7px 12px;cursor:pointer;font-size:13.5px;user-select:none;}
+  .chip input{width:auto;margin:0;accent-color:var(--warm);}
+  .chip.on{border-color:var(--warm);}
+  tr.roomhead td{background:rgba(255,255,255,.03);font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);border-bottom:1px solid var(--line);}
+  button{background:transparent;color:var(--warm);border:1px solid var(--warm);padding:8px 14px;font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;}
+  button:hover{background:var(--warm-dim);}
+  button.ghost{color:var(--sub);border-color:var(--line);} button.ghost:hover{color:var(--ink);background:rgba(255,255,255,.04);}
+  button.primary{color:var(--bg);background:var(--warm);font-weight:700;} button.primary:hover{background:#f2854f;}
+  button:disabled{opacity:.45;cursor:not-allowed;}
+  button.small{padding:4px 9px;font-size:10.5px;}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;}
+  .toggle{display:inline-flex;border:1px solid var(--line);flex-wrap:wrap;}
+  .toggle button{border:none;border-right:1px solid var(--line);color:var(--sub);}
+  .toggle button:last-child{border-right:none;}
+  .toggle button.active{background:var(--warm);color:var(--bg);font-weight:700;}
+  table{width:100%;border-collapse:collapse;}
+  th,td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--line);font-size:13px;vertical-align:top;}
+  th{color:var(--sub);text-transform:uppercase;font-size:10.5px;letter-spacing:.06em;font-family:var(--mono);font-weight:600;}
+  th.sel{color:var(--warm);}
+  td.sel{background:rgba(232,112,58,.07);}
+  .big{font-family:var(--mono);font-size:16px;font-weight:700;}
+  .small-sub{font-family:var(--mono);font-size:11px;color:var(--sub);}
+  .better{color:var(--ok);} .worse{color:var(--warm);}
+  .swatch{width:10px;height:10px;display:inline-block;margin-right:7px;vertical-align:0;}
+  .summary p{margin:0 0 10px;font-size:14.5px;}
+  .summary .muted{color:var(--sub);font-size:12.5px;}
+  .callout{border-left:3px solid var(--cool);padding:8px 12px;background:rgba(72,192,217,.07);color:var(--sub);font-size:12.5px;margin-top:10px;}
+  .callout.warn{border-left-color:var(--warm);background:rgba(232,112,58,.07);}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media(max-width:820px){.grid2{grid-template-columns:1fr;}}
+  .chartbox{position:relative;height:300px;}
+  .chartbox.tall{height:340px;}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:16px;}
+  .card{border:1px solid var(--line);background:var(--panel2);padding:16px 18px;}
+  .card h3{margin:0 0 4px;font-size:13px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--sub);}
+  .verdict{font-size:22px;font-weight:700;margin:2px 0 10px;}
+  .verdict.v-good{color:var(--ok);} .verdict.v-ok{color:#b9d66b;} .verdict.v-none{color:var(--ink);} .verdict.v-bad{color:var(--warm);} .verdict.v-unknown{color:var(--sub);}
+  .metric{display:flex;justify-content:space-between;gap:10px;border-top:1px dashed var(--line);padding:8px 0 2px;font-size:13.5px;}
+  .metric b{font-family:var(--mono);}
+  .metric .small-sub{text-align:right;}
+  details{margin-top:6px;} summary{cursor:pointer;color:var(--sub);font-family:var(--mono);font-size:12px;}
+  .log{font-family:var(--mono);font-size:11.5px;color:var(--sub);max-height:180px;overflow-y:auto;white-space:pre-wrap;margin-top:8px;}
+  .log .err{color:var(--warm);}
+  .spinner{display:inline-block;width:11px;height:11px;border:2px solid var(--line);border-top-color:var(--bg);border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:6px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">&larr; Tools</a>
+
+  <div class="titleblock">
+    <p class="eyebrow">Bouwfysica · Netatmo · live</p>
+    <h1>Isolatie succes</h1>
+    <p class="sub">Hebben de nieuwe kozijnen geholpen? Hoe minder de binnentemperatuur meebeweegt met buiten, hoe beter je huis isoleert. Bovenaan het oordeel per kamer, daaronder kun je zelf periodes vergelijken.</p>
+    <div class="status"><span class="dot" id="connDot"></span><span id="connText">verbinden…</span></div>
+  </div>
+
+  <div class="panel" id="verdictPanel">
+    <h2>Hebben de kozijnen geholpen?</h2>
+    <div style="display:flex;gap:14px;align-items:end;flex-wrap:wrap;margin-bottom:14px;">
+      <div style="width:200px;"><label for="installDate">Kozijnen geplaatst op</label><input type="date" id="installDate" value="2026-06-15"></div>
+      <div class="small-sub" style="max-width:560px;">Elke maand na de plaatsing wordt vergeleken met dezelfde maand in eerdere jaren. Zo telt het seizoen niet mee. Wintermaanden (november t/m maart) tellen niet mee in het oordeel, want dan stuurt de thermostaat.</div>
+    </div>
+    <div id="verdictCards" class="cards"><div class="small-sub"><span class="spinner" style="border-top-color:var(--warm)"></span>historie laden en doorrekenen…</div></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+      <div class="toggle" id="tlRoom"></div>
+      <div class="toggle" id="tlMetric"><button data-m="elke" class="active">Elke nacht</button><button data-m="hele">Hele nacht per maand</button><button data-m="dag">Overdag per maand</button><button data-m="nacht">Nacht per uur, per maand</button></div>
+    </div>
+    <div class="chartbox tall"><canvas id="chartTimeline"></canvas></div>
+    <p class="small-sub" id="tlExplain" style="margin-top:8px;"></p>
+  </div>
+
+  <div class="panel">
+    <h2><span class="n">1</span> Zelf periodes vergelijken</h2>
+    <p class="explain">De eerste periode is je <b>referentie</b>: alle andere periodes worden daarmee vergeleken. Ontbrekende metingen worden bij het analyseren automatisch bij Netatmo opgehaald (tot ruim 10 jaar terug).</p>
+    <label>Kamers</label>
+    <div id="rooms" class="rooms"></div>
+    <p class="small-sub" style="margin:6px 0 14px;">Elke kamer wordt met dezelfde periodes vergeleken, en per kamer apart beoordeeld.</p>
+    <div id="periods"></div>
+    <div class="actions">
+      <button class="ghost small" id="btnAdd">+ periode</button>
+      <button class="ghost small" id="btnAddYear">+ zelfde periode, jaar eerder</button>
+    </div>
+    <div class="actions">
+      <button class="primary" id="btnAnalyse">Analyseren</button>
+    </div>
+  </div>
+
+  <div id="results" style="display:none;">
+    <div class="panel">
+      <h2><span class="n">2</span> Vergelijking</h2>
+      <p class="explain"><b>Hele nacht:</b> hoeveel graden het binnen afkoelt tussen 21:00 en het koudste moment (uiterlijk 09:00), in een nacht met gemiddeld 5°C verschil tussen binnen en buiten. <b>Dag:</b> hoeveel graden het binnen opwarmt per graad dat het buiten opwarmt (ochtend naar middag). <b>Nacht</b> en <b>dag &amp; nacht:</b> hoeveel de binnentemperatuur per uur verandert bij 5°C verschil tussen binnen en buiten. Overal geldt: lager is beter geïsoleerd. Het percentage is het verschil met de referentie (groen = duidelijk beter, oranje = duidelijk slechter).</p>
+      <div style="overflow-x:auto;"><table id="matrix"></table></div>
+      <div class="callout" id="windowDefs">Hele nacht = 21:00 tot het koudste moment binnen, uiterlijk 09:00 (nachten waarin het binnen eerder opwarmt tellen niet mee) · Dag = dagen waarop het buiten minstens 3°C opwarmt, ochtend (5–10 u) naar middag (12–20 u) · Nacht = 23:00–06:00 (nachten waarin het binnen opwarmt, bijvoorbeeld door de verwarming, tellen niet mee) · Dag &amp; nacht = alle uren.</div>
+    </div>
+
+    <div class="panel">
+      <h2><span class="n">3</span> Uitleg per venster</h2>
+      <div class="toggle" id="roomToggle" style="margin:0 10px 14px 0;"></div>
+      <div class="toggle" id="winToggle" style="margin-bottom:14px;">
+        <button data-win="hele" class="active">Hele nacht</button>
+        <button data-win="nacht">Nacht per uur</button>
+        <button data-win="dag">Dag</button>
+        <button data-win="alles">Dag &amp; nacht</button>
+      </div>
+      <div class="summary" id="summary"></div>
+      <div class="grid2" style="margin-top:14px;">
+        <div class="chartbox"><canvas id="chartBar"></canvas></div>
+        <div class="chartbox"><canvas id="chartScatter"></canvas></div>
+      </div>
+      <details>
+        <summary>Alle cijfers voor dit venster</summary>
+        <div style="overflow-x:auto;margin-top:10px;"><table id="detail"></table></div>
+      </details>
+    </div>
+  </div>
+
+  <div class="panel">
+    <details>
+      <summary>Hoe wordt dit berekend?</summary>
+      <div class="explain" style="margin-top:10px;">
+        Voor elk uur kijken we naar het verschil tussen buiten en binnen, en hoeveel de binnentemperatuur het uur daarna veranderde. Volgens de afkoelingswet van Newton is die verandering evenredig met het verschil: <span style="font-family:var(--mono)">Δbinnen = k × (buiten − binnen)</span>. Hoe kleiner <b>k</b>, hoe minder warmte er door de gevel lekt. De tijdconstante τ = 1/k zegt na hoeveel uur het huis ongeveer twee derde van het verschil heeft ingehaald.<br><br>
+        <b>Nacht</b> is de zuiverste maat: geen zon, weinig activiteit. <b>Dag</b> wordt sterk beïnvloed door zoninstraling en bewoners: binnen warmt dan vaak op terwijl het buiten kouder is, waardoor k rond nul of negatief uitkomt. Dat zegt weinig over isolatie. In het stookseizoen (ongeveer november tot maart) houdt de thermostaat de binnentemperatuur vast, dan worden ook de nachtcijfers minder betrouwbaar.<br><br>
+        De ±-marge is een 95%-interval. Omdat opeenvolgende uren op elkaar lijken is die marge in werkelijkheid wat ruimer, zie hem als indicatie.
+      </div>
+    </details>
+    <details>
+      <summary>Log</summary>
+      <div class="log" id="log"></div>
+    </details>
+  </div>
+</div>
+
+<script>
+// ===== Instellingen =====
+const SUPA_URL = 'https://swrunlzeydmcskceqdju.supabase.co';
+// Publieke, alleen-lezen publishable/anon key (geen geheim), zelfde als de hub.
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3cnVubHpleWRtY3NrY2VxZGp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNjE2MDgsImV4cCI6MjA5MjkzNzYwOH0.V7haNdFPFJuvJJTbjhiUzKrWG8trW4UeRIJveAhFOgs';
+const PALETTE = ['#e8703a','#48c0d9','#c9a13a','#9b6bd6','#6bd68f','#d65a8a','#7f96b8'];
+const WINDOWS = {
+  dag:   { label:'Dag',          hours:[8,9,10,11,12,13,14,15,16,17,18,19] },
+  nacht: { label:'Nacht',        hours:[23,0,1,2,3,4,5] },
+  alles: { label:'Dag & nacht',  hours:[...Array(24).keys()] },
+};
+const WIN_ORDER = ['dag','nacht','alles'];
+const COLS = ['hele','dag','nacht','alles']; // kolommen in de vergelijkingstabel
+WINDOWS.hele = { label:'Hele nacht', hours:[] };
+const GAP = 5; // weergave: verandering per uur bij 5°C verschil
+// Minimaal aantal uur-overgangen (of dagen) voordat we een cijfer betrouwbaar genoeg vinden om te vergelijken.
+const MIN_N = { dag: 8, nacht: 60, alles: 150, hele: 8 };
+
+// ===== Rekenkern (puur, zonder DOM; ook los te testen) =====
+/*CORE-START*/
+// De handmatige CSV-import van juli 2024 had een foute tijdas (rijen precies op het hele uur, 30-6 t/m 31-7-2024).
+// Die maand is inmiddels correct bij Netatmo opgehaald, dus deze rijen negeren we.
+function cleanRows(rows){ return rows.filter(r => !(/T\d\d:00:00/.test(r.ts) && r.ts >= '2024-06-30' && r.ts < '2024-08-01')); }
+
+function hourKey(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours()).getTime(); }
+
+// Gemiddelde per klokuur (lokale tijd). Vangt ook dubbele metingen binnen hetzelfde uur op.
+function toHourly(rows){
+  const acc = new Map();
+  for(const r of rows){
+    const k = hourKey(new Date(r.ts));
+    const a = acc.get(k) || [0,0];
+    a[0] += Number(r.temperatuur); a[1]++;
+    acc.set(k, a);
+  }
+  const out = new Map();
+  for(const [k,[s,n]] of acc) out.set(k, s/n);
+  return out;
+}
+
+// Nachten (start 23:00) waarin het binnen ergens >0,15°C per uur opwarmt: verwarming of andere warmtebron.
+function heatedNights(inH){
+  const bad = new Set();
+  for(const [k,v] of inH){
+    const d = new Date(k), h = d.getHours();
+    if(!WINDOWS.nacht.hours.includes(h)) continue;
+    const next = inH.get(hourKey(new Date(k + 3600e3)));
+    if(next !== undefined && next - v > 0.15) bad.add(nightId(d));
+  }
+  return bad;
+}
+function nightId(d){
+  // uren 0-5 horen bij de nacht die de avond ervoor begon
+  const x = new Date(d); if(x.getHours() < 12) x.setDate(x.getDate()-1);
+  return `${x.getFullYear()}-${x.getMonth()+1}-${x.getDate()}`;
+}
+
+// Newton-koppeling door de oorsprong: Δbinnen(volgend uur) = k × (buiten − binnen)
+function analyseWindow(inH, outH, win, excludedNights){
+  const hours = WINDOWS[win].hours;
+  const xs=[], ys=[], ins=[], outs=[];
+  for(const [k, tin] of inH){
+    const d = new Date(k);
+    if(!hours.includes(d.getHours())) continue;
+    const tout = outH.get(k);
+    if(tout === undefined) continue;
+    if(win === 'nacht' && excludedNights.has(nightId(d))) continue;
+    ins.push(tin); outs.push(tout);
+    const next = inH.get(hourKey(new Date(k + 3600e3)));
+    if(next === undefined) continue;
+    xs.push(tout - tin); ys.push(next - tin);
+  }
+  const n = xs.length;
+  const mean = a => a.length ? a.reduce((s,v)=>s+v,0)/a.length : null;
+  if(n < 12) return { n, k:null, se:null, meanIn:mean(ins), meanOut:mean(outs) };
+  let sxy=0, sxx=0;
+  for(let i=0;i<n;i++){ sxy+=xs[i]*ys[i]; sxx+=xs[i]*xs[i]; }
+  const k = sxy/sxx;
+  let ssr=0; for(let i=0;i<n;i++){ const r=ys[i]-k*xs[i]; ssr+=r*r; }
+  const se = Math.sqrt(ssr/(n-1)/sxx);
+  return { n, k, se, meanIn:mean(ins), meanOut:mean(outs), points: xs.map((x,i)=>({x, y:ys[i]})) };
+}
+
+// Overdag: hoeveel stijgt binnen (ochtendminimum -> middagmaximum) per graad stijging buiten. Mediaan over dagen.
+function dayWarming(inH, outH){
+  const days = new Map();
+  for(const [k,tin] of inH){
+    const tout = outH.get(k); if(tout===undefined) continue;
+    const d = new Date(k), id = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    if(!days.has(id)) days.set(id, []);
+    days.get(id).push({h:d.getHours(), tin, tout});
+  }
+  const ratios = [], pts = [];
+  for(const arr of days.values()){
+    const ocht = arr.filter(r=>r.h>=5 && r.h<10), mid = arr.filter(r=>r.h>=12 && r.h<20);
+    if(ocht.length<4 || mid.length<6) continue;
+    const dOut = Math.max(...mid.map(r=>r.tout)) - Math.min(...ocht.map(r=>r.tout));
+    const dIn  = Math.max(...mid.map(r=>r.tin))  - Math.min(...ocht.map(r=>r.tin));
+    if(dOut >= 3){ ratios.push(dIn/dOut); pts.push({x:dOut, y:dIn}); }
+  }
+  if(ratios.length < 3) return { n: ratios.length, median: null, points: pts };
+  const s = [...ratios].sort((a,b)=>a-b), q = f => s[Math.min(s.length-1, Math.floor(f*(s.length-1)+0.5))];
+  return { n: s.length, median: q(0.5), q1: q(0.25), q3: q(0.75), points: pts };
+}
+
+// Hele nacht: van 21:00 tot het koudste moment binnen (uiterlijk 09:00).
+// Afkoeling gedeeld door het gemiddelde verschil binnen-buiten in die uren; weergave bij 5°C verschil.
+// Nachten waarin het binnen vóór het koudste moment opwarmt (verwarming) of waarin het niet afkoelt, tellen niet mee.
+function wholeNights(inH, outH){
+  const nights = [];
+  for(const k of inH.keys()){
+    const d = new Date(k); if(d.getHours() !== 21) continue;
+    const ti = [], to = [];
+    for(let i=0;i<=12;i++){ const h = hourKey(new Date(k + i*3600e3)); ti.push(inH.get(h)); to.push(outH.get(h)); }
+    if(ti.filter(v=>v!==undefined).length < 11 || to.filter(v=>v!==undefined).length < 11) continue;
+    let iMin = 0; for(let i=1;i<=12;i++) if(ti[i]!==undefined && ti[i] < ti[iMin]) iMin = i;
+    let warmed = false; for(let i=0;i<iMin;i++) if(ti[i]!==undefined && ti[i+1]!==undefined && ti[i+1]-ti[i] > 0.15) warmed = true;
+    const g = []; for(let i=0;i<=iMin;i++) if(ti[i]!==undefined && to[i]!==undefined) g.push(ti[i]-to[i]);
+    const gap = g.reduce((a,v)=>a+v,0)/g.length, drop = ti[0]-ti[iMin];
+    const ok = !warmed && iMin > 0 && gap >= 2;
+    nights.push({ k, start: ti[0], end: ti[iMin], drop, gap, coldHour: (21+iMin)%24, ok, per5: ok ? drop/gap*GAP : null,
+      outMean: to.filter(v=>v!==undefined).reduce((a,v)=>a+v,0)/to.filter(v=>v!==undefined).length });
+  }
+  return nights;
+}
+function summarize(vals){
+  if(vals.length < 3) return { n: vals.length, median: null };
+  const s = [...vals].sort((a,b)=>a-b), q = f => s[Math.min(s.length-1, Math.floor(f*(s.length-1)+0.5))];
+  return { n: s.length, median: q(0.5), q1: q(0.25), q3: q(0.75) };
+}
+
+function analysePeriod(inRows, outRows, expectedHours){
+  const inH = toHourly(inRows), outH = toHourly(outRows);
+  const excl = heatedNights(inH);
+  const res = {};
+  for(const w of WIN_ORDER) res[w] = analyseWindow(inH, outH, w, excl);
+  res.excludedNights = excl.size;
+  res.dayWarming = dayWarming(inH, outH);
+  res.nights = wholeNights(inH, outH);
+  res.hele = { ...summarize(res.nights.filter(n=>n.ok).map(n=>n.per5)), skipped: res.nights.filter(n=>!n.ok).length };
+  res.hours = inH.size;
+  res.coverIn = expectedHours ? Math.min(1, inH.size/expectedHours) : null;
+  res.coverOut = expectedHours ? Math.min(1, outH.size/expectedHours) : null;
+  return res;
+}
+
+// Verschil met referentie, en of het groter is dan de meetonzekerheid
+function enough(a, w){ return a && a.k!==null && a.n >= MIN_N[w]; }
+function compare(ref, cur, w='nacht'){
+  if(!enough(ref, w) || !enough(cur, w)) return null;
+  // Rond nul of negatief (zon/bewoning overheerst) is een percentage betekenisloos.
+  const pct = (ref.k > 0.002 && cur.k > 0.002) ? (cur.k - ref.k) / ref.k * 100 : null;
+  const clear = Math.abs(cur.k - ref.k) > 1.96*Math.sqrt(ref.se**2 + cur.se**2);
+  return { pct, clear };
+}
+// Voor medianen (dag en hele nacht): duidelijk verschil als de middelste helften niet overlappen.
+function compareMedian(ref, cur, min){
+  if(!ref || !cur || ref.median===null || cur.median===null || ref.median<=0.01 || ref.n < min || cur.n < min) return null;
+  return { pct: (cur.median - ref.median) / ref.median * 100, clear: cur.q3 < ref.q1 || cur.q1 > ref.q3 };
+}
+function compareDay(ref, cur){
+  if(!ref || !cur || ref.median===null || cur.median===null || ref.median<=0.01 || ref.n < MIN_N.dag || cur.n < MIN_N.dag) return null;
+  const pct = (cur.median - ref.median) / ref.median * 100;
+  const clear = ref.n>=8 && cur.n>=8 && (cur.q3 < ref.q1 || cur.q1 > ref.q3); // middelste helften overlappen niet
+  return { pct, clear };
+}
+/*CORE-END*/
+
+// ===== UI =====
+let supa = null;
+const state = { periods: [], results: [], win: 'hele', rooms: ['Woonkamer','Slaapkamer'], selected: new Set(['Woonkamer','Slaapkamer','Werkkamer']), viewRoom: null };
+let pid = 0, chartBar = null, chartScatter = null;
+
+function log(msg, err){
+  const el = document.getElementById('log'), line = document.createElement('div');
+  if(err) line.className = 'err';
+  line.textContent = (err?'✗ ':'· ') + msg;
+  el.appendChild(line); el.scrollTop = el.scrollHeight;
+}
+function setConn(ok, text){
+  document.getElementById('connDot').className = 'dot ' + (ok ? 'ok' : 'err');
+  document.getElementById('connText').textContent = text;
+}
+const fmt = (v, d=3) => v===null || v===undefined || !isFinite(v) ? '–' : v.toLocaleString('nl-NL',{minimumFractionDigits:d, maximumFractionDigits:d});
+const fmtDate = s => { if(!s) return ''; const [y,m,d]=s.split('-'); return `${Number(d)}-${Number(m)}-${y}`; };
+function autoName(p){ return p.start && p.end ? `${fmtDate(p.start)} t/m ${fmtDate(p.end)}` : 'Nieuwe periode'; }
+
+function shiftYear(dateStr, years){
+  const [y,m,d] = dateStr.split('-').map(Number), ny = y + years;
+  const dd = Math.min(d, new Date(ny, m, 0).getDate());
+  return `${ny}-${String(m).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
+}
+
+function addPeriod(start, end){
+  const p = { id: 'p'+(++pid), start, end, color: PALETTE[(pid-1) % PALETTE.length], name:'' };
+  state.periods.push(p); renderPeriods();
+}
+function removePeriod(id){
+  state.periods = state.periods.filter(p => p.id !== id); renderPeriods();
+}
+function renderPeriods(){
+  const box = document.getElementById('periods'); box.innerHTML = '';
+  state.periods.forEach((p, i) => {
+    const row = document.createElement('div'); row.className = 'row';
+    row.innerHTML = `
+      <div class="wide">
+        <label><span class="swatch" style="background:${p.color}"></span>Naam${i===0?'<span class="tag">referentie</span>':''}</label>
+        <input type="text" data-f="name" placeholder="${autoName(p)}" value="${p.name.replace(/"/g,'&quot;')}">
+      </div>
+      <div><label>Vanaf</label><input type="date" data-f="start" value="${p.start}"></div>
+      <div><label>Tot en met</label><input type="date" data-f="end" value="${p.end}"></div>
+      <div>${state.periods.length>1 ? `<button class="ghost small" data-rm>verwijder</button>` : ''}</div>`;
+    row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', () => {
+      p[inp.dataset.f] = inp.value;
+      if(inp.dataset.f !== 'name') row.querySelector('[data-f=name]').placeholder = autoName(p);
+    }));
+    const rm = row.querySelector('[data-rm]'); if(rm) rm.onclick = () => removePeriod(p.id);
+    box.appendChild(row);
+  });
+}
+
+document.getElementById('btnAdd').onclick = () => {
+  const last = state.periods[state.periods.length-1];
+  addPeriod(last ? last.start : '', last ? last.end : '');
+};
+document.getElementById('btnAddYear').onclick = () => {
+  const ref = state.periods[0];
+  if(!ref || !ref.start || !ref.end){ log('Vul eerst de referentieperiode in.', true); return; }
+  const used = new Set(state.periods.map(p => p.start.slice(0,4)));
+  let back = 1; while(used.has(shiftYear(ref.start, -back).slice(0,4))) back++;
+  addPeriod(shiftYear(ref.start, -back), shiftYear(ref.end, -back));
+};
+
+function renderRooms(){
+  const box = document.getElementById('rooms'); box.innerHTML = '';
+  for(const r of state.rooms){
+    const on = state.selected.has(r);
+    const el = document.createElement('label'); el.className = 'chip' + (on ? ' on' : '');
+    el.innerHTML = `<input type="checkbox" ${on?'checked':''}> ${r}`;
+    el.querySelector('input').onchange = e => { e.target.checked ? state.selected.add(r) : state.selected.delete(r); el.classList.toggle('on', e.target.checked); };
+    box.appendChild(el);
+  }
+}
+async function loadRooms(){
+  // alle binnenmodules die recent data hebben; nieuwe sensoren verschijnen hier vanzelf
+  const { data, error } = await supa.from('netatmo_metingen').select('module_naam').order('ts',{ascending:false}).limit(2000);
+  if(error || !data) return;
+  const names = [...new Set(data.map(r => r.module_naam))].filter(n => n !== 'Buiten');
+  const pref = ['Woonkamer','Werkkamer','Slaapkamer'];
+  names.sort((a,b) => (pref.indexOf(a)+1||99) - (pref.indexOf(b)+1||99) || a.localeCompare(b));
+  if(names.length) state.rooms = names;
+  renderRooms();
+}
+
+// ===== Data =====
+const isoStart = d => new Date(d+'T00:00:00').toISOString();
+const isoEnd   = d => new Date(d+'T23:59:59').toISOString();
+
+async function fetchRows(room, start, end){
+  let all = [], from = 0;
+  while(true){
+    const { data, error } = await supa.from('netatmo_metingen').select('ts, temperatuur')
+      .eq('module_naam', room).gte('ts', isoStart(start)).lte('ts', isoEnd(end))
+      .order('ts', { ascending:true }).range(from, from+999);
+    if(error) throw error;
+    all = all.concat(data);
+    if(data.length < 1000) break;
+    from += 1000;
+  }
+  return cleanRows(all);
+}
+async function countHours(room, start, end){
+  const { data, error } = await supa.from('netatmo_metingen').select('ts')
+    .eq('module_naam', room).gte('ts', isoStart(start)).lte('ts', isoEnd(end)).limit(20000);
+  if(error) throw error;
+  return new Set(data.map(r => hourKey(new Date(r.ts)))).size; // unieke uren, dubbele metingen tellen niet dubbel
+}
+const filled = new Set();
+async function ensureData(room, start, end){
+  const key = `${room}|${start}|${end}`; if(filled.has(key)) return;
+  const expected = Math.max(1, Math.round((new Date(end+'T23:59:59') - new Date(start+'T00:00:00'))/3600e3));
+  const [haveIn, haveOut] = await Promise.all([countHours(room,start,end), countHours('Buiten',start,end)]);
+  if(Math.min(haveIn, haveOut) >= expected*0.9){ filled.add(key); return; }
+  log(`${fmtDate(start)} t/m ${fmtDate(end)}: ${Math.min(haveIn,haveOut)}/${expected} uren aanwezig, ophalen bij Netatmo…`);
+  // In stukken van max. 31 dagen, zodat één aanroep nooit te lang duurt.
+  let from = new Date(start+'T00:00:00'); const until = new Date(end+'T23:59:59');
+  const totals = {};
+  while(from < until){
+    const to = new Date(Math.min(until.getTime(), from.getTime() + 31*86400e3));
+    const resp = await fetch('/.netlify/functions/netatmo-backfill', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ date_begin: from.toISOString(), date_end: to.toISOString(), rooms: [room, 'Buiten'] })
+    });
+    let data = null; try{ data = await resp.json(); }catch(_){}
+    if(!resp.ok || !data || data.ok === false) throw new Error('ophalen bij Netatmo mislukt: ' + (data?.error || ('HTTP ' + resp.status)));
+    for(const [k,v] of Object.entries(data.metingen||{})) totals[k] = (totals[k]||0) + v;
+    from = to;
+  }
+  log(`Opgehaald: ${Object.entries(totals).map(([k,v])=>`${k} ${v}`).join(', ') || 'geen nieuwe metingen (Netatmo heeft voor deze periode niets)'}`);
+  filled.add(key);
+}
+
+// ===== Analyse =====
+document.getElementById('btnAnalyse').onclick = async () => {
+  if(!supa){ log('Nog geen verbinding met de database.', true); return; }
+  const rooms = state.rooms.filter(r => state.selected.has(r));
+  if(!rooms.length){ alertInline('Kies minstens één kamer.'); return; }
+  const periods = state.periods.filter(p => p.start && p.end);
+  if(periods.length < 2){ log('Kies minstens twee periodes om te vergelijken.', true); alertInline('Kies minstens twee periodes met een begin- en einddatum.'); return; }
+  const bad = periods.find(p => p.end < p.start);
+  if(bad){ alertInline(`"${p_name(bad)}": einddatum ligt voor de begindatum.`); return; }
+
+  const btn = document.getElementById('btnAnalyse');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>analyseren…';
+  state.results = [];
+  const outCache = {};
+  for(const room of rooms){
+    for(const p of periods){
+      const name = p_name(p);
+      try{
+        await ensureData(room, p.start, p.end);
+        const okey = p.start+'|'+p.end;
+        const [inRows, outRows] = await Promise.all([fetchRows(room, p.start, p.end), outCache[okey] || (outCache[okey] = fetchRows('Buiten', p.start, p.end))]);
+        if(inRows.length < 24) throw new Error('geen of te weinig metingen van deze sensor in deze periode');
+        const expected = Math.round((new Date(p.end+'T23:59:59') - new Date(p.start+'T00:00:00'))/3600e3);
+        const r = analysePeriod(inRows, outRows, expected);
+        state.results.push({ ...p, name, room, r });
+        log(`${room}, ${name}: ${r.hours} uren, ${r.excludedNights} nacht(en) met verwarming overgeslagen.`);
+      }catch(e){
+        state.results.push({ ...p, name, room, r:null, error: e.message || String(e) });
+        log(`${room}, ${name}: ${e.message||e}`, true);
+      }
+    }
+  }
+  if(!rooms.includes(state.viewRoom)) state.viewRoom = rooms[0];
+  btn.disabled = false; btn.textContent = 'Analyseren';
+  document.getElementById('results').style.display = 'block';
+  renderAll();
+  document.getElementById('results').scrollIntoView({ behavior:'smooth', block:'start' });
+};
+function p_name(p){ return p.name.trim() || autoName(p); }
+function alertInline(msg){
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('matrix').innerHTML = `<tr><td><div class="callout warn">${msg}</div></td></tr>`;
+}
+
+document.querySelectorAll('#winToggle button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('#winToggle button').forEach(x => x.classList.toggle('active', x===b));
+  state.win = b.dataset.win; renderAll();
+});
+
+function isHeatingSeason(p){
+  const months = new Set();
+  let d = new Date(p.start+'T12:00:00'); const e = new Date(p.end+'T12:00:00');
+  while(d <= e){ months.add(d.getMonth()+1); d.setDate(d.getDate()+7); }
+  months.add(e.getMonth()+1);
+  return [11,12,1,2,3].some(m => months.has(m));
+}
+
+// ===== Weergave =====
+function cellDay(res, ref){
+  const d = res.r.dayWarming;
+  if(d.median===null || d.n < MIN_N.dag) return `<span class="small-sub">te weinig geschikte dagen (${d.n})</span>`;
+  let cmp = '';
+  if(ref && ref !== res){
+    const c = compareDay(ref.r.dayWarming, d);
+    if(c){ const cls = !c.clear ? '' : (c.pct<0?'better':'worse');
+      cmp = `<div class="small-sub ${cls}">${c.pct>0?'+':''}${fmt(c.pct,0)}% ${c.clear?'':'(binnen marge)'}</div>`; }
+  }
+  return `<div class="big">${fmt(d.median,2)}°C</div><div class="small-sub">per 1°C buiten · ${d.n} dagen</div>${cmp}`;
+}
+function cellHele(res, ref){
+  const h = res.r.hele;
+  if(h.median===null || h.n < MIN_N.hele) return `<span class="small-sub">te weinig bruikbare nachten (${h.n})</span>`;
+  let cmp = '';
+  if(ref && ref !== res){
+    const c = compareMedian(ref.r.hele, h, MIN_N.hele);
+    if(c){ const cls = !c.clear ? '' : (c.pct<0?'better':'worse');
+      cmp = `<div class="small-sub ${cls}">${c.pct>0?'+':''}${fmt(c.pct,0)}% ${c.clear?'':'(binnen marge)'}</div>`; }
+  }
+  return `<div class="big">${fmt(h.median,2)}°C</div><div class="small-sub">per nacht · ${h.n} nachten</div>${cmp}`;
+}
+function cell(res, ref, w){
+  if(w === 'hele') return cellHele(res, ref);
+  if(w === 'dag') return cellDay(res, ref);
+  const a = res.r?.[w];
+  if(!a || a.k===null) return `<span class="small-sub">te weinig data</span>`;
+  if(a.n < MIN_N[w]) return `<div class="big" style="color:var(--sub)">${fmt(a.k*GAP,3)}°C</div><div class="small-sub">te weinig data (${a.n} u), niet vergeleken</div>`;
+  let cmp = '';
+  if(ref && ref !== res){
+    const c = compare(ref.r?.[w], a, w);
+    if(c && c.pct!==null){
+      const cls = !c.clear ? '' : (c.pct < 0 ? 'better' : 'worse');
+      cmp = `<div class="small-sub ${cls}">${c.pct>0?'+':''}${fmt(c.pct,0)}% ${c.clear ? '' : '(binnen marge)'}</div>`;
+    } else if(c){
+      cmp = `<div class="small-sub">geen % (zon/bewoning overheerst)</div>`;
+    }
+  }
+  return `<div class="big">${fmt(a.k*GAP,3)}°C</div>
+          <div class="small-sub">± ${fmt(1.96*a.se*GAP,3)} · ${a.n} u</div>${cmp}`;
+}
+
+function roomsInResults(){ return [...new Set(state.results.map(x => x.room))]; }
+function renderAll(){
+  const m = document.getElementById('matrix');
+  let h = `<tr><th>Periode</th>${COLS.map(w=>`<th class="${w===state.win?'sel':''}">${WINDOWS[w].label}</th>`).join('')}<th>Gem. binnen / buiten · dekking</th></tr>`;
+  for(const room of roomsInResults()){
+    const all = state.results.filter(x => x.room === room);
+    const ref = all[0] && all[0].r ? all[0] : null;  // referentie = eerste periode, per kamer
+    h += `<tr class="roomhead"><td colspan="6">${room}</td></tr>`;
+    for(const x of all){
+      if(!x.r){ h += `<tr><td><span class="swatch" style="background:${x.color}"></span>${x.name}</td><td colspan="5"><span class="worse small-sub">${x.error}</span></td></tr>`; continue; }
+      h += `<tr><td><span class="swatch" style="background:${x.color}"></span>${x.name}${x===ref?' <span class="small-sub">(referentie)</span>':''}</td>
+        ${COLS.map(w=>`<td class="${w===state.win?'sel':''}">${cell(x, ref, w)}</td>`).join('')}
+        <td class="small-sub">${fmt(x.r.alles.meanIn,1)}° / ${fmt(x.r.alles.meanOut,1)}°
+          <div class="${(x.r.coverIn<0.8||x.r.coverOut<0.8)?'worse':''}">dekking ${fmt(x.r.coverIn*100,0)}% / ${fmt(x.r.coverOut*100,0)}%</div></td></tr>`;
+    }
+    if(!ref && all.length) h += `<tr><td colspan="6" class="small-sub">De referentieperiode heeft voor deze kamer geen data, dus er is geen vergelijking mogelijk.</td></tr>`;
+  }
+  m.innerHTML = h;
+  // kamer-toggle voor de uitleg
+  const rt = document.getElementById('roomToggle');
+  rt.innerHTML = roomsInResults().map(r => `<button data-room="${r}" class="${r===state.viewRoom?'active':''}">${r}</button>`).join('');
+  rt.querySelectorAll('button').forEach(b => b.onclick = () => { state.viewRoom = b.dataset.room; renderAll(); });
+  const sel = state.results.filter(x => x.room === state.viewRoom);
+  const res = sel.filter(x => x.r), ref = sel[0] && sel[0].r ? sel[0] : null;
+  renderSummary(res, ref);
+  renderDetail(res, ref);
+  renderCharts(res);
+}
+
+function renderSummary(res, ref){
+  const w = state.win, el = document.getElementById('summary');
+  if(!ref){ el.innerHTML = `<p>Geen vergelijking mogelijk voor ${state.viewRoom}: de referentieperiode heeft geen data van deze sensor.</p>`; return; }
+  const parts = [];
+  const a0 = ref.r[w];
+
+  if(w === 'hele'){
+    for(const x of res.slice(1)){
+      const h0 = ref.r.hele, h = x.r.hele, c = compareMedian(h0, h, MIN_N.hele);
+      if(!c){ parts.push(`<p><b>${ref.name}</b> vs <b>${x.name}</b>: te weinig bruikbare nachten voor een vergelijking.</p>`); continue; }
+      const pr = (h0.median - h.median)/h.median*100;
+      parts.push(`<p><b>Hele nacht:</b> in een nacht met gemiddeld 5°C verschil koelt het binnen in <b>${ref.name}</b> <b>${fmt(h0.median,2)}°C</b> af, tegen <b>${fmt(h.median,2)}°C</b> in <b>${x.name}</b>: <b>${fmt(Math.abs(pr),0)}% ${pr<0?'minder':'meer'}</b>. ${c.clear?'<span class="muted">Duidelijk verschil.</span>':'<span class="muted">Valt binnen de spreiding, nog geen harde conclusie.</span>'}</p>`);
+    }
+    const sk = res.filter(x => x.r.hele.skipped).map(x => `${x.name}: ${x.r.hele.skipped}`);
+    if(sk.length) parts.push(`<p class="muted">Niet meegeteld omdat het binnen vóór het koudste moment opwarmde of niet afkoelde: ${sk.join(' · ')} nachten.</p>`);
+    parts.push(`<p class="muted">Let op: een raam dat 's nachts openstaat laat het cijfer stijgen, zonder dat de isolatie slechter is.</p>`);
+  }
+  if(w === 'dag'){
+    for(const x of res.slice(1)){
+      const d0 = ref.r.dayWarming, d = x.r.dayWarming, c = compareDay(d0, d);
+      if(!c){ parts.push(`<p><b>${ref.name}</b> vs <b>${x.name}</b>: te weinig geschikte dagen voor een vergelijking.</p>`); continue; }
+      const pr = (d0.median - d.median)/d.median*100;
+      parts.push(`<p><b>Dag:</b> in <b>${ref.name}</b> warmt het binnen <b>${fmt(d0.median,2)}°C</b> op per graad dat het buiten opwarmt, tegen <b>${fmt(d.median,2)}°C</b> in <b>${x.name}</b>: <b>${fmt(Math.abs(pr),0)}% ${pr<0?'minder':'meer'}</b>. ${c.clear?'<span class="muted">Duidelijk verschil.</span>':'<span class="muted">Valt binnen de spreiding, nog geen harde conclusie.</span>'}</p>`);
+    }
+    parts.push(`<p class="muted">Let op: overdag speelt de zon mee. Zonnige periodes geven een hoger cijfer, ook zonder verschil in isolatie.</p>`);
+  }
+  for(const x of (w==='dag' || w==='hele' ? [] : res.slice(1))){
+    const a = x.r[w], c = compare(a0, a, w);
+    if(!c){ parts.push(`<p><b>${WINDOWS[w].label}:</b> <b>${ref.name}</b> vs <b>${x.name}</b>: te weinig bruikbare uren in een van beide periodes, dus geen vergelijking.</p>`); continue; }
+    if(c.pct===null){ parts.push(`<p><b>${WINDOWS[w].label}:</b> <b>${ref.name}</b> vs <b>${x.name}</b>: geen zinvol percentage, want in minstens één van beide warmt het binnen op ondanks koudere buitenlucht.</p>`); continue; }
+    const pctRef = (a0.k - a.k)/a.k*100; // referentie ten opzichte van deze periode
+    const word = pctRef < 0 ? 'minder' : 'meer';
+    let line = `<p><b>${WINDOWS[w].label}:</b> in <b>${ref.name}</b> beweegt de binnentemperatuur <b>${fmt(Math.abs(pctRef),0)}% ${word}</b> mee met buiten dan in <b>${x.name}</b>.`;
+    if(w === 'nacht') line += ` Bij 5°C verschil koelt het 's nachts (7 uur) <b>${fmt(a0.k*GAP*7,2)}°C</b> af, tegen <b>${fmt(a.k*GAP*7,2)}°C</b>.`;
+    else line += ` Bij 5°C verschil is dat ${fmt(a0.k*GAP,3)}°C per uur, tegen ${fmt(a.k*GAP,3)}°C.`;
+    line += c.clear ? ` <span class="muted">Dit verschil is groter dan de meetonzekerheid.</span>` : ` <span class="muted">Dit verschil valt binnen de meetonzekerheid, dus nog geen harde conclusie.</span>`;
+    parts.push(line + '</p>');
+  }
+
+  if(w === 'nacht') parts.push(`<p class="muted">Let op: een raam dat 's nachts openstaat (zeker in de slaapkamer in de zomer) laat dit cijfer stijgen, zonder dat de isolatie slechter is. Vergelijk bij voorkeur periodes waarin je ongeveer hetzelfde ventileerde.</p>`);
+  if(w === 'nacht'){
+    const ex = res.filter(x => x.r.excludedNights > 0).map(x => `${x.name}: ${x.r.excludedNights}`);
+    if(ex.length) parts.push(`<p class="muted">Overgeslagen nachten waarin het binnen opwarmde (verwarming?): ${ex.join(' · ')}.</p>`);
+  }
+  const gaps = res.filter(x => x.r.coverIn < 0.8 || x.r.coverOut < 0.8);
+  if(gaps.length) parts.push(`<div class="callout warn">Onvolledige metingen: ${gaps.map(x => `${x.name} (binnen ${fmt(x.r.coverIn*100,0)}%, buiten ${fmt(x.r.coverOut*100,0)}%)`).join(' · ')}. Netatmo heeft voor die periode niet meer data, bijvoorbeeld door een lege batterij van een sensor.</div>`);
+  if(res.some(isHeatingSeason)) parts.push(`<div class="callout warn">Een of meer periodes vallen in het stookseizoen. De thermostaat houdt de binnentemperatuur dan vast, waardoor de cijfers minder zeggen over de gevel.</div>`);
+  if(res.length < 2) parts.push('<p>Voeg een tweede periode toe om te vergelijken.</p>');
+  el.innerHTML = parts.join('');
+}
+
+function renderDetail(res, ref){
+  const w = state.win, t = document.getElementById('detail');
+  if(w === 'hele'){
+    let h = `<tr><th>Periode</th><th>Mediaan per nacht bij 5°C</th><th>Middelste helft</th><th>Nachten</th><th>Niet meegeteld</th><th>Typisch koudste moment</th></tr>`;
+    for(const x of res){ const v = x.r.hele, ok = x.r.nights.filter(n=>n.ok);
+      const hrs = summarize(ok.map(n => n.coldHour < 12 ? n.coldHour + 24 : n.coldHour));
+      h += `<tr><td><span class="swatch" style="background:${x.color}"></span>${x.name}</td><td>${fmt(v.median,2)}°C</td><td>${fmt(v.q1,2)} – ${fmt(v.q3,2)}</td><td>${v.n}</td><td>${v.skipped}</td><td>${hrs.median!==null ? String(Math.round(hrs.median)%24).padStart(2,'0')+':00' : '–'}</td></tr>`; }
+    t.innerHTML = h; return;
+  }
+  if(w === 'dag'){
+    let h = `<tr><th>Periode</th><th>Mediaan binnen per 1°C buiten</th><th>Middelste helft</th><th>Dagen</th><th>Newton-k overdag (08–20 u)</th></tr>`;
+    for(const x of res){ const d = x.r.dayWarming, a = x.r.dag;
+      h += `<tr><td><span class="swatch" style="background:${x.color}"></span>${x.name}</td><td>${fmt(d.median,2)}°C</td><td>${fmt(d.q1,2)} – ${fmt(d.q3,2)}</td><td>${d.n}</td><td>${fmt(a.k,4)} ± ${fmt(a.se!==null?1.96*a.se:null,4)}</td></tr>`; }
+    t.innerHTML = h; return;
+  }
+  let h = `<tr><th>Periode</th><th>k per uur</th><th>τ (uur)</th><th>Bij 5°C verschil / uur</th><th>Uren gebruikt</th><th>Gem. binnen</th><th>Gem. buiten</th></tr>`;
+  for(const x of res){
+    const a = x.r[w];
+    h += `<tr><td><span class="swatch" style="background:${x.color}"></span>${x.name}</td>
+      <td>${fmt(a.k,4)} ± ${fmt(a.se!==null?1.96*a.se:null,4)}</td>
+      <td>${a.k>0 ? fmt(1/a.k,0) : '–'}</td>
+      <td>${fmt(a.k!==null?a.k*GAP:null,3)}°C</td>
+      <td>${a.n}</td><td>${fmt(a.meanIn,1)}°</td><td>${fmt(a.meanOut,1)}°</td></tr>`;
+  }
+  t.innerHTML = h;
+}
+
+function renderCharts(res){
+  Chart.defaults.color = '#8fa5c7'; Chart.defaults.borderColor = '#2c4a70';
+  if(chartBar) chartBar.destroy();
+  const w = state.win, isDay = w === 'dag', isHele = w === 'hele';
+  chartBar = new Chart(document.getElementById('chartBar'), {
+    type:'bar',
+    data:{ labels: res.map(x=>x.name),
+      datasets:[{ data: res.map(x => isHele ? x.r.hele.median : isDay ? x.r.dayWarming.median : (x.r[w].k!==null ? +(x.r[w].k*GAP).toFixed(4) : null)),
+        backgroundColor: res.map(x=>x.color) }] },
+    options:{ maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, title:{display:true, text: isHele ? 'Hele nacht: °C afkoeling bij 5°C verschil (lager = beter)' : isDay ? 'Dag: °C opwarming binnen per 1°C buiten (lager = beter)' : `${WINDOWS[w].label}: °C per uur bij 5°C verschil (lager = beter)`} },
+      scales:{ y:{ beginAtZero:true } } }
+  });
+  if(chartScatter) chartScatter.destroy();
+  const ds = [];
+  for(const x of res){
+    const a = isHele ? { points: x.r.nights.filter(n=>n.ok).map(n=>({x:n.gap, y:n.drop})), k: x.r.hele.median!==null ? x.r.hele.median/GAP : null }
+            : isDay ? { points: x.r.dayWarming.points, k: x.r.dayWarming.median } : x.r[w];
+    if(!a.points || !a.points.length || a.k===null) continue;
+    const pts = a.points.length > 1500 ? a.points.filter((_,i)=>i % Math.ceil(a.points.length/1500)===0) : a.points;
+    ds.push({ type:'scatter', label:x.name, data:pts, backgroundColor:x.color+'55', pointRadius:2 });
+    const xs = a.points.map(p=>p.x), lo = Math.min(...xs), hi = Math.max(...xs);
+    ds.push({ type:'line', label:x.name+' (lijn)', data:[{x:lo,y:a.k*lo},{x:hi,y:a.k*hi}], borderColor:x.color, borderWidth:2.5, pointRadius:0 });
+  }
+  chartScatter = new Chart(document.getElementById('chartScatter'), {
+    data:{ datasets: ds },
+    options:{ maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom', labels:{ filter: i => !i.text.endsWith('(lijn)') } },
+        title:{ display:true, text: isHele ? 'Hele nacht: verschil binnen−buiten vs afkoeling (1 stip = 1 nacht)' : isDay ? 'Dag: opwarming buiten vs binnen (1 stip = 1 dag)' : `${WINDOWS[w].label}: verschil buiten−binnen vs verandering binnen` } },
+      scales:{ x:{ type:'linear', title:{display:true,text: isHele ? 'gemiddeld verschil binnen − buiten (°C)' : isDay ? 'opwarming buiten (°C)' : 'buiten − binnen (°C)'} }, y:{ title:{display:true,text: isHele ? 'afkoeling binnen in de nacht (°C)' : isDay ? 'opwarming binnen (°C)' : 'Δ binnen volgend uur (°C)'} } } }
+  });
+}
+
+// ===== Oordeel: maand voor maand, seizoensgelijk =====
+const monthKey = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+const HEATING = [11,12,1,2,3];
+const MAANDEN = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+const mLabel = k => `${MAANDEN[Number(k.slice(5))-1]} ${k.slice(2,4)}`;
+const tl = { months:{}, room:null, metric:'elke', chart:null };
+
+async function fetchAll(room){
+  let all = [], from = 0;
+  while(true){
+    const { data, error } = await supa.from('netatmo_metingen').select('ts, temperatuur')
+      .eq('module_naam', room).order('ts',{ascending:true}).range(from, from+999);
+    if(error) throw error;
+    all = all.concat(data); if(data.length < 1000) break; from += 1000;
+  }
+  return cleanRows(all);
+}
+function monthly(inRows, outRows){
+  const group = rows => { const o = {}; for(const r of rows){ const k = monthKey(new Date(r.ts)); (o[k] = o[k] || []).push(r); } return o; };
+  const gi = group(inRows), go = group(outRows), res = [];
+  for(const k of Object.keys(gi).sort()){
+    if(!go[k]) continue;
+    const [y,m] = k.split('-').map(Number);
+    const r = analysePeriod(gi[k], go[k], new Date(y, m, 0).getDate()*24);
+    res.push({ k, m, cov: Math.min(r.coverIn, r.coverOut),
+      nacht: r.nacht.n >= MIN_N.nacht ? r.nacht.k*GAP : null,
+      dag: r.dayWarming.n >= MIN_N.dag ? r.dayWarming.median : null,
+      hele: r.hele.n >= MIN_N.hele ? r.hele.median : null, nights: r.nights });
+  }
+  return res;
+}
+function verdictFor(rows, metric, installKey){
+  const ok = x => x[metric] !== null && x.cov >= 0.6 && !HEATING.includes(x.m) && x[metric] > 0.002;
+  const after = rows.filter(x => x.k > installKey && ok(x));
+  const pairs = [];
+  for(const a of after) for(const b of rows.filter(x => x.k < installKey && x.m === a.m && ok(x)))
+    pairs.push({ a:a.k, b:b.k, pct:(a[metric]-b[metric])/b[metric]*100 });
+  if(pairs.length < 2) return { pairs, cls:'unknown', word:'Nog te weinig data' };
+  const avg = pairs.reduce((s,p)=>s+p.pct,0)/pairs.length, better = pairs.filter(p=>p.pct<0).length, share = better/pairs.length;
+  let cls, word;
+  if(avg <= -25 && share >= 0.8){ cls='good'; word='Duidelijk beter'; }
+  else if(avg <= -10 && share >= 0.6){ cls='ok'; word='Beter'; }
+  else if(avg >= 10 && share <= 0.4){ cls='bad'; word='Slechter'; }
+  else { cls='none'; word= share>0.3 && share<0.7 ? 'Wisselend beeld' : 'Geen duidelijk verschil'; }
+  return { pairs, avg, better, cls, word };
+}
+const RANK = { good:4, ok:3, none:2, bad:1, unknown:0 };
+function nightExample(rows, installKey){
+  const okRow = x => !HEATING.includes(x.m) && x.cov >= 0.6;
+  const after = rows.filter(x => x.k > installKey && okRow(x)), months = new Set(after.map(x=>x.m));
+  const before = rows.filter(x => x.k < installKey && okRow(x) && months.has(x.m));
+  const vals = rr => rr.flatMap(x => x.nights.filter(n=>n.ok).map(n=>n.per5));
+  const a = summarize(vals(after)), b = summarize(vals(before));
+  return a.median!==null && b.median!==null && a.n>=15 && b.n>=15 ? { after:a.median, before:b.median } : null;
+}
+function renderVerdicts(){
+  const installKey = monthKey(new Date(document.getElementById('installDate').value + 'T12:00:00'));
+  const box = document.getElementById('verdictCards'); box.innerHTML = '';
+  for(const room of Object.keys(tl.months)){
+    const rows = tl.months[room];
+    const vn = verdictFor(rows, 'nacht', installKey), vd = verdictFor(rows, 'dag', installKey), vh = verdictFor(rows, 'hele', installKey);
+    const main = [vh, vd, vn].sort((a,b)=>RANK[b.cls]-RANK[a.cls])[0];
+    // Concreet voorbeeld: mediaan per nacht in dezelfde kalendermaanden, voor vs na
+    const ex = nightExample(rows, installKey);
+    const line = (lbl, v, unit) => v.cls==='unknown'
+      ? `<div class="metric"><span>${lbl}</span><span class="small-sub">nog te weinig vergelijkbare maanden</span></div>`
+      : `<div class="metric"><span>${lbl}<br><b class="${v.avg<0?'better':'worse'}">${v.avg<0?'':'+'}${fmt(v.avg,0)}%</b> ${unit}</span><span class="small-sub">${v.better} van ${v.pairs.length} maanden beter<br>${v.word.toLowerCase()}</span></div>`;
+    const card = document.createElement('div'); card.className = 'card';
+    card.innerHTML = `<h3>${room}</h3><div class="verdict v-${main.cls}">${main.word}</div>
+      ${ex ? `<p style="margin:-4px 0 10px;font-size:13.5px;">Een nacht met 5°C verschil: het koelt nu <b>${fmt(ex.after,2)}°C</b> af, vroeger <b>${fmt(ex.before,2)}°C</b>.</p>` : ''}
+      ${line('Hele nacht (21–09 u), afkoeling', vh, 'per nacht')}
+      ${line('Overdag, opwarming door zon en warmte', vd, 'per graad buiten')}
+      ${line("'s Nachts per uur, afkoeling", vn, 'per graad verschil')}`;
+    card.title = [...vh.pairs.map(p=>`Hele nacht ${mLabel(p.a)} vs ${mLabel(p.b)}: ${fmt(p.pct,0)}%`), ...vd.pairs.map(p=>`Overdag ${mLabel(p.a)} vs ${mLabel(p.b)}: ${fmt(p.pct,0)}%`), ...vn.pairs.map(p=>`Nacht ${mLabel(p.a)} vs ${mLabel(p.b)}: ${fmt(p.pct,0)}%`)].join('\n');
+    box.appendChild(card);
+  }
+  box.insertAdjacentHTML('beforeend', `<div class="small-sub" style="align-self:end;">Percentage = gemiddeld verschil met dezelfde maand in eerdere jaren. Negatief is beter. Beweeg over een kaart voor de losse maanden.</div>`);
+  renderTimeline();
+}
+function renderEachNight(rows){
+  const installMs = new Date(document.getElementById('installDate').value + 'T12:00:00').getTime();
+  const pts = rows.filter(x => !HEATING.includes(x.m)).flatMap(x => x.nights.filter(n=>n.ok).map(n => ({ x:n.k, y:n.per5, n })));
+  const before = pts.filter(p => p.x < installMs), after = pts.filter(p => p.x >= installMs);
+  if(tl.chart) tl.chart.destroy();
+  const ys = pts.map(p=>p.y).sort((a,b)=>a-b), ymax = ys.length ? ys[Math.floor(ys.length*0.98)]*1.15 : 1;
+  const d = ms => new Date(ms).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'2-digit'});
+  tl.chart = new Chart(document.getElementById('chartTimeline'), {
+    type:'scatter',
+    data:{ datasets:[
+      { label:'voor de kozijnen', data: before, backgroundColor:'#48c0d999', pointRadius:2.5 },
+      { label:'na de kozijnen', data: after, backgroundColor:'#e8703acc', pointRadius:3 } ]},
+    options:{ maintainAspectRatio:false, animation:false,
+      plugins:{ legend:{ position:'bottom' }, title:{ display:true, text:'Elke nacht: °C afkoeling van 21:00 tot het koudste moment, bij 5°C verschil (lager = beter)' },
+        tooltip:{ callbacks:{ title: it => 'Nacht van ' + d(it[0].raw.x),
+          label: it => { const n = it.raw.n; return [`binnen ${fmt(n.start,1)}° → ${fmt(n.end,1)}° (koudst om ${String(n.coldHour).padStart(2,'0')}:00)`, `gemiddeld verschil met buiten ${fmt(n.gap,1)}°`, `omgerekend naar 5°C verschil: ${fmt(n.per5,2)}°C`]; } } } },
+      scales:{ x:{ type:'linear', ticks:{ callback: v => d(v), maxTicksLimit: 8 } }, y:{ beginAtZero:true, max: ymax } } },
+    plugins:[{ id:'installLine', afterDraw(c){ const x = c.scales.x.getPixelForValue(installMs); const {top,bottom,left,right} = c.chartArea; if(x<left||x>right) return;
+      const g = c.ctx; g.save(); g.strokeStyle='#6bd68f'; g.setLineDash([5,4]); g.beginPath(); g.moveTo(x,top); g.lineTo(x,bottom); g.stroke();
+      g.fillStyle='#6bd68f'; g.font='11px monospace'; g.fillText('nieuwe kozijnen', x+5, top+12); g.restore(); } }]
+  });
+  document.getElementById('tlExplain').textContent = 'Elke stip is één nacht (wintermaanden en nachten met verwarming weggelaten). Beweeg over een stip voor de details van die nacht. Blauw is voor de nieuwe kozijnen, oranje erna. Let op het seizoenspatroon: in de zomer liggen de stippen van nature hoger.';
+}
+function renderTimeline(){
+  const rt = document.getElementById('tlRoom');
+  rt.innerHTML = Object.keys(tl.months).map(r=>`<button data-r="${r}" class="${r===tl.room?'active':''}">${r}</button>`).join('');
+  rt.querySelectorAll('button').forEach(b => b.onclick = () => { tl.room = b.dataset.r; renderTimeline(); });
+  const rows = tl.months[tl.room] || [], m = tl.metric;
+  if(m === 'elke') return renderEachNight(rows);
+  const installKey = monthKey(new Date(document.getElementById('installDate').value + 'T12:00:00'));
+  const labels = rows.map(x => x.k);
+  const val = x => x[m] !== null && x.cov >= 0.6 ? x[m] : null;
+  const color = x => x.k > installKey ? '#e8703a' : '#48c0d9';
+  if(tl.chart) tl.chart.destroy();
+  const vals = rows.map(val).filter(v=>v!==null), ymax = vals.length ? Math.max(...vals)*1.1 : 1;
+  tl.chart = new Chart(document.getElementById('chartTimeline'), {
+    data:{ labels, datasets:[
+      { type:'line', label: m==='nacht' ? "afkoeling 's nachts" : 'opwarming overdag', data: rows.map(val), spanGaps:false, borderColor:'#7f96b8', borderWidth:1,
+        pointRadius: rows.map(x => HEATING.includes(x.m) ? 3 : 5), pointBackgroundColor: rows.map(x => HEATING.includes(x.m) ? 'transparent' : color(x)),
+        pointBorderColor: rows.map(color), segment:{ borderDash: c => HEATING.includes(rows[c.p1DataIndex]?.m) ? [3,3] : undefined } },
+      { type:'line', label:'kozijnen geplaatst', data: labels.map(k => null), borderColor:'#6bd68f', pointRadius:0 }
+    ]},
+    options:{ maintainAspectRatio:false, animation:false,
+      plugins:{ legend:{ display:false }, title:{ display:true, text: m==='nacht' ? "'s Nachts per uur: °C afkoeling per uur bij 5°C verschil (lager = beter)" : m==='hele' ? 'Hele nacht: °C afkoeling per nacht bij 5°C verschil, mediaan per maand (lager = beter)' : 'Overdag: °C opwarming binnen per 1°C opwarming buiten (lager = beter)' },
+        tooltip:{ callbacks:{ title: it => mLabel(it[0].label), label: it => `${fmt(it.parsed.y, m==='nacht'?3:2)}°C${HEATING.includes(rows[it.dataIndex].m)?' (stookseizoen, telt niet mee)':''}` } } },
+      scales:{ x:{ ticks:{ callback:(v,i) => labels[i].endsWith('-01') || labels[i].endsWith('-07') ? mLabel(labels[i]) : '' } }, y:{ beginAtZero:true, max: ymax } } },
+    plugins:[{ id:'installLine', afterDraw(c){ const i = labels.findIndex(k => k > installKey); if(i<1) return;
+      const x = (c.scales.x.getPixelForValue(i-1) + c.scales.x.getPixelForValue(i))/2, {top, bottom} = c.chartArea, g = c.ctx;
+      g.save(); g.strokeStyle='#6bd68f'; g.setLineDash([5,4]); g.beginPath(); g.moveTo(x,top); g.lineTo(x,bottom); g.stroke();
+      g.fillStyle='#6bd68f'; g.font='11px monospace'; g.fillText('nieuwe kozijnen', x+5, top+12); g.restore(); } }]
+  });
+  document.getElementById('tlExplain').textContent = 'Elke stip is een maand. Blauw is voor de nieuwe kozijnen, oranje erna. Open stippen zijn wintermaanden: daar stuurt de thermostaat en tellen ze niet mee. Let op het seizoenspatroon: in de zomer liggen de cijfers van nature hoger (meer ventileren), daarom vergelijkt het oordeel steeds dezelfde maand.';
+}
+document.querySelectorAll('#tlMetric button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('#tlMetric button').forEach(x => x.classList.toggle('active', x===b)); tl.metric = b.dataset.m; renderTimeline(); });
+document.getElementById('installDate').addEventListener('change', () => { if(Object.keys(tl.months).length) renderVerdicts(); });
+async function loadVerdicts(){
+  try{
+    const rooms = state.rooms.filter(r => ['Woonkamer','Werkkamer','Slaapkamer'].includes(r)).concat(state.rooms.filter(r => !['Woonkamer','Werkkamer','Slaapkamer'].includes(r)));
+    const [out, ...ins] = await Promise.all([fetchAll('Buiten'), ...rooms.map(fetchAll)]);
+    rooms.forEach((r,i) => { tl.months[r] = monthly(ins[i], out); });
+    tl.room = rooms[0];
+    renderVerdicts();
+    log(`Historie geladen: ${out.length} buitenmetingen.`);
+  }catch(e){
+    document.getElementById('verdictCards').innerHTML = `<div class="callout warn">Kon de historie niet laden: ${e.message||e}</div>`;
+    log('Historie laden mislukt: ' + (e.message||e), true);
+  }
+}
+
+// ===== Start =====
+async function connect(){
+  try{
+    supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+    const { error } = await supa.from('netatmo_metingen').select('ts').limit(1);
+    if(error) throw error;
+    setConn(true, 'verbonden met de database');
+    await loadRooms();
+    loadVerdicts();
+    log('Verbinding gelukt.');
+  }catch(e){
+    setConn(false, 'geen verbinding'); log('Verbinding mislukt: ' + (e.message||e), true);
+  }
+}
+function init(){
+  addPeriod('2026-07-01','2026-07-31');
+  addPeriod('2024-07-01','2024-07-31');
+  renderRooms();
+  connect();
+}
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+</script>
+</body>
+</html>
