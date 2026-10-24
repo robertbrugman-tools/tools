@@ -1,0 +1,827 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Boodschappenwacht</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Opzet: één kolom. Aanbiedingen krijgen de vorm van een schaplabel (gele prijskaart met grote euro's en kleine centen). */
+:root {
+  --bg: #f4f6f2;
+  --surface: #ffffff;
+  --ink: #15201a;
+  --muted: #5b6a61;
+  --line: #dde3dc;
+  --accent: #0d6b4b;
+  --accent-ink: #ffffff;
+  --label: #ffd23f;
+  --label-ink: #1b1b10;
+  --good: #0d6b4b;
+  --warn-bg: #fff1c9;
+  --warn-ink: #5c4300;
+  --err: #b3261e;
+  --font-body: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-num: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1411;
+    --surface: #171d19;
+    --ink: #e7eee9;
+    --muted: #98a79d;
+    --line: #28312b;
+    --accent: #45c590;
+    --accent-ink: #06150e;
+    --label: #ffd23f;
+    --label-ink: #1b1b10;
+    --good: #45c590;
+    --warn-bg: #3a2f0c;
+    --warn-ink: #ffe3a1;
+    --err: #ff8a80;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.45 var(--font-body); }
+[hidden] { display: none !important; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.wrap {
+  max-width: 640px; margin: 0 auto; display: grid; gap: 20px;
+  padding-block: calc(24px + env(safe-area-inset-top, 0px)) calc(48px + env(safe-area-inset-bottom, 0px));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px));
+}
+h1 { margin: 0 0 6px; font: 700 clamp(30px, 8vw, 40px)/1 var(--font-num); text-transform: uppercase; letter-spacing: .03em; }
+.lede { margin: 0; color: var(--muted); }
+h2 { margin: 0; font: 700 13px/1.2 var(--font-body); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.muted { color: var(--muted); }
+a { color: var(--accent); text-underline-offset: 3px; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 12px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { min-height: 40px; padding: 8px 14px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); font: 600 15px var(--font-body); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.hint { margin: 0; font-size: 14px; color: var(--muted); }
+.row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+label { font-weight: 600; font-size: 15px; }
+select, input[type="text"], input[type="search"], input.rename {
+  min-height: 46px; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--line);
+  background: var(--bg); color: var(--ink); font: inherit; min-width: 0;
+}
+input::placeholder { color: var(--muted); opacity: .8; }
+
+.btn { min-height: 48px; padding: 12px 16px; border-radius: 12px; border: 1.5px solid var(--accent); background: var(--accent); color: var(--accent-ink); font: 700 16px var(--font-body); cursor: pointer; }
+.btn-ghost { background: transparent; color: var(--accent); }
+.link { background: none; border: 0; padding: 8px 0; min-height: 36px; color: var(--accent); font: 600 14px var(--font-body); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+
+.manual { display: grid; gap: 6px; }
+.manual .line { display: flex; gap: 8px; }
+.manual input { flex: 1; }
+.field-err { margin: 0; color: var(--err); font-size: 14px; }
+
+.list-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.list-head .tools { display: flex; align-items: baseline; gap: 12px; font-size: 14px; }
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+
+.item { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+.item.flash { animation: flash 1.2s ease-out; }
+@keyframes flash { from { box-shadow: 0 0 0 3px var(--label); } to { box-shadow: 0 0 0 3px transparent; } }
+.head { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 12px; align-items: start; }
+.thumb { width: 56px; height: 56px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); display: grid; place-items: center; overflow: hidden; font: 700 24px var(--font-num); color: var(--muted); }
+.thumb img { width: 100%; height: 100%; object-fit: contain; }
+.name { margin: 0; font: 700 17px/1.2 var(--font-body); overflow-wrap: anywhere; }
+.sub { margin: 3px 0 0; font-size: 14px; color: var(--muted); }
+.eanline { margin: 2px 0 0; font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--muted); }
+input.rename { width: 100%; font-weight: 700; }
+.badge { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+.badge-hit { background: var(--accent); color: var(--accent-ink); }
+.badge-muted { border: 1px solid var(--line); color: var(--muted); }
+.badge-soon { background: var(--warn-bg); color: var(--warn-ink); }
+
+.deals { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 10px; }
+.deal { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; }
+.tag { min-width: 92px; padding: 8px 10px 9px; border-radius: 6px; background: var(--label); color: var(--label-ink); text-align: center; line-height: 1; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .14); }
+.price { display: inline-flex; align-items: flex-start; font-family: var(--font-num); font-weight: 700; line-height: .9; }
+.price .cur { font-size: 18px; margin: 5px 2px 0 0; }
+.price .eur { font-size: 46px; }
+.price .cts { font-size: 24px; margin: 4px 0 0 1px; }
+.per { display: block; margin-top: 4px; font: 600 11px var(--font-body); text-transform: uppercase; letter-spacing: .06em; opacity: .75; }
+.deal-soon .tag { background: transparent; border: 1.5px dashed var(--line); color: var(--ink); box-shadow: none; }
+.info { min-width: 0; }
+.info .top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.info .top strong { font-size: 16px; }
+.info .top a { color: inherit; }
+.pct { font: 700 17px var(--font-num); color: var(--good); }
+.promo { font-weight: 600; }
+.was { margin-left: 6px; font-weight: 400; color: var(--muted); text-decoration: line-through; }
+.meta { font-size: 13px; color: var(--muted); }
+.rname { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.note { margin: 12px 0 0; font-size: 14px; color: var(--muted); }
+.note-err { color: var(--err); }
+.sub-title { margin: 14px 0 0; font: 700 12px var(--font-body); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.actions { display: flex; gap: 18px; margin-top: 12px; padding-top: 6px; border-top: 1px solid var(--line); }
+.skeleton { height: 58px; margin-top: 14px; border-radius: 8px; background: linear-gradient(90deg, var(--line), transparent, var(--line)); background-size: 200% 100%; animation: sh 1.2s linear infinite; }
+@keyframes sh { to { background-position: -200% 0; } }
+
+.empty { border: 1.5px dashed var(--line); border-radius: 14px; padding: 24px 16px; text-align: center; color: var(--muted); display: grid; gap: 10px; justify-items: center; }
+.empty p { margin: 0; }
+
+footer { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
+footer p { margin: 0; }
+
+.scanner { position: fixed; inset: 0; z-index: 50; background: #000; color: #fff; }
+.scanner video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.frame { position: absolute; left: 50%; top: 42%; width: min(82vw, 440px); aspect-ratio: 2.2 / 1; transform: translate(-50%, -50%); border: 3px solid var(--label); border-radius: 12px; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .5); }
+.scanner .close { position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); min-height: 44px; padding: 8px 16px; border-radius: 999px; border: 0; background: rgba(0, 0, 0, .6); color: #fff; font: 600 15px var(--font-body); cursor: pointer; }
+.scanner .bottom { position: absolute; left: 0; right: 0; bottom: 0; display: grid; gap: 10px; justify-items: center; text-align: center; padding: 16px max(16px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); background: linear-gradient(transparent, rgba(0, 0, 0, .75)); }
+.scanner .bottom p { margin: 0; font-weight: 600; }
+.scanner .link { color: #fff; }
+
+.toast { position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60; max-width: min(92vw, 520px); padding: 12px 16px; border-radius: 12px; background: var(--ink); color: var(--bg); font-size: 15px; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.toast.show { opacity: 1; }
+
+@media (max-width: 400px) {
+  .tag { min-width: 80px; }
+  .price .eur { font-size: 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton, .item.flash { animation: none; }
+  .toast { transition: none; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Boodschappenwacht</h1>
+    <p class="lede">Scan een product en zie of het in de aanbieding is bij jouw supermarkten.</p>
+  </header>
+
+  <section class="card" aria-labelledby="h-stores">
+    <h2 id="h-stores">Mijn supermarkten</h2>
+    <div id="chips" class="chips" role="group" aria-labelledby="h-stores"></div>
+    <p class="hint">Aldi, Lidl, Vomar en Coop staan er niet bij. Zij publiceren geen barcode, dus een scan is niet aan hun aanbiedingen te koppelen.</p>
+    <div class="row">
+      <label for="minpct">Minimale korting</label>
+      <select id="minpct">
+        <option value="0">Elke aanbieding</option>
+        <option value="10">10% of meer</option>
+        <option value="20">20% of meer</option>
+        <option value="25">25% of meer</option>
+        <option value="30">30% of meer</option>
+        <option value="40">40% of meer</option>
+        <option value="50">50% of meer (1+1)</option>
+      </select>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="h-add">
+    <h2 id="h-add">Product toevoegen</h2>
+    <button id="scan" class="btn" type="button">Scan barcode</button>
+    <form id="manual" class="manual" autocomplete="off" novalidate>
+      <label for="ean">Of typ de barcode</label>
+      <div class="line">
+        <input id="ean" type="text" inputmode="numeric" maxlength="14" placeholder="8711000675298" aria-describedby="ean-help ean-err">
+        <button class="btn btn-ghost" type="submit">Voeg toe</button>
+      </div>
+      <p id="ean-help" class="hint">De cijfers onder de streepjes op de verpakking.</p>
+      <p id="ean-err" class="field-err" role="alert" hidden></p>
+    </form>
+  </section>
+
+  <section aria-labelledby="h-list">
+    <div class="list-head">
+      <h2 id="h-list">Mijn producten <span id="count"></span></h2>
+      <div class="tools"><span id="updated" class="muted"></span><button id="refresh" class="link" type="button">Vernieuw</button></div>
+    </div>
+    <ul id="list" class="list"></ul>
+    <div id="empty" class="empty" hidden>
+      <p>Nog geen producten. Scan een barcode of typ er een.</p>
+      <button id="sample" class="btn btn-ghost" type="button">Probeer een voorbeeldproduct</button>
+    </div>
+  </section>
+
+  <footer>
+    <p>Aanbiedingen via <a href="https://www.prijsprofeet.nl" target="_blank" rel="noopener">PrijsProfeet</a>. Prijzen zijn indicatief, controleer ze in de winkel.</p>
+    <p>Productgegevens via <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener">Open Food Facts</a> (ODbL).</p>
+    <p>Testversie. Je lijst staat alleen in deze browser. <span id="keyed"></span></p>
+  </footer>
+</div>
+
+<div id="scanner" class="scanner" role="dialog" aria-modal="true" aria-label="Barcode scannen" hidden>
+  <video id="video" playsinline muted autoplay></video>
+  <div class="frame" aria-hidden="true"></div>
+  <button id="scan-close" class="close" type="button">Sluiten</button>
+  <div class="bottom">
+    <p id="scan-hint" role="status">Camera starten</p>
+    <button id="scan-type" class="link" type="button">Typ de barcode</button>
+  </div>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* === pure:start === */
+const RETAILERS = [
+  { id: 'albert_heijn', name: 'Albert Heijn' },
+  { id: 'jumbo', name: 'Jumbo' },
+  { id: 'plus', name: 'PLUS' },
+  { id: 'dirk', name: 'Dirk' },
+  { id: 'dekamarkt', name: 'DekaMarkt' },
+  { id: 'hoogvliet', name: 'Hoogvliet' },
+  { id: 'poiesz', name: 'Poiesz' },
+  { id: 'ekoplaza', name: 'Ekoplaza' },
+];
+const RETAILER_NAMES = {
+  albert_heijn: 'Albert Heijn', jumbo: 'Jumbo', plus: 'PLUS', dirk: 'Dirk', dekamarkt: 'DekaMarkt',
+  hoogvliet: 'Hoogvliet', poiesz: 'Poiesz', ekoplaza: 'Ekoplaza', aldi: 'Aldi', lidl: 'Lidl',
+  vomar: 'Vomar', coop: 'Coop', gewoon_coop: 'Gewoon Coop', spar: 'SPAR', nettorama: 'Nettorama',
+  boni: 'Boni', boons_markt: "Boon's Markt", amazing_oriental: 'Amazing Oriental', mcd: 'MCD', dagwinkel: 'Dagwinkel',
+};
+// Percentages boven dit niveau zijn in de praktijk foutieve data (bijvoorbeeld een prijs van 1 cent) en tellen niet mee voor de drempel.
+const MAX_PLAUSIBLE_PCT = 90;
+const EUR = new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' });
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function safeUrl(u) { return typeof u === 'string' && /^https:\/\//.test(u) ? u : ''; }
+function retailerName(id) {
+  return RETAILER_NAMES[id] || String(id || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+function joinNl(list) {
+  if (list.length <= 1) return list.join('');
+  return list.slice(0, -1).join(', ') + ' en ' + list[list.length - 1];
+}
+function money(n) { return typeof n === 'number' && isFinite(n) ? EUR.format(n) : ''; }
+
+// Controlecijfer voor EAN-8, UPC-A (12) en EAN-13.
+function ean13Valid(code) {
+  if (!/^\d+$/.test(code) || ![8, 12, 13].includes(code.length)) return false;
+  const d = code.split('').map(Number);
+  const check = d.pop();
+  let sum = 0;
+  for (let i = d.length - 1, w = 3; i >= 0; i--, w = w === 3 ? 1 : 3) sum += d[i] * w;
+  return (10 - (sum % 10)) % 10 === check;
+}
+function normalizeEan(raw) {
+  const c = String(raw).replace(/\D/g, '');
+  return c.length === 12 ? '0' + c : c; // UPC-A als EAN-13
+}
+
+// Effectief kortingspercentage per stuk. Bij 1+1 en x voor y is dit al verwerkt in savings_percentage.
+function effectivePct(o) {
+  let p = null;
+  if (typeof o.savings_percentage === 'number' && o.savings_percentage > 0) p = o.savings_percentage;
+  else if (o.original_price > 0 && typeof o.price === 'number' && o.price < o.original_price) p = (1 - o.price / o.original_price) * 100;
+  return p !== null && p <= MAX_PLAUSIBLE_PCT ? p : null;
+}
+
+function dealLabel(o) {
+  const kw = (o.promotional_keywords || [])[0];
+  switch (o.promotion_type) {
+    case 'one_plus_one':
+      return '1+1 gratis';
+    case 'multi_buy':
+      if (o.multi_buy_quantity > 1 && o.multi_buy_price > 0) return o.multi_buy_quantity + ' voor ' + money(o.multi_buy_price);
+      return kw || 'Meer voor minder';
+    case 'percentage': {
+      if (kw && /%/.test(kw)) return kw;
+      const p = effectivePct(o);
+      return p ? Math.round(p) + '% korting' : (kw || 'Korting');
+    }
+    case 'limited':
+      return kw || 'Beperkt aanbod';
+    default:
+      return kw || 'Aanbieding';
+  }
+}
+
+function todayISO() { return new Date().toLocaleDateString('sv-SE'); }
+function dealState(o, today) {
+  if (o.promotion_status === 'upcoming') return 'upcoming';
+  if (o.promotion_status !== 'active') return 'none';
+  if (o.valid_until && o.valid_until < today) return 'none';
+  return 'active';
+}
+function fmtDate(iso) {
+  if (!iso) return '';
+  return new Date(iso + 'T12:00:00').toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+function summarize(offers, retailers, today) {
+  const sel = new Set(retailers);
+  const active = [];
+  const upcoming = [];
+  for (const o of offers || []) {
+    const s = dealState(o, today);
+    if (s === 'active') active.push(o);
+    else if (s === 'upcoming') upcoming.push(o);
+  }
+  const rank = (a, b) => (effectivePct(b) ?? -1) - (effectivePct(a) ?? -1) || a.price - b.price;
+  active.sort(rank);
+  upcoming.sort(rank);
+  const chosen = active.filter((o) => sel.has(o.retailer));
+  const pcts = chosen.map(effectivePct).filter((p) => p !== null);
+  return {
+    chosen,
+    elsewhere: active.filter((o) => !sel.has(o.retailer)),
+    upcoming: upcoming.filter((o) => sel.has(o.retailer)),
+    best: pcts.length ? Math.max(...pcts) : null,
+  };
+}
+function meetsThreshold(sum, minPct) {
+  if (!sum.chosen.length) return false;
+  if (!minPct) return true;
+  return sum.best !== null && sum.best >= minPct;
+}
+function tierOf(sum, minPct) {
+  if (meetsThreshold(sum, minPct)) return 0;
+  if (sum.chosen.length) return 1;
+  if (sum.upcoming.length) return 2;
+  return 3;
+}
+function limitPerRetailer(rows, n) {
+  const seen = {};
+  return rows.filter((o) => (seen[o.retailer] = (seen[o.retailer] || 0) + 1) <= n);
+}
+/* === pure:end === */
+
+(() => {
+'use strict';
+
+const LS_KEY = 'boodschappenwacht.v1';
+const STALE_MS = 6 * 60 * 60 * 1000;
+const ZXING_URL = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
+const ZXING_SRI = 'sha384-BzBxP10ZE72aitqj5UMmUsbKFliP/DZqA8Wq+BNNhlIJDGoEd1tpkMYXOg9+n6sB';
+const SAMPLE_EAN = '8712000050030';
+
+const $ = (id) => document.getElementById(id);
+const els = {
+  chips: $('chips'), minpct: $('minpct'), scan: $('scan'), form: $('manual'), ean: $('ean'), eanErr: $('ean-err'),
+  list: $('list'), empty: $('empty'), count: $('count'), updated: $('updated'), refresh: $('refresh'), sample: $('sample'),
+  scanner: $('scanner'), video: $('video'), hint: $('scan-hint'), close: $('scan-close'), type: $('scan-type'),
+  toast: $('toast'), keyed: $('keyed'),
+};
+
+/* ---------- opslag (tijdelijke "database": localStorage) ---------- */
+function loadState() {
+  const base = { settings: { retailers: ['albert_heijn', 'jumbo', 'plus'], minPct: 0 }, items: [], offers: {} };
+  try {
+    const s = JSON.parse(localStorage.getItem(LS_KEY));
+    if (s && typeof s === 'object') {
+      const known = new Set(RETAILERS.map((r) => r.id));
+      const stored = s.settings && Array.isArray(s.settings.retailers) ? s.settings.retailers.filter((id) => known.has(id)) : [];
+      return {
+        settings: { retailers: stored.length ? stored : base.settings.retailers, minPct: Number(s.settings && s.settings.minPct) || 0 },
+        items: Array.isArray(s.items) ? s.items.filter((i) => i && typeof i.ean === 'string') : [],
+        offers: s.offers && typeof s.offers === 'object' ? s.offers : {},
+      };
+    }
+  } catch (_) { /* leeg of beschadigd, begin opnieuw */ }
+  return base;
+}
+const state = loadState();
+const pending = new Set();
+let renaming = false;
+let serverKeyed = null;
+
+function save() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (_) { /* opslag geblokkeerd */ }
+}
+
+let toastTimer;
+function toast(msg) {
+  els.toast.textContent = msg;
+  els.toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => els.toast.classList.remove('show'), 4200);
+}
+
+/* ---------- netwerk ---------- */
+// Hub-login: dezelfde Supabase-sessie als de andere tools (alleen lezen uit localStorage).
+function hubAuthHeaders() {
+  try {
+    const raw = localStorage.getItem('sb-swrunlzeydmcskceqdju-auth-token');
+    const tok = raw && JSON.parse(raw).access_token;
+    return tok ? { Authorization: 'Bearer ' + tok } : {};
+  } catch (_) { return {}; }
+}
+async function fetchOffers(ean) {
+  let r;
+  try {
+    r = await fetch('/.netlify/functions/boodschappenwacht-offers?ean=' + encodeURIComponent(ean), { headers: hubAuthHeaders() });
+  } catch (_) {
+    throw new Error('geen verbinding met de server. Start de hub via "Start lokale server.command" en open http://localhost:8888/boodschappenwacht/');
+  }
+  if (!r.ok) {
+    let msg = r.status === 404 ? 'de server heeft geen boodschappenwacht-offers functie' : r.status === 401 || r.status === 403 ? 'niet ingelogd in de hub (log eerst in op robertbrugman.nl)' : 'status ' + r.status;
+    try { msg = (await r.json()).error || msg; } catch (_) { /* geen json */ }
+    throw new Error(msg);
+  }
+  const j = await r.json();
+  serverKeyed = Boolean(j.keyed);
+  return j;
+}
+
+async function fetchProduct(ean) {
+  try {
+    const r = await fetch('https://world.openfoodfacts.org/api/v2/product/' + encodeURIComponent(ean) + '.json?fields=product_name,product_name_nl,brands,quantity,image_front_small_url');
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (j.status !== 1 || !j.product) return null;
+    const p = j.product;
+    const name = (p.product_name_nl || p.product_name || '').trim();
+    if (!name) return null;
+    return { name, brand: (p.brands || '').split(',')[0].trim(), quantity: (p.quantity || '').trim(), image: safeUrl(p.image_front_small_url) };
+  } catch (_) {
+    return null;
+  }
+}
+
+function fillFromOffers(item, list) {
+  if (item.name || !list.length) return;
+  const o = list[0];
+  item.name = o.name || '';
+  item.brand = item.brand || o.brand || '';
+  item.quantity = item.quantity || o.quantity || '';
+  item.image = item.image || safeUrl(o.image_url);
+}
+
+async function refreshOne(ean) {
+  const item = state.items.find((i) => i.ean === ean);
+  if (!item) return;
+  pending.add(ean);
+  render();
+  try {
+    const j = await fetchOffers(ean);
+    state.offers[ean] = { ts: Date.now(), list: j.offers || [], error: null };
+    fillFromOffers(item, state.offers[ean].list);
+  } catch (err) {
+    const prev = state.offers[ean] || { ts: 0, list: [] };
+    state.offers[ean] = { ts: prev.ts, list: prev.list, error: err.message };
+  }
+  pending.delete(ean);
+  save();
+  render();
+}
+
+async function refresh(eans, force) {
+  const now = Date.now();
+  const todo = eans.filter((e) => force || !state.offers[e] || state.offers[e].error || now - state.offers[e].ts > STALE_MS);
+  let i = 0;
+  const worker = async () => { while (i < todo.length) await refreshOne(todo[i++]); };
+  await Promise.all([worker(), worker(), worker()]);
+}
+
+/* ---------- product toevoegen ---------- */
+function flash(ean) {
+  const card = els.list.querySelector('[data-ean="' + ean + '"]');
+  if (!card) return;
+  card.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  card.classList.add('flash');
+}
+
+async function addProduct(raw) {
+  const ean = normalizeEan(raw);
+  if (!ean13Valid(ean)) return { ok: false, error: 'Dit is geen geldige barcode. Controleer de cijfers.' };
+  if (state.items.some((i) => i.ean === ean)) {
+    toast('Dit product staat al in je lijst.');
+    flash(ean);
+    return { ok: true };
+  }
+  const item = { ean, name: '', brand: '', quantity: '', image: '', addedAt: Date.now() };
+  state.items.unshift(item);
+  pending.add(ean);
+  save();
+  render();
+
+  const [prod, offs] = await Promise.allSettled([fetchProduct(ean), fetchOffers(ean)]);
+  if (prod.status === 'fulfilled' && prod.value) Object.assign(item, prod.value);
+  if (offs.status === 'fulfilled') {
+    state.offers[ean] = { ts: Date.now(), list: offs.value.offers || [], error: null };
+    fillFromOffers(item, state.offers[ean].list);
+  } else {
+    state.offers[ean] = { ts: 0, list: [], error: offs.reason.message };
+  }
+  pending.delete(ean);
+  save();
+  render();
+  flash(ean);
+
+  const sum = summarize(state.offers[ean].list, state.settings.retailers, todayISO());
+  const label = item.name || 'Product';
+  if (sum.chosen.length) toast(label + ' is nu in de aanbieding bij ' + joinNl([...new Set(sum.chosen.map((o) => retailerName(o.retailer)))]) + '.');
+  else toast(label + ' toegevoegd. Geen aanbieding bij jouw supermarkten.');
+  return { ok: true };
+}
+
+/* ---------- weergave ---------- */
+function renderChips() {
+  els.chips.innerHTML = RETAILERS.map((r) =>
+    '<button type="button" class="chip" data-retailer="' + r.id + '" aria-pressed="' + state.settings.retailers.includes(r.id) + '">' + esc(r.name) + '</button>').join('');
+  els.minpct.value = String(state.settings.minPct);
+}
+
+function dealHtml(o, soon) {
+  const [eur, cts] = (typeof o.price === 'number' ? o.price : 0).toFixed(2).split('.');
+  const multi = o.multi_buy_quantity > 1;
+  const pct = effectivePct(o);
+  const url = safeUrl(o.product_url);
+  const who = url
+    ? '<a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(retailerName(o.retailer)) + '</a>'
+    : esc(retailerName(o.retailer));
+  const when = soon
+    ? 'vanaf ' + fmtDate(o.valid_from)
+    : (o.valid_until ? 'tot ' + fmtDate(o.valid_until) + (o.valid_until_estimated ? ' (geschat)' : '') : '');
+  const extras = [when, o.loyalty_price ? 'met klantenkaart' : '', o.in_store_only ? 'alleen in de winkel' : ''].filter(Boolean).join(' · ');
+  return '<li class="deal' + (soon ? ' deal-soon' : '') + '">'
+    + '<div class="tag"><span class="price" role="img" aria-label="' + esc(money(o.price)) + (multi ? ' per stuk' : '') + '">'
+    + '<span class="cur" aria-hidden="true">€</span><span class="eur" aria-hidden="true">' + eur + '</span><span class="cts" aria-hidden="true">' + cts + '</span></span>'
+    + (multi ? '<span class="per">per stuk</span>' : '') + '</div>'
+    + '<div class="info"><div class="top"><strong>' + who + '</strong>' + (pct ? '<span class="pct">-' + Math.round(pct) + '%</span>' : '') + '</div>'
+    + '<div class="promo">' + esc(dealLabel(o)) + (o.original_price > o.price ? '<span class="was">was ' + esc(money(o.original_price)) + '</span>' : '') + '</div>'
+    + (extras ? '<div class="meta">' + esc(extras) + '</div>' : '')
+    + (o.name ? '<div class="rname">' + esc(o.name) + '</div>' : '')
+    + '</div></li>';
+}
+
+function itemHtml(row) {
+  const { item, od, sum, tier } = row;
+  const busy = pending.has(item.ean);
+  const names = state.settings.retailers.map(retailerName);
+  let badge = '';
+  if (tier === 0) badge = '<span class="badge badge-hit">Aanbieding</span>';
+  else if (tier === 1) badge = '<span class="badge badge-muted">Onder je drempel</span>';
+  else if (tier === 2) badge = '<span class="badge badge-soon">Volgende week</span>';
+  else if (busy && !od) badge = '<span class="badge badge-muted">Zoeken</span>';
+
+  let body = '';
+  if (sum.chosen.length) {
+    body += '<ul class="deals">' + limitPerRetailer(sum.chosen, 2).map((o) => dealHtml(o, false)).join('') + '</ul>';
+  } else if (busy && !od) {
+    body += '<div class="skeleton" aria-hidden="true"></div>';
+  } else if (od && od.error && !od.list.length) {
+    body += '<p class="note note-err">Aanbiedingen laden mislukt: ' + esc(od.error) + '. <button type="button" class="link" data-action="retry">Opnieuw proberen</button></p>';
+  } else {
+    body += '<p class="note">Geen aanbieding bij ' + esc(joinNl(names)) + '.</p>';
+  }
+  if (od && od.error && od.list.length) body += '<p class="note note-err">Vernieuwen mislukt, dit is de laatst bekende stand.</p>';
+  if (sum.upcoming.length) {
+    body += '<p class="sub-title">Volgende week</p><ul class="deals">' + limitPerRetailer(sum.upcoming, 1).map((o) => dealHtml(o, true)).join('') + '</ul>';
+  }
+  if (sum.elsewhere.length) {
+    const other = limitPerRetailer(sum.elsewhere, 1).slice(0, 3).map((o) => retailerName(o.retailer) + ' (' + money(o.price) + ')');
+    body += '<p class="note">' + (sum.chosen.length ? 'Ook' : 'Wel') + ' in de aanbieding bij ' + esc(joinNl(other)) + '.</p>';
+  }
+
+  const sub = [item.brand, item.quantity].filter(Boolean).join(' · ');
+  const thumb = item.image
+    ? '<img src="' + esc(item.image) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+    : esc((item.name || '?').charAt(0).toUpperCase());
+  return '<li class="item" data-ean="' + esc(item.ean) + '">'
+    + '<div class="head"><div class="thumb">' + thumb + '</div>'
+    + '<div><h3 class="name">' + esc(item.name || 'Onbekend product') + '</h3>'
+    + (sub ? '<p class="sub">' + esc(sub) + '</p>' : '')
+    + '<p class="eanline">EAN ' + esc(item.ean) + '</p></div>' + badge + '</div>'
+    + body
+    + '<div class="actions"><button type="button" class="link" data-action="rename">Naam wijzigen</button><button type="button" class="link" data-action="remove">Verwijderen</button></div>'
+    + '</li>';
+}
+
+function renderList() {
+  if (renaming) return;
+  const today = todayISO();
+  const minPct = state.settings.minPct;
+  const rows = state.items.map((item) => {
+    const od = state.offers[item.ean];
+    const sum = summarize(od ? od.list : [], state.settings.retailers, today);
+    return { item, od, sum, tier: tierOf(sum, minPct) };
+  });
+  rows.sort((a, b) => a.tier - b.tier || (b.sum.best ?? -1) - (a.sum.best ?? -1) || b.item.addedAt - a.item.addedAt);
+  els.list.innerHTML = rows.map(itemHtml).join('');
+  els.empty.hidden = rows.length > 0;
+  els.count.textContent = rows.length ? '(' + rows.length + ')' : '';
+}
+
+function renderMeta() {
+  const ts = Math.max(0, ...state.items.map((i) => (state.offers[i.ean] || {}).ts || 0));
+  if (!ts) { els.updated.textContent = ''; }
+  else {
+    const d = new Date(ts);
+    const sameDay = d.toLocaleDateString('sv-SE') === todayISO();
+    els.updated.textContent = 'Bijgewerkt ' + (sameDay
+      ? d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })
+      : d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }) + ' ' + d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }));
+  }
+  els.keyed.textContent = serverKeyed === null ? '' : (serverKeyed ? 'De server gebruikt een API-key.' : 'De server gebruikt geen API-key (lagere limieten).');
+}
+
+function render() { renderList(); renderMeta(); }
+
+/* ---------- scanner ---------- */
+let scanSession = 0;
+let activeStream = null;
+let zxingPromise = null;
+
+function loadZxing() {
+  if (window.ZXing) return Promise.resolve();
+  if (!zxingPromise) {
+    zxingPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = ZXING_URL; s.integrity = ZXING_SRI; s.crossOrigin = 'anonymous';
+      s.onload = () => resolve();
+      s.onerror = () => { zxingPromise = null; reject(new Error('zxing')); };
+      document.head.appendChild(s);
+    });
+  }
+  return zxingPromise;
+}
+
+async function makeDecoder() {
+  if ('BarcodeDetector' in window) {
+    try {
+      const supported = await BarcodeDetector.getSupportedFormats();
+      const formats = ['ean_13', 'ean_8', 'upc_a'].filter((f) => supported.includes(f));
+      if (formats.length) {
+        const detector = new BarcodeDetector({ formats });
+        return async (video) => { const found = await detector.detect(video); return found.length ? found[0].rawValue : null; };
+      }
+    } catch (_) { /* val terug op ZXing */ }
+  }
+  await loadZxing();
+  const hints = new Map();
+  hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8, ZXing.BarcodeFormat.UPC_A]);
+  hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+  const reader = new ZXing.BrowserMultiFormatReader(hints);
+  return async (video) => {
+    try { return reader.decodeBitmap(reader.createBinaryBitmap(video)).getText(); }
+    catch (_) { return null; } // geen barcode in dit beeld
+  };
+}
+
+function cameraError(err) {
+  if (err && err.name === 'NotAllowedError') return 'Geen toegang tot de camera. Sta camera-toegang toe in je browser en probeer opnieuw.';
+  if (err && err.name === 'NotFoundError') return 'Er is geen camera gevonden. Typ de barcode in.';
+  return 'De camera kon niet starten. Typ de barcode in.';
+}
+
+function closeScanner() {
+  scanSession++;
+  if (activeStream) { activeStream.getTracks().forEach((t) => t.stop()); activeStream = null; }
+  els.video.srcObject = null;
+  els.scanner.hidden = true;
+}
+
+async function openScanner() {
+  if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    toast('De camera werkt alleen via https of localhost. Typ de barcode in.');
+    els.ean.focus();
+    return;
+  }
+  const session = ++scanSession;
+  els.scanner.hidden = false;
+  els.hint.textContent = 'Camera starten';
+
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false,
+    });
+  } catch (err) {
+    if (session === scanSession) { closeScanner(); toast(cameraError(err)); }
+    return;
+  }
+  if (session !== scanSession) { stream.getTracks().forEach((t) => t.stop()); return; }
+  activeStream = stream;
+  els.video.srcObject = stream;
+  try { await els.video.play(); } catch (_) { /* autoplay geblokkeerd, beeld start alsnog */ }
+
+  els.hint.textContent = 'Scanner laden';
+  let decode;
+  try { decode = await makeDecoder(); }
+  catch (_) { if (session === scanSession) { closeScanner(); toast('De scanner kon niet laden. Typ de barcode in.'); } return; }
+  if (session !== scanSession) return;
+
+  els.hint.textContent = 'Houd de barcode in het kader';
+  const tick = async () => {
+    if (session !== scanSession) return;
+    let code = null;
+    try { if (els.video.readyState >= 2 && els.video.videoWidth) code = await decode(els.video); } catch (_) { /* volgende beeld */ }
+    if (session !== scanSession) return;
+    if (code) {
+      const ean = normalizeEan(code);
+      if (ean13Valid(ean)) {
+        if (navigator.vibrate) navigator.vibrate(60);
+        closeScanner();
+        addProduct(ean);
+        return;
+      }
+    }
+    setTimeout(tick, 140);
+  };
+  tick();
+}
+
+/* ---------- acties ---------- */
+function startRename(card, ean) {
+  const item = state.items.find((i) => i.ean === ean);
+  const title = card.querySelector('.name');
+  if (!item || !title) return;
+  renaming = true;
+  const input = document.createElement('input');
+  input.type = 'text'; input.className = 'rename'; input.value = item.name; input.maxLength = 120;
+  input.setAttribute('aria-label', 'Naam van het product');
+  title.replaceWith(input);
+  input.focus(); input.select();
+  let finished = false;
+  const done = (apply) => {
+    if (finished) return;
+    finished = true;
+    if (apply && input.value.trim()) { item.name = input.value.trim(); save(); }
+    renaming = false;
+    render();
+  };
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') done(true); else if (e.key === 'Escape') done(false); });
+  input.addEventListener('blur', () => done(true));
+}
+
+els.chips.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-retailer]');
+  if (!btn) return;
+  const id = btn.dataset.retailer;
+  const list = state.settings.retailers;
+  if (list.includes(id)) {
+    if (list.length === 1) { toast('Houd minstens één supermarkt aan.'); return; }
+    state.settings.retailers = list.filter((x) => x !== id);
+  } else {
+    state.settings.retailers = [...list, id];
+  }
+  save(); renderChips(); render();
+});
+
+els.minpct.addEventListener('change', () => {
+  state.settings.minPct = Number(els.minpct.value) || 0;
+  save(); render();
+});
+
+els.scan.addEventListener('click', openScanner);
+els.close.addEventListener('click', closeScanner);
+els.type.addEventListener('click', () => { closeScanner(); els.ean.focus(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !els.scanner.hidden) closeScanner(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && !els.scanner.hidden) closeScanner();
+  else if (!document.hidden) refresh(state.items.map((i) => i.ean), false);
+});
+
+els.form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  els.eanErr.hidden = true;
+  const res = await addProduct(els.ean.value);
+  if (res.ok) { els.ean.value = ''; }
+  else { els.eanErr.textContent = res.error; els.eanErr.hidden = false; els.ean.focus(); }
+});
+els.ean.addEventListener('input', () => { els.eanErr.hidden = true; });
+
+els.sample.addEventListener('click', () => addProduct(SAMPLE_EAN));
+els.refresh.addEventListener('click', async () => {
+  if (!state.items.length) { toast('Je lijst is nog leeg.'); return; }
+  await refresh(state.items.map((i) => i.ean), true);
+  toast('Aanbiedingen bijgewerkt.');
+});
+
+els.list.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  const card = btn.closest('.item');
+  const ean = card && card.dataset.ean;
+  if (!ean) return;
+  if (btn.dataset.action === 'remove') {
+    state.items = state.items.filter((i) => i.ean !== ean);
+    delete state.offers[ean];
+    save(); render();
+    toast('Verwijderd uit je lijst.');
+  } else if (btn.dataset.action === 'rename') {
+    startRename(card, ean);
+  } else if (btn.dataset.action === 'retry') {
+    refreshOne(ean);
+  }
+});
+
+/* ---------- start ---------- */
+renderChips();
+render();
+refresh(state.items.map((i) => i.ean), false);
+})();
+</script>
+</body>
+</html>
