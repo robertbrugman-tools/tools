@@ -1,10 +1,12 @@
 'use strict';
 // Proxy tussen de app en de PrijsProfeet-API.
 // De API-key blijft op de server (omgevingsvariabele PRIJSPROFEET_KEY) en komt nooit in de browser.
-// Netlify Function. Lokaal (netlify dev) zonder login, online alleen met geldig hub-token van Robert.
+// Netlify Function. Lokaal (netlify dev) zonder login, online alleen voor Robert en gebruikers met het recht "boodschappenwacht" (gebruikersbeheer).
 //
 // GET /.netlify/functions/boodschappenwacht-offers?ean=8711000675298
 //   -> { ean, offers: [...], keyed: true|false, fetched_at }
+
+const { requireAccess } = require('../lib/hub-admin');
 
 const BASE = 'https://www.prijsprofeet.nl/api/v1';
 const USER_AGENT = 'Boodschappenwacht/0.1 (testversie)'; // geen "bot", "crawler" of "spider" erin
@@ -28,31 +30,21 @@ function slim(p) {
 
 const pad13 = (e) => String(e).padStart(13, '0');
 
-const HUB_URL = 'https://swrunlzeydmcskceqdju.supabase.co';
-const HUB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3cnVubHpleWRtY3NrY2VxZGp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNjE2MDgsImV4cCI6MjA5MjkzNzYwOH0.V7haNdFPFJuvJJTbjhiUzKrWG8trW4UeRIJveAhFOgs'; // publieke anon-key, zelfde als in mail-list.js
-const ADMIN_EMAIL = 'robert@circe-advies.nl';
-
 const json = (statusCode, body, extra = {}) => ({
   statusCode,
   headers: { 'Content-Type': 'application/json', ...extra },
   body: JSON.stringify(body),
 });
 
-async function emailFromToken(token) {
-  const res = await fetch(`${HUB_URL}/auth/v1/user`, { headers: { apikey: HUB_KEY, Authorization: `Bearer ${token}` } });
-  if (!res.ok) return null;
-  return (await res.json()).email || null;
-}
-
 exports.handler = async (event) => {
   if (event.httpMethod !== 'GET') return json(405, { error: 'Method Not Allowed' });
 
-  // Online alleen voor Robert, zodat niemand de API-limiet kan opmaken. Lokaal met netlify dev geen login nodig.
+  // Online alleen met het recht "boodschappenwacht", zodat niemand de API-limiet kan opmaken. Lokaal met netlify dev geen login nodig.
   if (process.env.NETLIFY_DEV !== 'true') {
-    const auth = (event.headers && (event.headers.authorization || event.headers.Authorization)) || '';
-    const token = auth.replace(/^Bearer\s+/i, '');
-    if (!token) return json(401, { error: 'Niet ingelogd' });
-    if ((await emailFromToken(token)) !== ADMIN_EMAIL) return json(403, { error: 'Geen toegang' });
+    let access;
+    try { access = await requireAccess(event, 'boodschappenwacht'); }
+    catch (err) { return json(500, { error: err.message }); }
+    if (access.denied) return access.denied;
   }
 
   const ean = String((event.queryStringParameters && event.queryStringParameters.ean) || '').trim();
