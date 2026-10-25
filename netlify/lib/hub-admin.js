@@ -6,7 +6,7 @@ const HUB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 const ADMIN_EMAIL = 'robert@circe-advies.nl'
 
 // Houd deze lijst gelijk aan APPS in index.html en aan beheer/index.html.
-const APP_KEYS = ['daglicht', 'claude', 'uren', 'taken', 'docs', 'rijradius', 'bewaard', 'linkbeheer', 'e208', 'respyre', 'aanvragen']
+const APP_KEYS = ['daglicht', 'claude', 'uren', 'taken', 'docs', 'rijradius', 'bewaard', 'linkbeheer', 'e208', 'boodschappenwacht', 'warmtedoorgang', 'respyre', 'aanvragen']
 
 function json(statusCode, obj) {
   return { statusCode, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify(obj) }
