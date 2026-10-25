@@ -721,7 +721,7 @@ const MONO = { albert_heijn: 'AH', jumbo: 'J', plus: 'P', dirk: 'D', dekamarkt: 
 function monoOf(id) { return MONO[id] || retailerName(id).replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase() || '?'; }
 
 // Eén kortingskaart. Met "name" (Aanbiedingen-pagina) staat de productnaam bovenaan.
-function dealHtml(o, soon, foreign, name) {
+function dealHtml(o, soon, foreign, name, more) {
   const multi = o.multi_buy_quantity > 1;
   const pct = effectivePct(o);
   const url = safeUrl(o.product_url);
@@ -743,6 +743,7 @@ function dealHtml(o, soon, foreign, name) {
     + '<div class="dprice"><b>' + esc(money(o.price)) + '</b>' + (multi ? '<span>per stuk</span>' : '') + (o.original_price > o.price ? '<s>' + esc(money(o.original_price)) + '</s>' : '') + '</div>'
     + (showLabel ? '<div class="dlabel">' + esc(label) + '</div>' : '')
     + (extras ? '<div class="dmeta">' + esc(extras) + '</div>' : '')
+    + (more && more.length ? '<div class="dmeta">Ook: ' + esc(more.join(' · ')) + '</div>' : '')
     + (foreign ? '<div class="dforeign">Niet jouw winkel, wel hoge korting</div>' : '')
     + '</div></li>';
 }
@@ -810,13 +811,17 @@ function buildRows() {
 
 function renderDeals(rows) {
   const list = rows.filter((r) => r.onDeals);
-  const entries = [];
-  list.forEach((r) => {
-    (r.tier === 0 ? limitPerRetailer(r.sum.chosen, 2) : []).forEach((o) => entries.push({ r, o, foreign: false }));
-    r.high.forEach((o) => entries.push({ r, o, foreign: true }));
+  // Elk product één keer: de beste aanbieding groot, de overige winkels als regel eronder.
+  const entries = list.map((r) => {
+    const cands = (r.tier === 0 ? r.sum.chosen.map((o) => ({ o, foreign: false })) : []).concat(r.high.map((o) => ({ o, foreign: true })));
+    cands.sort((x, y) => (effectivePct(y.o) ?? -1) - (effectivePct(x.o) ?? -1) || x.o.price - y.o.price);
+    const seen = new Set([cands[0].o.retailer]);
+    const more = cands.slice(1).filter((c) => !seen.has(c.o.retailer) && seen.add(c.o.retailer))
+      .map((c) => retailerName(c.o.retailer) + ' ' + money(c.o.price));
+    return { r, o: cands[0].o, foreign: cands[0].foreign, more };
   });
   entries.sort((a, b) => (effectivePct(b.o) ?? -1) - (effectivePct(a.o) ?? -1));
-  els.dealsList.innerHTML = entries.map((e) => dealHtml(e.o, false, e.foreign, e.r.item.name || 'Onbekend product')).join('');
+  els.dealsList.innerHTML = entries.map((e) => dealHtml(e.o, false, e.foreign, e.r.item.name || 'Onbekend product', e.more)).join('');
   const names = joinNl(state.settings.retailers.map(retailerName));
   els.dealsSub.textContent = rows.length
     ? list.length + ' van je ' + rows.length + ' ' + (rows.length === 1 ? 'product is' : 'producten zijn') + ' nu in de aanbieding bij ' + names
