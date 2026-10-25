@@ -37,12 +37,16 @@
   input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 12px; font: inherit; font-size: 0.9rem; background: #fff; color: var(--ink); }
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 3px var(--green-l); }
   textarea { resize: vertical; line-height: 1.55; }
+  .pw { position: relative; }
+  .pw input { padding-right: 70px; }
+  .pw-toggle { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--green); font-size: .78rem; font-weight: 600; padding: 6px 10px; border-radius: 8px; }
+  .pw-toggle:hover { background: var(--green-l); }
   .submit-btn { width: 100%; padding: 13px; margin-top: 6px; }
   .msg { font-size: .84rem; text-align: center; margin-top: 10px; min-height: 1.2em; color: var(--alert); }
 
-  #app { display: none; padding: 22px 24px 64px; }
-  .wrap { max-width: 1320px; margin: 0 auto; }
-  .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--rule); border-radius: 999px; padding: 10px 14px 10px 24px; }
+  #app { display: none; padding: 16px 24px 16px; height: 100vh; }
+  .wrap { max-width: 1320px; margin: 0 auto; height: 100%; display: flex; flex-direction: column; }
+  .top { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--rule); border-radius: 999px; padding: 10px 14px 10px 24px; }
   .brand { display: flex; align-items: center; gap: 16px; }
   .brand h1 { font-family: var(--serif); font-size: 1.25rem; font-weight: 500; color: var(--green); letter-spacing: -0.01em; }
   .brand .sub { font-size: .84rem; color: var(--mute); }
@@ -66,21 +70,20 @@
   .status-line { font-size: .82rem; color: var(--mute); }
   .status-line.err { color: var(--alert); font-weight: 500; }
 
-  .layout { display: grid; grid-template-columns: 260px minmax(280px, 1fr) minmax(380px, 1.25fr); gap: 16px; align-items: start; }
+  .layout { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 16px; align-items: stretch; }
   .panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 22px; }
 
-  .buckets { padding: 10px; position: sticky; top: 14px; }
-  .bk { width: 100%; text-align: left; background: none; border: none; border-radius: 14px; padding: 10px 12px; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; color: var(--body); }
+  .buckets { flex: none; display: flex; flex-wrap: wrap; gap: 6px; padding: 10px; margin-bottom: 14px; }
+  .bk { background: none; border: 1px solid var(--rule); border-radius: 999px; padding: 6px 8px 6px 14px; display: inline-flex; gap: 8px; align-items: center; color: var(--body); }
   .bk:hover { background: var(--paper); }
-  .bk[aria-pressed="true"] { background: var(--green); color: #fff; }
-  .bk .n { font-variant-numeric: tabular-nums; font-weight: 600; }
-  .bk .nm { font-size: .88rem; line-height: 1.3; font-weight: 500; }
-  .bk small { display: block; font-size: .72rem; color: var(--mute); margin-top: 2px; font-weight: 400; }
-  .bk[aria-pressed="true"] small { color: #d3e2d1; }
+  .bk[aria-pressed="true"] { background: var(--green); border-color: var(--green); color: #fff; }
+  .bk .n { font-variant-numeric: tabular-nums; font-weight: 600; font-size: .78rem; background: var(--paper); color: var(--ink); border-radius: 999px; min-width: 24px; text-align: center; padding: 1px 7px; }
+  .bk .nm { font-size: .84rem; line-height: 1.3; font-weight: 500; }
+  .bk.zero { opacity: .6; }
   .bk.zero .n { color: var(--mute); font-weight: 400; }
-  .bk[aria-pressed="true"].zero .n { color: #d3e2d1; }
+  .bk[aria-pressed="true"] .n { background: rgba(255,255,255,.2); color: #fff; }
 
-  .list { padding: 8px; min-height: 120px; }
+  .list { padding: 8px; min-height: 0; overflow: auto; }
   .list h2 { font-family: var(--serif); font-size: 1.1rem; font-weight: 500; color: var(--green); padding: 12px 12px 2px; }
   .list .hint { font-size: .8rem; color: var(--mute); padding: 0 12px 10px; }
   .row { width: 100%; text-align: left; background: none; border: none; border-radius: 14px; padding: 11px 12px; display: block; border-top: 1px solid var(--rule-2); }
@@ -95,7 +98,7 @@
   .tag.green { background: var(--green-l); color: var(--green-d); }
   .empty { padding: 18px 12px; color: var(--mute); font-size: .9rem; line-height: 1.6; }
 
-  .detail { padding: 26px; position: sticky; top: 14px; max-height: calc(100vh - 28px); overflow: auto; }
+  .detail { padding: 22px 26px 26px; min-height: 0; overflow: auto; }
   .detail h2 { font-family: var(--serif); font-size: 1.45rem; font-weight: 500; color: var(--green); letter-spacing: -.01em; }
   .detail .org { color: var(--mute); font-size: .92rem; margin-top: 2px; }
   .sec { font-family: var(--btn); font-size: .66rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--mute); margin: 22px 0 8px; }
@@ -103,6 +106,9 @@
   dl.facts dt { color: var(--mute); }
   dl.facts dd { word-break: break-word; white-space: pre-wrap; color: var(--ink); }
   dl.facts.raw { background: var(--paper); border-radius: 14px; padding: 14px 16px; margin-top: 4px; }
+  .ans { margin-bottom: 10px; }
+  .ans .q { font-size: .76rem; color: var(--mute); }
+  .ans .a { font-size: .88rem; color: var(--ink); white-space: pre-wrap; word-break: break-word; }
   .why { background: var(--green-l); border-radius: 14px; padding: 11px 14px; font-size: .84rem; color: var(--green-d); line-height: 1.5; margin-bottom: 10px; }
   .flag { background: var(--warn-bg); color: var(--warn); border-radius: 14px; padding: 10px 14px; font-size: .86rem; margin-bottom: 8px; font-weight: 500; }
   .flag.red { background: var(--alert-bg); color: var(--alert); }
@@ -128,12 +134,28 @@
 
   .ctrl { display: grid; grid-template-columns: 1fr 120px; gap: 10px; margin-bottom: 10px; }
   .actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0; align-items: center; }
-  .draft { margin-top: 20px; border-top: 1px solid var(--rule); padding-top: 18px; }
-  #dBody { min-height: 300px; }
+  .draft { margin-top: 4px; }
+  .regen { margin-top: 18px; border-top: 1px solid var(--rule); padding-top: 12px; }
+  .regen summary { cursor: pointer; font-size: .82rem; font-weight: 600; color: var(--green); margin-bottom: 12px; }
+  #dBody { min-height: 300px; resize: none; overflow: hidden; }
+  .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 28px; align-items: start; margin-top: 6px; }
+  .cols .sec:first-child { margin-top: 14px; }
+  .cols dl.facts { margin-top: 4px; }
+  .tabst { display: inline-block; margin-left: 8px; vertical-align: 1px; font-size: .64rem; letter-spacing: .04em; text-transform: none; font-weight: 600; border-radius: 999px; padding: 1px 8px; background: var(--paper); color: var(--mute); }
+  .tabst.klaar { background: var(--green-l); color: var(--green-d); }
+  .tabst.fout { background: var(--alert-bg); color: var(--alert); }
+  .chk { display: flex; align-items: center; gap: 8px; font-size: .8rem; color: var(--mute); margin: 0 0 10px; cursor: pointer; }
+  .chk input { width: auto; padding: 0; margin: 0; }
   .note { font-size: .78rem; color: var(--mute); margin-top: 6px; line-height: 1.5; }
 
-  @media (max-width: 1100px) { .layout { grid-template-columns: 230px 1fr; } .detail { grid-column: 1 / -1; position: static; max-height: none; } }
-  @media (max-width: 720px) { .layout { grid-template-columns: 1fr; } .buckets { position: static; } #app { padding: 14px 12px 48px; } .top { border-radius: 24px; padding: 12px 16px; } }
+  /* Smalle schermen: gewoon een pagina die scrolt, zonder vensters in vensters. */
+  @media (max-width: 1100px) {
+    #app { height: auto; } .wrap { height: auto; display: block; } .top { margin-bottom: 20px; }
+    .layout { display: grid; grid-template-columns: 1fr; grid-template-rows: auto; align-items: start; }
+    .list, .detail { overflow: visible; }
+  }
+  @media (max-width: 1280px) { .cols { grid-template-columns: minmax(0, 1fr); gap: 0; } }
+  @media (max-width: 720px) { #app { padding: 14px 12px 48px; } .top { border-radius: 24px; padding: 12px 16px; } }
 </style>
 </head>
 <body>
@@ -143,8 +165,8 @@
   <div class="auth-box">
     <h1>Aanvragen</h1>
     <p>Log in met je Hub-account</p>
-    <div class="fg"><label for="authEmail">E-mailadres</label><input type="email" id="authEmail" placeholder="jouw@email.nl" onkeydown="if(event.key==='Enter')login()"></div>
-    <div class="fg"><label for="authPw">Wachtwoord</label><input type="password" id="authPw" placeholder="••••••••" onkeydown="if(event.key==='Enter')login()"></div>
+    <div class="fg"><label for="authEmail">E-mailadres</label><input type="email" id="authEmail" autocomplete="username" placeholder="jouw@email.nl" onkeydown="if(event.key==='Enter')login()"></div>
+    <div class="fg"><label for="authPw">Wachtwoord</label><div class="pw"><input type="password" id="authPw" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()"><button type="button" class="pw-toggle" id="pwToggle" aria-controls="authPw" aria-pressed="false">Toon</button></div></div>
     <button class="btn submit-btn" id="btnLogin" onclick="login()">Inloggen</button>
     <p class="msg" id="authMsg"></p>
   </div>
@@ -169,8 +191,9 @@
       </div>
     </div>
 
+    <nav class="panel buckets" id="buckets" aria-label="Bakjes"></nav>
+
     <div class="layout">
-      <nav class="panel buckets" id="buckets" aria-label="Bakjes"></nav>
       <section class="panel list" id="list" aria-live="polite"></section>
       <section class="panel detail" id="detail"><p class="empty">Kies een aanvraag.</p></section>
     </div>
@@ -193,12 +216,22 @@
   let selectedId = null
   const drafts = {}
   const details = {}
+  const pendingDrafts = {} // concepten die nu geschreven worden, per aanvraag
+  const autoFout = {} // automatisch schrijven mislukt, niet blijven herhalen
+  const autoOn = () => localStorage.getItem('aanvragen_auto') !== '0'
   let overrides = {} // handmatig gekozen bakjes, bewaard op de server (voor iedereen met toegang gelijk)
 
   ;(async () => {
     const { data: { session } } = await sb.auth.getSession()
     if (session) enter()
   })()
+
+  document.getElementById('pwToggle').addEventListener('click', e => {
+    const f = document.getElementById('authPw'), toon = f.type === 'password'
+    f.type = toon ? 'text' : 'password'
+    e.currentTarget.textContent = toon ? 'Verberg' : 'Toon'
+    e.currentTarget.setAttribute('aria-pressed', toon ? 'true' : 'false')
+  })
 
   async function login() {
     const email = document.getElementById('authEmail').value.trim()
@@ -308,7 +341,7 @@
     const c = counts()
     document.getElementById('buckets').innerHTML = ORDER.map(k => {
       const b = data.buckets[k]
-      return `<button class="bk ${c[k] ? '' : 'zero'}" data-k="${k}" aria-pressed="${k === current}"><span class="nm">${esc(b.nr)}. ${esc(b.naam)}<small>${esc(b.uitleg)}</small></span><span class="n">${c[k]}</span></button>`
+      return `<button class="bk ${c[k] ? '' : 'zero'}" data-k="${k}" title="${esc(b.uitleg)}" aria-pressed="${k === current}"><span class="nm">${esc(b.nr)}. ${esc(b.naam)}</span><span class="n">${c[k]}</span></button>`
     }).join('')
     document.querySelectorAll('.bk').forEach(el => el.addEventListener('click', () => {
       current = el.dataset.k; localStorage.setItem('aanvragen_bucket', current); selectedId = null; render()
@@ -335,6 +368,7 @@
     const raw = {}; (i.raw || []).forEach(r => { if (r.value) raw[r.label] = r.value })
     const rows = []
     rows.push(['E-mail', esc(i.person.email || 'onbekend') + (i.priveMail ? ' <span class="tag">privé-adres</span>' : '')])
+    if (i.website) rows.push(['Website', '<a href="' + esc(i.website.url) + '" target="_blank" rel="noopener noreferrer">' + esc(i.website.label) + '</a> <span class="tag">afgeleid van e-mailadres</span>'])
     rows.push(['Locatie', esc(raw['Locatie'] || i.land.naam || i.land.raw || 'onbekend')])
     const ingevuld = raw['Grootte'] || i.grootteTekst
     let opp
@@ -363,10 +397,82 @@
       if (n) { n.textContent = 'Verplaatsen is niet gelukt: ' + err.message; n.className = 'note err' }
       return
     }
-    // Het bakje van het antwoord volgt het nieuwe bakje, tenzij dat Handmatig is.
+    // Het concept hoort bij het bakje. Ongewijzigde concepten worden opnieuw geschreven, aangepaste blijven staan.
+    delete autoFout[i.id]
+    let behouden = false
+    const dr = drafts[i.id]
+    if (dr && dr.bucket !== bucketOf(i)) {
+      if (dr.tekst !== dr.orig || dr.onderwerp !== dr.origOnderwerp) behouden = true
+      else delete drafts[i.id]
+    }
     current = bucketOf(i); localStorage.setItem('aanvragen_bucket', current)
     render()
+    if (behouden) { const n = document.getElementById('moveNote'); if (n) n.textContent += ' Het aangepaste concept is bewaard. Klik op Genereer opnieuw voor een concept bij dit bakje.' }
   }
+
+  // Een concept ophalen of schrijven. Altijd maar een tegelijk per aanvraag, het resultaat blijft bewaard bij de aanvraag.
+  function requestDraft(i, o) {
+    if (pendingDrafts[i.id]) return pendingDrafts[i.id]
+    pendingDrafts[i.id] = (async () => {
+      const headers = await authHeader(); if (!headers) throw new Error('Niet ingelogd.')
+      const res = await fetch(FN_DRAFT, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ dealId: i.id, bucket: o.bucket, lang: o.lang || undefined, extra: o.extra || '', auto: !!o.auto, force: !!o.force }) })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || ('Fout ' + res.status))
+      drafts[i.id] = { ...body, extra: body.extra || o.extra || '', orig: body.tekst, origOnderwerp: body.onderwerp }
+      return drafts[i.id]
+    })().finally(() => { delete pendingDrafts[i.id] })
+    return pendingDrafts[i.id]
+  }
+
+  // Verversen van alleen het conceptdeel, zodat wat je intussen typt in andere velden blijft staan.
+  function showDraft(i) {
+    renderList()
+    if (selectedId !== i.id) return
+    const d = drafts[i.id]
+    const box = document.getElementById('draftBox'); if (!box || !d) return
+    box.innerHTML = draftHtml(i, d)
+    bindDraft(i)
+    const g = document.getElementById('btnGen'); if (g) g.textContent = 'Genereer opnieuw'
+    const st = document.getElementById('genStatus'); if (st) { st.className = 'status-line'; st.textContent = d.cached ? 'Bewaard concept geladen.' : '' }
+    const ex = document.getElementById('extra'); if (ex && !ex.value && d.extra) ex.value = d.extra
+    const rg = document.getElementById('regen'); if (rg) rg.open = false
+    updateTabStatus(i)
+  }
+
+  function startAuto(i) {
+    const st = document.getElementById('genStatus')
+    if (!autoOn() || drafts[i.id] || autoFout[i.id]) return
+    const bk = bucketOf(i)
+    if (bk === 'handmatig') { if (st) { st.className = 'status-line'; st.textContent = 'Kies eerst een bakje voor deze aanvraag om een concept te laten schrijven.' } return }
+    if (st) { st.className = 'status-line'; st.textContent = 'Concept wordt automatisch geschreven...' }
+    const wacht = requestDraft(i, { bucket: bk, auto: true }); updateTabStatus(i)
+    wacht.then(d => {
+      if (d.bucket !== bucketOf(i)) { delete drafts[i.id]; if (selectedId === i.id) startAuto(i); return }
+      showDraft(i)
+    }).catch(err => {
+      autoFout[i.id] = err.message; updateTabStatus(i)
+      if (selectedId === i.id) { const rg = document.getElementById('regen'); if (rg) rg.open = true }
+      if (selectedId === i.id) { const s2 = document.getElementById('genStatus'); if (s2) { s2.textContent = 'Automatisch concept mislukt: ' + err.message; s2.className = 'status-line err' } }
+    })
+  }
+
+  // Toont naast de kop Antwoord of het concept bezig is, klaar is of mislukt.
+  function updateTabStatus(i) {
+    const el = document.getElementById('tabStatus'); if (!el || selectedId !== i.id) return
+    let t = '', k = ''
+    if (pendingDrafts[i.id]) t = 'bezig...'
+    else if (drafts[i.id]) { t = 'klaar'; k = ' klaar' }
+    else if (autoFout[i.id]) { t = 'mislukt'; k = ' fout' }
+    el.textContent = t; el.className = 'tabst' + k; el.style.display = t ? '' : 'none'
+  }
+  // Het tekstvak groeit mee met de tekst, zodat het geen eigen schuifbalk krijgt.
+  function fitDraft() {
+    const t = document.getElementById('dBody')
+    if (!t || t.offsetParent === null) return
+    t.style.height = 'auto'
+    t.style.height = Math.max(300, t.scrollHeight + 2) + 'px'
+  }
+  window.addEventListener('resize', () => fitDraft())
 
   function renderDetail() {
     const el = document.getElementById('detail')
@@ -383,15 +489,25 @@
         ${overrides[i.id] ? '<button class="btn ghost" id="btnAuto" type="button">Terug naar automatisch</button>' : ''}</div>
         <p class="note" id="moveNote">${overrides[i.id] ? 'Handmatig verplaatst. Automatisch was: ' + esc(data.buckets[i.bucket].nr + '. ' + data.buckets[i.bucket].naam) + '.' : 'Automatisch ingedeeld. Kies een ander bakje om te verplaatsen. Dit past niets aan in Pipedrive.'}</p>
       </div>
-      <dl class="facts">${factsHtml(i)}</dl>
-      ${i.noGo ? '<div class="flag red">No-go: ' + esc(i.flags[0]) + '</div>' : ''}
-      ${i.flags.filter(x => !i.noGo || x !== i.flags[0]).map(x => '<div class="flag">' + esc(x) + '</div>').join('')}
-      <div class="why"><b>Waarom dit bakje:</b> ${esc(i.reasons.join('. '))}.</div>
+      <div class="cols">
+      <div>
+        <div class="sec">Aanvraag</div>
+        <dl class="facts">${factsHtml(i)}</dl>
+        <div id="formBox"></div>
+        ${i.noGo ? '<div class="flag red">No-go: ' + esc(i.flags[0]) + '</div>' : ''}
+        ${i.flags.filter(x => !i.noGo || x !== i.flags[0]).map(x => '<div class="flag">' + esc(x) + '</div>').join('')}
+        <div class="why"><b>Waarom dit bakje:</b> ${esc(i.reasons.join('. '))}.</div>
 
-      <div class="sec">Bijlagen</div>
-      <div id="filesBox" class="files"><p class="note">Laden...</p></div>
+        <div class="sec">Bijlagen</div>
+        <div id="filesBox" class="files"><p class="note">Laden...</p></div>
+      </div>
 
-      <div class="sec">Antwoord</div>
+      <div>
+      <div class="sec">Antwoord<span class="tabst" id="tabStatus"></span></div>
+      <div id="draftBox">${d ? draftHtml(i, d) : ''}</div>
+      <details class="regen" id="regen" ${d ? '' : 'open'}>
+      <summary>Opnieuw schrijven en instellingen</summary>
+      <label class="chk"><input type="checkbox" id="autoConcept" ${autoOn() ? 'checked' : ''}> Concept automatisch schrijven bij het openen van een aanvraag</label>
       <div class="ctrl">
         <div><label class="lbl" for="selBucket">Bakje voor het antwoord</label><select id="selBucket">${ORDER.map(k => `<option value="${k}" ${k === bk ? 'selected' : ''}>${esc(data.buckets[k].nr)}. ${esc(data.buckets[k].naam)}</option>`).join('')}</select></div>
         <div><label class="lbl" for="selLang">Taal</label><select id="selLang"><option value="">Auto</option><option value="nl">NL</option><option value="en">EN</option><option value="de">DE</option></select></div>
@@ -399,13 +515,22 @@
       <label class="lbl" for="extra">Extra instructie (optioneel)</label>
       <input id="extra" type="text" placeholder="Bijvoorbeeld: noem ook de foto's van Utrecht" value="${esc(d ? d.extra : '')}">
       <div class="actions"><button class="btn" id="btnGen">${d ? 'Genereer opnieuw' : 'Genereer antwoord'}</button><span class="status-line" id="genStatus"></span></div>
-      <div id="draftBox">${d ? draftHtml(i, d) : ''}</div>`
+      </details>
+      </div>
+      </div>`
     document.getElementById('selMove').addEventListener('change', e => moveTo(i, e.target.value === i.bucket ? null : e.target.value))
     const btnAuto = document.getElementById('btnAuto')
     if (btnAuto) btnAuto.addEventListener('click', () => moveTo(i, null))
     document.getElementById('btnGen').addEventListener('click', () => generate(i))
+    document.getElementById('autoConcept').addEventListener('change', e => {
+      localStorage.setItem('aanvragen_auto', e.target.checked ? '1' : '0')
+      if (e.target.checked) { delete autoFout[i.id]; startAuto(i) }
+    })
     bindDraft(i)
     loadDetail(i)
+    updateTabStatus(i)
+    if (pendingDrafts[i.id]) { const st = document.getElementById('genStatus'); if (st) st.textContent = 'Concept wordt geschreven...' }
+    else startAuto(i)
   }
 
   // ---- Bijlagen ----
@@ -506,6 +631,10 @@
     const det = details[i.id]
     const fb = document.getElementById('filesBox')
     if (!fb || !det) return
+    const fbx = document.getElementById('formBox')
+    if (fbx) fbx.innerHTML = (det.formulier && det.formulier.length)
+      ? '<div class="sec">Uit het formulier</div>' + det.formulier.map(x => '<div class="ans"><div class="q">' + esc(x.vraag) + '</div><div class="a">' + esc(x.antwoord) + '</div></div>').join('')
+      : ''
     const files = det.files || []
     if (!files.length) { fb.innerHTML = '<p class="note">Geen bijlagen bij deze aanvraag.</p>'; return }
     const photos = files.filter(f => !f.remote && kindOf(f) === 'image' && !tooBig(f))
@@ -578,14 +707,14 @@
   // ---- Concept ----
   function draftHtml(i, d) {
     return `<div class="draft">
-      <label class="lbl" for="dSubj">Onderwerp</label><input id="dSubj" type="text" value="${esc(d.onderwerp)}">
-      <label class="lbl" for="dBody" style="margin-top:10px">Tekst (aan te passen)</label><textarea id="dBody">${esc(d.tekst)}</textarea>
-      <div class="actions">
+      <div class="actions" style="margin-top:0">
         <button class="btn" id="btnMail" ${i.person.email ? '' : 'disabled'}>Open in e-mail</button>
         <button class="btn ghost" id="btnCopyRich">Kopieer opgemaakt</button>
         <button class="btn ghost" id="btnCopy">Kopieer tekst</button>
         <span class="status-line" id="copyStatus"></span>
       </div>
+      <label class="lbl" for="dSubj">Onderwerp</label><input id="dSubj" type="text" value="${esc(d.onderwerp)}">
+      <label class="lbl" for="dBody" style="margin-top:10px">Tekst (aan te passen)</label><textarea id="dBody">${esc(d.tekst)}</textarea>
       <p class="note">Geen handtekening en geen afsluitgroet, die voeg je zelf toe. Kopieer opgemaakt plakt de kopjes vet in je mail. Past je een kopje aan, dan wordt die regel niet meer vet. Controleer prijzen en details voor je verstuurt. Bakje: ${esc(data.buckets[d.bucket].naam)}, model: ${esc(d.model)}.${i.person.email ? '' : ' Er is geen e-mailadres bij deze aanvraag, dus alleen kopiëren kan.'}</p>
       <div id="fbBox"></div>
     </div>`
@@ -597,7 +726,8 @@
     const body = () => document.getElementById('dBody').value
     const subj = () => document.getElementById('dSubj').value
     const keep = () => { drafts[i.id].tekst = body(); drafts[i.id].onderwerp = subj() }
-    document.getElementById('dBody').addEventListener('input', keep)
+    document.getElementById('dBody').addEventListener('input', () => { keep(); fitDraft() })
+    fitDraft()
     document.getElementById('dSubj').addEventListener('input', keep)
     btnCopy.addEventListener('click', async () => {
       const el = document.getElementById('copyStatus')
@@ -634,13 +764,14 @@
     if (bucket === 'handmatig') { st.textContent = 'Kies eerst een ander bakje voor het antwoord.'; st.className = 'status-line err'; return }
     btn.disabled = true; st.className = 'status-line'; st.textContent = 'Concept wordt geschreven, dit duurt ongeveer 10 seconden...'
     try {
-      const res = await fetch(FN_DRAFT, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ dealId: i.id, bucket, lang: lang || undefined, extra }) })
-      const body = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(body.error || ('Fout ' + res.status))
-      drafts[i.id] = { ...body, extra }
-      renderList(); renderDetail()
+      if (pendingDrafts[i.id]) { try { await pendingDrafts[i.id] } catch (_) { /* uitkomst maakt niet uit, hieronder wordt opnieuw geschreven */ } }
+      delete autoFout[i.id]
+      const schrijf = requestDraft(i, { bucket, lang, extra, force: true }); updateTabStatus(i)
+      await schrijf
+      renderList(); if (selectedId === i.id) renderDetail()
     } catch (err) {
       st.textContent = err.message; st.className = 'status-line err'
+      const rg = document.getElementById('regen'); if (rg) rg.open = true
     }
     const b2 = document.getElementById('btnGen'); if (b2) b2.disabled = false
   }

@@ -32,6 +32,12 @@ function zonderIrrigatiekosten(tekst) {
   }).join('\n').replace(/\n{3,}/g, '\n\n')
 }
 
+// De vaste kopjes uit de opmaakregels. Vangnet als het model de "# " vergeet: een losse regel met precies zo'n kopje telt dan toch als kopje.
+const VASTE_KOPJES = ['hoe werkt het', 'irrigatiesysteem', 'aanbrengen', 'investering', 'subsidie', 'r&d-project', 'pilot', 'hoe nu verder',
+  'how it works', 'irrigation system', 'application', 'investment', 'r&d project', 'pilot', 'next steps',
+  'so funktioniert es', 'bewässerungssystem', 'anbringung', 'investition', 'wie geht es weiter']
+const isVastKopje = r => VASTE_KOPJES.includes(String(r || '').trim().replace(/[?:.!]+$/, '').toLowerCase())
+
 // Haalt kopjes uit de tekst: regels met "# " (of ## of **vet**) worden gewone regels, de kopjes komen in een lijst.
 function kopjesUitTekst(tekst) {
   const kopjes = []
@@ -44,7 +50,8 @@ function kopjesUitTekst(tekst) {
     }
     return r.replace(/\*\*/g, '')
   })
+  if (!kopjes.length) regels.forEach(r => { if (isVastKopje(r)) kopjes.push(r.trim()) })
   return { tekst: regels.join('\n').replace(/\n{3,}/g, '\n\n').trim(), kopjes }
 }
 
-module.exports = { OPMAAK, schoon, kopjesUitTekst, zonderIrrigatiekosten }
+module.exports = { OPMAAK, schoon, kopjesUitTekst, zonderIrrigatiekosten, VASTE_KOPJES, isVastKopje }

@@ -26,7 +26,7 @@ assert.strictEqual(r.notes[0].items[1].antwoord, 'Strak en donker')
 console.log('OK formulier: 11 en 12 beide ingevuld')
 
 // Alles leeg: de notitie verdwijnt
-r = filterNotes([{ id: 1, text: formulier.replace('walls', '(Blank)') }])
+r = filterNotes([{ id: 1, text: formulier.replace('walls', '(Blank)').replace('Nederlands', '(Blank)') }])
 assert.strictEqual(r.notes.length, 0)
 assert.strictEqual(r.verborgen, 1)
 console.log('OK formulier: niets ingevuld, notitie verborgen')
@@ -43,3 +43,43 @@ console.log('OK eigen genummerde notitie blijft staan')
 
 assert.strictEqual(notesVoorPrompt(filterNotes([{ id: 1, text: formulier }])), 'Specifieke kenmerken waarmee we rekening moeten houden?: walls')
 console.log('OK prompttekst')
+
+// Echte vorm uit Pipedrive: antwoord direct voor de volgende vraag en een vraag zonder nummer
+const echt = [
+  '1. Naam | Name', 'Furio', '', '2. Bedrijf | Company', 'Costruzioni', '', '3. Locatie | Location', 'Italie', '', '4. Oppervlakte | Surface', '60', '',
+  '11. Specifieke kenmerken waarmee we rekening moeten houden? | Specific features that should be taken into account?', 'First floor', '',
+  '12. Beschrijf uw esthetische en ontwerp voorkeuren voor de gevel | Describe your aesthetic and design preferences for the facade', 'To be discussed14. Taal voorkeur in communicatie | Preferred language for communication', 'English', '',
+  'Hoe heeft u ons gevonden? | How did you find us?', "I know you since the beginning, but you weren't willing to do it in Italy. I hope we can do it now.",
+].join('\n')
+r = filterNotes([{ id: 1, text: echt }])
+assert.deepStrictEqual(r.notes[0].items.map(i => i.antwoord), ['First floor', 'To be discussed', "I know you since the beginning, but you weren't willing to do it in Italy. I hope we can do it now."])
+assert.strictEqual(r.notes[0].items[2].vraag, 'Hoe heeft u ons gevonden?')
+console.log('OK echte formulier: kenmerken, voorkeur en hoe gevonden blijven, taal valt weg')
+
+// Taalvoorkeur en reCAPTCHA-score horen er niet bij, ook niet met een hoog vraagnummer
+r = filterNotes([{ id: 1, text: echt + '\n15. reCAPTCHA bot score | Score\n0.9\n16. Iets anders | Other\nwaarde' }])
+assert.ok(!r.notes[0].items.some(i => /taal|recaptcha|anders/i.test(i.vraag)))
+console.log('OK taal en reCAPTCHA-score worden niet getoond')
+
+// reCAPTCHA-score direct na het laatste antwoord, met en zonder streepje: hoort niet bij het antwoord
+for (const extra of ['\nreCAPTCHA bot score | score\n0.9', '\nRecaptcha bot score: 0.9']) {
+  r = filterNotes([{ id: 1, text: echt + extra }])
+  const laatste = r.notes[0].items[r.notes[0].items.length - 1]
+  assert.ok(!/recaptcha|0\.9/i.test(laatste.antwoord), laatste.antwoord)
+}
+console.log('OK reCAPTCHA-score komt niet in het antwoord terecht')
+
+// "Hoe gevonden" alleen als het een duidelijke opmerking is, niet een kanaal; en de score hoort er nooit bij
+const basis = echt.split('\nHoe heeft u ons gevonden?')[0]
+const score = '1.00 (0.0 = likely bot, 1.0 = likely human)'
+for (const kanaal of ['facebook', 'Google', 'via een collega', 'LinkedIn post']) {
+  r = filterNotes([{ id: 1, text: basis + '\nHoe heeft u ons gevonden? | How did you find us?\n' + kanaal + '\n' + score }])
+  const txt = JSON.stringify(r.notes[0].items)
+  assert.ok(!/gevonden/i.test(txt) && !/likely/i.test(txt) && !new RegExp(kanaal, 'i').test(txt), kanaal + ' ' + txt)
+}
+r = filterNotes([{ id: 1, text: basis + '\nHoe heeft u ons gevonden? | How did you find us?\nfacebook\n' + score }])
+assert.strictEqual(r.notes[0].items.length, 2)
+r = filterNotes([{ id: 1, text: basis + '\nHoe heeft u ons gevonden? | How did you find us?\nI know you since the beginning, but you were not willing.\n' + score }])
+const l = r.notes[0].items[2]
+assert.ok(l && /since the beginning/.test(l.antwoord) && !/likely|1\.00/.test(l.antwoord), JSON.stringify(l))
+console.log('OK hoe gevonden: kanaal valt weg, opmerking blijft, score nooit')
