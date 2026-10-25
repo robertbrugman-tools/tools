@@ -4,174 +4,262 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#141f5e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Wacht">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0AQMAAAAHA5RxAAAABlBMVEX/ehoUH16XwyRXAAAAY0lEQVR42u2WsQ2AQAhF/6m9I9woruZojuIKdhaab2Nyldag71XkhQJCAkgAEIretmdJ1fYhSeoeUrP7u98Wj9/uN5uv67TX4sUZ6z9LE9vAfPH4N594D3NHQs/lX/8MAITgAok9HyWdGox1AAAAAElFTkSuQmCC">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
 <title>Boodschappenwacht</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap" rel="stylesheet">
 <style>
-/* Opzet: één kolom. Aanbiedingen krijgen de vorm van een schaplabel (gele prijskaart met grote euro's en kleine centen). */
+/* Stijl: dikke randen, harde schaduw, oranje kortingsblok op marineblauw ("aanbiedingenfolder").
+   Alle kleuren staan in :root, zodat een ander ontwerp alleen deze variabelen hoeft te wisselen. */
 :root {
-  --bg: #f4f6f2;
+  --bg: #f4f6fb;
   --surface: #ffffff;
-  --ink: #15201a;
-  --muted: #5b6a61;
-  --line: #dde3dc;
-  --accent: #0d6b4b;
+  --ink: #141f5e;
+  --text: #141f5e;
+  --muted: #4a5578;
+  --line: #d5dbee;
+  --edge: #141f5e;
+  --accent: #141f5e;
   --accent-ink: #ffffff;
-  --label: #ffd23f;
-  --label-ink: #1b1b10;
-  --good: #0d6b4b;
-  --warn-bg: #fff1c9;
-  --warn-ink: #5c4300;
+  --hot: #ff7a1a;
+  --hot-ink: #141f5e;
+  --head-bg: #141f5e;
+  --head-ink: #ffffff;
+  --head-sub: #d3dbf2;
+  --good: #141f5e;
+  --warn-bg: #ffe9d6;
+  --warn-ink: #5a2a00;
   --err: #b3261e;
-  --font-body: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-num: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+  --font-body: "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --tabbar-h: 72px;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f1411;
-    --surface: #171d19;
-    --ink: #e7eee9;
-    --muted: #98a79d;
-    --line: #28312b;
-    --accent: #45c590;
-    --accent-ink: #06150e;
-    --label: #ffd23f;
-    --label-ink: #1b1b10;
-    --good: #45c590;
-    --warn-bg: #3a2f0c;
-    --warn-ink: #ffe3a1;
-    --err: #ff8a80;
+    --bg: #0b1030; --surface: #141b47; --ink: #eef1ff; --text: #eef1ff; --muted: #a9b3da; --line: #2a346b; --edge: #5866b8;
+    --accent: #ff8a33; --accent-ink: #141f5e; --hot: #ff8a33; --hot-ink: #141f5e;
+    --head-bg: #141b47; --head-ink: #ffffff; --head-sub: #c3cbee; --good: #ffb27a;
+    --warn-bg: #4a2a0c; --warn-ink: #ffd9b8; --err: #ff8a80;
     color-scheme: dark;
   }
 }
 
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
-body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.45 var(--font-body); }
+html { -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 500 16px/1.45 var(--font-body); overflow-x: hidden; }
 [hidden] { display: none !important; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+a { color: var(--accent); text-underline-offset: 3px; }
+:focus-visible { outline: 3px solid var(--hot); outline-offset: 2px; }
+.muted { color: var(--muted); }
 
-.wrap {
-  max-width: 640px; margin: 0 auto; display: grid; gap: 20px;
-  padding-block: calc(24px + env(safe-area-inset-top, 0px)) calc(48px + env(safe-area-inset-bottom, 0px));
+.view {
+  max-width: 640px; margin: 0 auto; display: grid; gap: 16px; align-content: start;
+  padding-block: 0 calc(var(--tabbar-h) + 36px + env(safe-area-inset-bottom, 0px));
   padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px));
 }
-h1 { margin: 0 0 6px; font: 700 clamp(30px, 8vw, 40px)/1 var(--font-num); text-transform: uppercase; letter-spacing: .03em; }
-.lede { margin: 0; color: var(--muted); }
-h2 { margin: 0; font: 700 13px/1.2 var(--font-body); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
-.muted { color: var(--muted); }
-a { color: var(--accent); text-underline-offset: 3px; }
-:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+/* kopband over de volle breedte */
+.top {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  margin-inline: calc(50% - 50vw); padding: calc(26px + env(safe-area-inset-top, 0px)) calc(50vw - 50%) 20px;
+  background: var(--head-bg); color: var(--head-ink); border-bottom: 4px solid var(--hot);
+}
+h1 { margin: 0; font: 800 clamp(30px, 9vw, 38px)/1 var(--font-body); letter-spacing: -.03em; }
+h2 { margin: 0; font: 800 13px/1.2 var(--font-body); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.lede { margin: 6px 0 0; color: var(--head-sub); font-weight: 500; }
+.icon-btn { width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center; border-radius: 10px; border: 0; background: var(--hot); color: var(--hot-ink); cursor: pointer; }
+.icon-btn svg { width: 22px; height: 22px; }
 
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 12px; }
-.chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chip { min-height: 40px; padding: 8px 14px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); font: 600 15px var(--font-body); cursor: pointer; }
-.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.card { background: var(--surface); border: 3px solid var(--edge); border-radius: 12px; padding: 16px; display: grid; gap: 12px; box-shadow: 4px 4px 0 var(--edge); }
+.chips, .filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { min-height: 44px; padding: 8px 14px; border-radius: 10px; border: 3px solid var(--edge); background: var(--surface); color: var(--text); font: 700 15px var(--font-body); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--hot); color: var(--hot-ink); }
 .hint { margin: 0; font-size: 14px; color: var(--muted); }
-.row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-label { font-weight: 600; font-size: 15px; }
-select, input[type="text"], input[type="search"], input.rename {
-  min-height: 46px; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--line);
-  background: var(--bg); color: var(--ink); font: inherit; min-width: 0;
+.row { display: grid; gap: 6px; }
+label { font-weight: 700; font-size: 15px; }
+select, input[type="text"], input[type="email"], input[type="password"], input.rename {
+  min-height: 48px; padding: 10px 12px; border-radius: 10px; border: 2px solid var(--edge);
+  background: var(--bg); color: var(--text); font: inherit; font-size: 16px; min-width: 0; width: 100%;
 }
 input::placeholder { color: var(--muted); opacity: .8; }
+.btn { min-height: 48px; padding: 12px 16px; border-radius: 10px; border: 3px solid var(--edge); background: var(--hot); color: var(--hot-ink); font: 800 16px var(--font-body); cursor: pointer; }
+.btn-ghost { background: transparent; color: var(--text); }
+.link { background: none; border: 0; padding: 10px 0; min-height: 44px; color: var(--accent); font: 700 14px var(--font-body); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.field-err { margin: 0; color: var(--err); font-size: 14px; font-weight: 600; }
+.pw { display: flex; gap: 8px; }
 
-.btn { min-height: 48px; padding: 12px 16px; border-radius: 12px; border: 1.5px solid var(--accent); background: var(--accent); color: var(--accent-ink); font: 700 16px var(--font-body); cursor: pointer; }
-.btn-ghost { background: transparent; color: var(--accent); }
-.link { background: none; border: 0; padding: 8px 0; min-height: 36px; color: var(--accent); font: 600 14px var(--font-body); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.banner { border: 3px solid var(--warn-ink); background: var(--warn-bg); color: var(--warn-ink); border-radius: 12px; padding: 12px 14px; display: grid; gap: 4px; justify-items: start; }
+.banner p { margin: 0; }
+.banner .link { color: inherit; padding: 4px 0; }
 
-.manual { display: grid; gap: 6px; }
-.manual .line { display: flex; gap: 8px; }
-.manual input { flex: 1; }
-.field-err { margin: 0; color: var(--err); font-size: 14px; }
+/* kortingskaart: oranje blok met percentage links, gegevens rechts */
+.dcard { list-style: none; display: flex; border: 3px solid var(--edge); border-radius: 12px; box-shadow: 4px 4px 0 var(--edge); overflow: hidden; background: var(--surface); }
+.pcb { width: 94px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 6px; background: var(--hot); color: var(--hot-ink); border-right: 3px solid var(--edge); font: 800 30px/1 var(--font-body); letter-spacing: -.02em; }
+.pcb.sm { font-size: 20px; }
+.dcard.soon .pcb { background: transparent; color: var(--text); border-right-style: dashed; }
+.dbody { flex: 1; min-width: 0; padding: 10px 12px; display: grid; gap: 3px; align-content: center; }
+.dname { font: 700 17px/1.2 var(--font-body); overflow-wrap: anywhere; }
+.dstore { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.dstore a { color: inherit; }
+.mono { width: 22px; min-width: 22px; height: 22px; border-radius: 6px; background: var(--edge); color: var(--surface); font: 800 10px/1 var(--font-body); display: grid; place-items: center; }
+.dprice { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.dprice b { font: 800 22px/1.1 var(--font-body); }
+.dprice s { font-size: 13px; color: var(--muted); }
+.dprice span { font-size: 12px; color: var(--muted); }
+.dlabel { font-size: 13px; font-weight: 700; }
+.dmeta { font-size: 12px; color: var(--muted); }
+.dforeign { font-size: 12px; font-weight: 800; color: var(--warn-ink); background: var(--warn-bg); justify-self: start; padding: 2px 8px; border-radius: 6px; }
+.deals { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 12px; }
+.deals .dcard { box-shadow: none; border-width: 2px; }
+.deals .pcb { border-right-width: 2px; }
 
-.list-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
-.list-head .tools { display: flex; align-items: baseline; gap: 12px; font-size: 14px; }
-.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-
-.item { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+.item { background: var(--surface); border: 3px solid var(--edge); border-radius: 12px; padding: 14px; box-shadow: 4px 4px 0 var(--edge); }
 .item.flash { animation: flash 1.2s ease-out; }
-@keyframes flash { from { box-shadow: 0 0 0 3px var(--label); } to { box-shadow: 0 0 0 3px transparent; } }
+@keyframes flash { from { box-shadow: 0 0 0 5px var(--hot); } to { box-shadow: 4px 4px 0 var(--edge); } }
 .head { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 12px; align-items: start; }
-.thumb { width: 56px; height: 56px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); display: grid; place-items: center; overflow: hidden; font: 700 24px var(--font-num); color: var(--muted); }
+.thumb { width: 56px; height: 56px; border-radius: 10px; background: var(--bg); border: 2px solid var(--line); display: grid; place-items: center; overflow: hidden; font: 800 24px var(--font-body); color: var(--muted); }
 .thumb img { width: 100%; height: 100%; object-fit: contain; }
-.name { margin: 0; font: 700 17px/1.2 var(--font-body); overflow-wrap: anywhere; }
+.name { margin: 0; font: 800 17px/1.2 var(--font-body); overflow-wrap: anywhere; }
 .sub { margin: 3px 0 0; font-size: 14px; color: var(--muted); }
 .eanline { margin: 2px 0 0; font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--muted); }
-input.rename { width: 100%; font-weight: 700; }
-.badge { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
-.badge-hit { background: var(--accent); color: var(--accent-ink); }
-.badge-muted { border: 1px solid var(--line); color: var(--muted); }
+input.rename { font-weight: 800; }
+.badge { font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 8px; white-space: nowrap; }
+.badge-hit { background: var(--hot); color: var(--hot-ink); }
+.badge-muted { border: 2px solid var(--line); color: var(--muted); }
 .badge-soon { background: var(--warn-bg); color: var(--warn-ink); }
-
-.deals { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 10px; }
-.deal { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; }
-.tag { min-width: 92px; padding: 8px 10px 9px; border-radius: 6px; background: var(--label); color: var(--label-ink); text-align: center; line-height: 1; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .14); }
-.price { display: inline-flex; align-items: flex-start; font-family: var(--font-num); font-weight: 700; line-height: .9; }
-.price .cur { font-size: 18px; margin: 5px 2px 0 0; }
-.price .eur { font-size: 46px; }
-.price .cts { font-size: 24px; margin: 4px 0 0 1px; }
-.per { display: block; margin-top: 4px; font: 600 11px var(--font-body); text-transform: uppercase; letter-spacing: .06em; opacity: .75; }
-.deal-soon .tag { background: transparent; border: 1.5px dashed var(--line); color: var(--ink); box-shadow: none; }
-.info { min-width: 0; }
-.info .top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.info .top strong { font-size: 16px; }
-.info .top a { color: inherit; }
-.pct { font: 700 17px var(--font-num); color: var(--good); }
-.promo { font-weight: 600; }
-.was { margin-left: 6px; font-weight: 400; color: var(--muted); text-decoration: line-through; }
-.meta { font-size: 13px; color: var(--muted); }
-.rname { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .note { margin: 12px 0 0; font-size: 14px; color: var(--muted); }
 .note-err { color: var(--err); }
-.sub-title { margin: 14px 0 0; font: 700 12px var(--font-body); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
-.actions { display: flex; gap: 18px; margin-top: 12px; padding-top: 6px; border-top: 1px solid var(--line); }
+.sub-title { margin: 14px 0 0; font: 800 12px var(--font-body); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.actions { display: flex; gap: 18px; margin-top: 12px; padding-top: 6px; border-top: 2px solid var(--line); }
 .skeleton { height: 58px; margin-top: 14px; border-radius: 8px; background: linear-gradient(90deg, var(--line), transparent, var(--line)); background-size: 200% 100%; animation: sh 1.2s linear infinite; }
 @keyframes sh { to { background-position: -200% 0; } }
-
-.empty { border: 1.5px dashed var(--line); border-radius: 14px; padding: 24px 16px; text-align: center; color: var(--muted); display: grid; gap: 10px; justify-items: center; }
+.empty { border: 3px dashed var(--line); border-radius: 12px; padding: 24px 16px; text-align: center; color: var(--muted); display: grid; gap: 10px; justify-items: center; }
 .empty p { margin: 0; }
+.foot { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
+.foot p { margin: 0; }
+.attr { text-align: center; font-size: 12px; color: var(--muted); margin: 0; }
 
-footer { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
-footer p { margin: 0; }
+/* onderbalk */
+.tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--surface); border-top: 3px solid var(--edge);
+  display: grid; grid-template-columns: 1fr 84px 1fr; align-items: center; gap: 4px;
+  height: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px)); padding: 0 max(12px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(12px, env(safe-area-inset-left, 0px));
+}
+.tab { display: grid; justify-items: center; gap: 2px; min-height: 52px; align-content: center; color: var(--muted); font: 700 12px var(--font-body); text-decoration: none; border: 3px solid transparent; border-radius: 10px; }
+.tab svg { width: 24px; height: 24px; }
+.tab[aria-current="page"] { color: var(--hot-ink); background: var(--hot); border-color: var(--edge); font-weight: 800; }
+.scan-fab { justify-self: center; width: 64px; height: 64px; margin-top: -30px; border-radius: 999px; border: 4px solid var(--surface); box-shadow: 0 0 0 3px var(--edge); background: var(--edge); color: var(--hot); display: grid; place-items: center; cursor: pointer; }
+.scan-fab svg { width: 28px; height: 28px; }
 
-.scanner { position: fixed; inset: 0; z-index: 50; background: #000; color: #fff; }
+/* scanner */
+.scanner { position: fixed; inset: 0; z-index: 50; background: #000; color: #fff; overflow: hidden; }
 .scanner video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.frame { position: absolute; left: 50%; top: 42%; width: min(82vw, 440px); aspect-ratio: 2.2 / 1; transform: translate(-50%, -50%); border: 3px solid var(--label); border-radius: 12px; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .5); }
-.scanner .close { position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); min-height: 44px; padding: 8px 16px; border-radius: 999px; border: 0; background: rgba(0, 0, 0, .6); color: #fff; font: 600 15px var(--font-body); cursor: pointer; }
-.scanner .bottom { position: absolute; left: 0; right: 0; bottom: 0; display: grid; gap: 10px; justify-items: center; text-align: center; padding: 16px max(16px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); background: linear-gradient(transparent, rgba(0, 0, 0, .75)); }
-.scanner .bottom p { margin: 0; font-weight: 600; }
-.scanner .link { color: #fff; }
+.stage { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 0 16px 14vh; }
+.instr { position: relative; z-index: 1; margin: 0; font: 700 18px var(--font-body); text-align: center; text-shadow: 0 1px 6px rgba(0, 0, 0, .7); }
+.frame { position: relative; width: min(76vw, 320px); aspect-ratio: 1.4 / 1; border-radius: 18px; box-shadow: 0 0 0 100vmax rgba(8, 12, 10, .6); }
+.frame i { position: absolute; width: 38px; height: 38px; border: 0 solid #fff; transition: border-color .15s; }
+.frame i:nth-child(1) { left: 0; top: 0; border-left-width: 5px; border-top-width: 5px; border-top-left-radius: 18px; }
+.frame i:nth-child(2) { right: 0; top: 0; border-right-width: 5px; border-top-width: 5px; border-top-right-radius: 18px; }
+.frame i:nth-child(3) { left: 0; bottom: 0; border-left-width: 5px; border-bottom-width: 5px; border-bottom-left-radius: 18px; }
+.frame i:nth-child(4) { right: 0; bottom: 0; border-right-width: 5px; border-bottom-width: 5px; border-bottom-right-radius: 18px; }
+.frame.ok i { border-color: #5de39a; }
+.scan-hint { position: relative; z-index: 1; margin: 0; min-height: 48px; max-width: 340px; padding: 12px 16px; border-radius: 14px; background: rgba(15, 22, 18, .8); font: 700 15px var(--font-body); text-align: center; }
+.scan-hint.warn { background: #ffe2a8; color: #3d2600; }
+.scan-hint.good { background: #cff0dc; color: #0b3d24; }
+.scan-top { position: absolute; top: 0; left: 0; right: 0; display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; z-index: 2; padding: calc(12px + env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-right, 0px)) 0 max(14px, env(safe-area-inset-left, 0px)); }
+.scan-top .icon-btn { background: rgba(15, 22, 18, .7); border-color: transparent; color: #fff; }
+.scan-top .icon-btn[aria-pressed="true"] { background: #ffe2a8; color: #3d2600; }
+.scan-top h2 { color: #fff; font-size: 15px; letter-spacing: .04em; text-align: center; }
+.scan-top .icon-btn[hidden] { display: grid !important; visibility: hidden; }
+.scan-bottom { z-index: 2; position: absolute; left: 0; right: 0; bottom: 0; display: grid; gap: 10px; justify-items: center; padding: 16px max(16px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.pill { min-height: 48px; padding: 0 20px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .45); background: rgba(255, 255, 255, .14); color: #fff; font: 600 16px var(--font-body); display: inline-flex; align-items: center; gap: 10px; cursor: pointer; }
+.pill svg { width: 24px; height: 24px; }
+.scan-note { margin: 0; font-size: 12px; color: #d3dcd6; text-align: center; }
+.sheet { width: min(100%, 420px); display: grid; gap: 8px; background: var(--surface); color: var(--ink); border-radius: 16px; padding: 14px; text-align: left; }
+.sheet .line { display: flex; gap: 8px; }
+.sheet .line input { flex: 1; }
+.cam-err { position: absolute; left: 16px; right: 16px; top: 22%; background: var(--surface); color: var(--ink); border-radius: 16px; padding: 16px; display: grid; gap: 10px; }
+.cam-err p { margin: 0; }
+.cam-err code { font: 12px ui-monospace, Menlo, monospace; color: var(--muted); overflow-wrap: anywhere; }
 
-.toast { position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60; max-width: min(92vw, 520px); padding: 12px 16px; border-radius: 12px; background: var(--ink); color: var(--bg); font-size: 15px; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.toast { position: fixed; left: 50%; bottom: calc(var(--tabbar-h) + 18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60; width: max-content; max-width: min(92vw, 520px); padding: 12px 16px; border-radius: 12px; background: var(--ink); color: var(--bg); font-size: 15px; opacity: 0; pointer-events: none; transition: opacity .2s; }
 .toast.show { opacity: 1; }
 
-@media (max-width: 400px) {
-  .tag { min-width: 80px; }
-  .price .eur { font-size: 40px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .skeleton, .item.flash { animation: none; }
-  .toast { transition: none; }
-}
+@media (prefers-reduced-motion: reduce) { .skeleton, .item.flash { animation: none; } .toast, .frame i { transition: none; } }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <h1>Boodschappenwacht</h1>
-    <p class="lede">Scan een product en zie of het in de aanbieding is bij jouw supermarkten.</p>
-  </header>
+
+<main id="view-deals" class="view" aria-labelledby="t-deals">
+  <div class="top">
+    <div>
+      <h1 id="t-deals">Aanbiedingen</h1>
+      <p id="deals-sub" class="lede"></p>
+    </div>
+    <a class="icon-btn" href="#instellingen" aria-label="Instellingen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+    </a>
+  </div>
+  <div class="banner auth-banner" hidden><p><strong>Inloggen nodig.</strong> Zonder login kan de app geen aanbiedingen ophalen.</p><a class="link" href="#instellingen">Naar instellingen</a></div>
+  <ul id="deals-list" class="list"></ul>
+  <div id="deals-empty" class="empty" hidden></div>
+  <p class="row-meta muted" style="margin:0;font-size:14px"><span id="updated"></span> <button id="refresh" class="link" type="button">Vernieuw</button></p>
+  <p class="attr">Aanbiedingen via <a href="https://www.prijsprofeet.nl" target="_blank" rel="noopener">PrijsProfeet</a></p>
+</main>
+
+<main id="view-basket" class="view" aria-labelledby="t-basket" hidden>
+  <div class="top">
+    <div>
+      <h1 id="t-basket">Mijn favorieten</h1>
+      <p id="basket-sub" class="lede"></p>
+    </div>
+    <a class="icon-btn" href="#instellingen" aria-label="Instellingen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+    </a>
+  </div>
+  <div class="banner auth-banner" hidden><p><strong>Inloggen nodig.</strong> Zonder login kan de app geen aanbiedingen ophalen.</p><a class="link" href="#instellingen">Naar instellingen</a></div>
+  <div class="filters" role="group" aria-label="Filter">
+    <button type="button" class="chip" data-filter="all" aria-pressed="true">Alles</button>
+    <button type="button" class="chip" data-filter="offer" aria-pressed="false">In aanbieding</button>
+  </div>
+  <ul id="basket-list" class="list"></ul>
+  <div id="basket-empty" class="empty" hidden>
+    <p>Nog geen producten. Tik op de scanknop onderin om een barcode te scannen.</p>
+    <button id="sample" class="btn btn-ghost" type="button">Probeer een voorbeeldproduct</button>
+  </div>
+  <p class="attr">Aanbiedingen via <a href="https://www.prijsprofeet.nl" target="_blank" rel="noopener">PrijsProfeet</a></p>
+</main>
+
+<main id="view-settings" class="view" aria-labelledby="t-settings" hidden>
+  <div class="top">
+    <div>
+      <h1 id="t-settings">Instellingen</h1>
+    </div>
+    <a class="icon-btn" href="#" aria-label="Terug">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </a>
+  </div>
 
   <section class="card" aria-labelledby="h-stores">
     <h2 id="h-stores">Mijn supermarkten</h2>
     <div id="chips" class="chips" role="group" aria-labelledby="h-stores"></div>
     <p class="hint">Aldi, Lidl, Vomar en Coop staan er niet bij. Zij publiceren geen barcode, dus een scan is niet aan hun aanbiedingen te koppelen.</p>
+  </section>
+
+  <section class="card" aria-labelledby="h-thr">
+    <h2 id="h-thr">Wanneer tonen</h2>
     <div class="row">
-      <label for="minpct">Minimale korting</label>
+      <label for="minpct">Minimale korting bij mijn supermarkten</label>
       <select id="minpct">
         <option value="0">Elke aanbieding</option>
         <option value="10">10% of meer</option>
@@ -182,48 +270,96 @@ footer p { margin: 0; }
         <option value="50">50% of meer (1+1)</option>
       </select>
     </div>
+    <div class="row">
+      <label for="otherpct">Andere supermarkten tonen vanaf</label>
+      <select id="otherpct">
+        <option value="0">Nooit</option>
+        <option value="40">40% korting</option>
+        <option value="50">50% korting</option>
+        <option value="60">60% korting</option>
+        <option value="70">70% korting</option>
+      </select>
+      <p class="hint">Zo mis je een grote aanbieding niet, ook al is de winkel niet jouw favoriet.</p>
+    </div>
   </section>
 
-  <section class="card" aria-labelledby="h-add">
-    <h2 id="h-add">Product toevoegen</h2>
-    <button id="scan" class="btn" type="button">Scan barcode</button>
-    <form id="manual" class="manual" autocomplete="off" novalidate>
-      <label for="ean">Of typ de barcode</label>
-      <div class="line">
-        <input id="ean" type="text" inputmode="numeric" maxlength="14" placeholder="8711000675298" aria-describedby="ean-help ean-err">
-        <button class="btn btn-ghost" type="submit">Voeg toe</button>
+  <section class="card" aria-labelledby="h-acc">
+    <h2 id="h-acc">Account</h2>
+    <p id="acc-status" class="hint"></p>
+    <form id="login" autocomplete="on" novalidate hidden style="display:grid;gap:12px">
+      <div class="row"><label for="l-email">E-mailadres</label><input id="l-email" type="email" autocomplete="username" inputmode="email"></div>
+      <div class="row">
+        <label for="l-pass">Wachtwoord</label>
+        <div class="pw"><input id="l-pass" type="password" autocomplete="current-password"><button id="l-show" class="btn btn-ghost" type="button" aria-pressed="false">Toon</button></div>
       </div>
-      <p id="ean-help" class="hint">De cijfers onder de streepjes op de verpakking.</p>
-      <p id="ean-err" class="field-err" role="alert" hidden></p>
+      <p id="l-err" class="field-err" role="alert" hidden></p>
+      <button class="btn" type="submit">Inloggen</button>
     </form>
+    <button id="logout" class="link" type="button" hidden>Uitloggen</button>
   </section>
 
-  <section aria-labelledby="h-list">
-    <div class="list-head">
-      <h2 id="h-list">Mijn producten <span id="count"></span></h2>
-      <div class="tools"><span id="updated" class="muted"></span><button id="refresh" class="link" type="button">Vernieuw</button></div>
-    </div>
-    <ul id="list" class="list"></ul>
-    <div id="empty" class="empty" hidden>
-      <p>Nog geen producten. Scan een barcode of typ er een.</p>
-      <button id="sample" class="btn btn-ghost" type="button">Probeer een voorbeeldproduct</button>
-    </div>
+  <section class="card" aria-labelledby="h-app">
+    <h2 id="h-app">App</h2>
+    <p id="app-status" class="hint"></p>
+    <button id="install" class="btn btn-ghost" type="button" hidden>Installeer op dit toestel</button>
   </section>
 
-  <footer>
+  <div class="foot">
     <p>Aanbiedingen via <a href="https://www.prijsprofeet.nl" target="_blank" rel="noopener">PrijsProfeet</a>. Prijzen zijn indicatief, controleer ze in de winkel.</p>
     <p>Productgegevens via <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener">Open Food Facts</a> (ODbL).</p>
-    <p>Testversie. Je lijst staat alleen in deze browser. <span id="keyed"></span></p>
-  </footer>
-</div>
+    <p>Testversie. Je lijst staat alleen op dit toestel, in deze browser of app. <span id="keyed"></span></p>
+  </div>
+</main>
+
+<nav class="tabbar" aria-label="Hoofdmenu">
+  <a class="tab" id="tab-deals" href="#" aria-current="page">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg>
+    Aanbiedingen
+  </a>
+  <button id="scan" class="scan-fab" type="button" aria-label="Scan een barcode">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M8 9v6M11 9v6M14 9v6M17 9v6"/></svg>
+  </button>
+  <a class="tab" id="tab-basket" href="#favorieten">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-4.6-9.3-9A5.3 5.3 0 0 1 12 6a5.3 5.3 0 0 1 9.3 6c-2.3 4.4-9.3 9-9.3 9z"/></svg>
+    Favorieten
+  </a>
+</nav>
 
 <div id="scanner" class="scanner" role="dialog" aria-modal="true" aria-label="Barcode scannen" hidden>
   <video id="video" playsinline muted autoplay></video>
-  <div class="frame" aria-hidden="true"></div>
-  <button id="scan-close" class="close" type="button">Sluiten</button>
-  <div class="bottom">
-    <p id="scan-hint" role="status">Camera starten</p>
-    <button id="scan-type" class="link" type="button">Typ de barcode</button>
+  <div class="stage">
+    <p class="instr" id="scan-instr">Houd de barcode in het kader</p>
+    <div id="frame" class="frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <p id="scan-hint" class="scan-hint" role="status">Camera starten</p>
+  </div>
+  <div class="scan-top">
+    <button id="scan-close" class="icon-btn" type="button" aria-label="Sluiten">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    <h2>Scan een barcode</h2>
+    <button id="scan-torch" class="icon-btn" type="button" aria-label="Zaklamp" aria-pressed="false" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 2h10l-1.5 6h-7L7 2z"/><path d="M8.5 8v4l-1 2v8h9v-8l-1-2V8"/></svg>
+    </button>
+  </div>
+  <div id="cam-err" class="cam-err" role="alert" hidden>
+    <p id="cam-err-msg"></p>
+    <code id="cam-err-tech"></code>
+    <button id="cam-retry" class="btn" type="button">Opnieuw proberen</button>
+  </div>
+  <div class="scan-bottom">
+    <form id="manual" class="sheet" autocomplete="off" novalidate hidden>
+      <label for="ean">Barcode (de cijfers onder de streepjes)</label>
+      <div class="line">
+        <input id="ean" type="text" inputmode="numeric" maxlength="14">
+        <button class="btn" type="submit">Voeg toe</button>
+      </div>
+      <p id="ean-err" class="field-err" role="alert" hidden></p>
+    </form>
+    <button id="scan-type" class="pill" type="button" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg>
+      Code zelf intypen
+    </button>
+    <p class="scan-note">Er wordt niets opgeslagen van het camerabeeld.</p>
   </div>
 </div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -359,29 +495,45 @@ function limitPerRetailer(rows, n) {
 'use strict';
 
 const LS_KEY = 'boodschappenwacht.v1';
+const AUTH_KEY = 'boodschappenwacht.auth.v1';
+const HUB_TOKEN_KEY = 'sb-swrunlzeydmcskceqdju-auth-token';
+const SB_URL = 'https://swrunlzeydmcskceqdju.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3cnVubHpleWRtY3NrY2VxZGp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNjE2MDgsImV4cCI6MjA5MjkzNzYwOH0.V7haNdFPFJuvJJTbjhiUzKrWG8trW4UeRIJveAhFOgs';
 const STALE_MS = 6 * 60 * 60 * 1000;
+const CAMERA_IDLE_MS = 5 * 60 * 1000;
 const ZXING_URL = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
 const ZXING_SRI = 'sha384-BzBxP10ZE72aitqj5UMmUsbKFliP/DZqA8Wq+BNNhlIJDGoEd1tpkMYXOg9+n6sB';
 const SAMPLE_EAN = '8712000050030';
 
 const $ = (id) => document.getElementById(id);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const els = {
-  chips: $('chips'), minpct: $('minpct'), scan: $('scan'), form: $('manual'), ean: $('ean'), eanErr: $('ean-err'),
-  list: $('list'), empty: $('empty'), count: $('count'), updated: $('updated'), refresh: $('refresh'), sample: $('sample'),
-  scanner: $('scanner'), video: $('video'), hint: $('scan-hint'), close: $('scan-close'), type: $('scan-type'),
+  chips: $('chips'), minpct: $('minpct'), otherpct: $('otherpct'),
+  dealsList: $('deals-list'), dealsEmpty: $('deals-empty'), dealsSub: $('deals-sub'), updated: $('updated'), refresh: $('refresh'),
+  basketList: $('basket-list'), basketEmpty: $('basket-empty'), basketSub: $('basket-sub'), sample: $('sample'),
+  scan: $('scan'), scanner: $('scanner'), video: $('video'), frame: $('frame'), hint: $('scan-hint'), instr: $('scan-instr'),
+  close: $('scan-close'), torch: $('scan-torch'), type: $('scan-type'), form: $('manual'), ean: $('ean'), eanErr: $('ean-err'),
+  camErr: $('cam-err'), camErrMsg: $('cam-err-msg'), camErrTech: $('cam-err-tech'), camRetry: $('cam-retry'),
   toast: $('toast'), keyed: $('keyed'),
+  login: $('login'), lEmail: $('l-email'), lPass: $('l-pass'), lShow: $('l-show'), lErr: $('l-err'), logout: $('logout'), accStatus: $('acc-status'),
+  install: $('install'), appStatus: $('app-status'),
 };
 
 /* ---------- opslag (tijdelijke "database": localStorage) ---------- */
 function loadState() {
-  const base = { settings: { retailers: ['albert_heijn', 'jumbo', 'plus'], minPct: 0 }, items: [], offers: {} };
+  const base = { settings: { retailers: ['albert_heijn', 'jumbo', 'plus'], minPct: 0, otherPct: 50 }, items: [], offers: {} };
   try {
     const s = JSON.parse(localStorage.getItem(LS_KEY));
     if (s && typeof s === 'object') {
       const known = new Set(RETAILERS.map((r) => r.id));
-      const stored = s.settings && Array.isArray(s.settings.retailers) ? s.settings.retailers.filter((id) => known.has(id)) : [];
+      const st = s.settings || {};
+      const stored = Array.isArray(st.retailers) ? st.retailers.filter((id) => known.has(id)) : [];
       return {
-        settings: { retailers: stored.length ? stored : base.settings.retailers, minPct: Number(s.settings && s.settings.minPct) || 0 },
+        settings: {
+          retailers: stored.length ? stored : base.settings.retailers,
+          minPct: Number(st.minPct) || 0,
+          otherPct: st.otherPct === undefined ? base.settings.otherPct : (Number(st.otherPct) || 0),
+        },
         items: Array.isArray(s.items) ? s.items.filter((i) => i && typeof i.ean === 'string') : [],
         offers: s.offers && typeof s.offers === 'object' ? s.offers : {},
       };
@@ -393,10 +545,10 @@ const state = loadState();
 const pending = new Set();
 let renaming = false;
 let serverKeyed = null;
+let authNeeded = false;
+let basketFilter = 'all';
 
-function save() {
-  try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (_) { /* opslag geblokkeerd */ }
-}
+function save() { try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (_) { /* opslag geblokkeerd */ } }
 
 let toastTimer;
 function toast(msg) {
@@ -406,27 +558,60 @@ function toast(msg) {
   toastTimer = setTimeout(() => els.toast.classList.remove('show'), 4200);
 }
 
-/* ---------- netwerk ---------- */
-// Hub-login: dezelfde Supabase-sessie als de andere tools (alleen lezen uit localStorage).
-function hubAuthHeaders() {
-  try {
-    const raw = localStorage.getItem('sb-swrunlzeydmcskceqdju-auth-token');
-    const tok = raw && JSON.parse(raw).access_token;
-    return tok ? { Authorization: 'Bearer ' + tok } : {};
-  } catch (_) { return {}; }
+/* ---------- inloggen (eigen sessie, ook bruikbaar in de geïnstalleerde app) ---------- */
+function readAuth() { try { return JSON.parse(localStorage.getItem(AUTH_KEY)); } catch (_) { return null; } }
+function jwtExp(t) {
+  try { return JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).exp * 1000; } catch (_) { return 0; }
 }
+async function sbToken(body, grant) {
+  const r = await fetch(SB_URL + '/auth/v1/token?grant_type=' + grant, {
+    method: 'POST', headers: { apikey: SB_ANON, 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error_description || j.msg || 'Inloggen mislukt');
+  return j;
+}
+async function getToken() {
+  const a = readAuth();
+  if (a && a.access_token) {
+    if (jwtExp(a.access_token) - Date.now() > 60000) return a.access_token;
+    if (a.refresh_token) {
+      try {
+        const j = await sbToken({ refresh_token: a.refresh_token }, 'refresh_token');
+        localStorage.setItem(AUTH_KEY, JSON.stringify({ access_token: j.access_token, refresh_token: j.refresh_token, email: a.email }));
+        return j.access_token;
+      } catch (_) { /* sessie verlopen */ }
+    }
+  }
+  try { // sessie van de hub, alleen lezen
+    const raw = localStorage.getItem(HUB_TOKEN_KEY);
+    const t = raw && JSON.parse(raw).access_token;
+    if (t && jwtExp(t) - Date.now() > 30000) return t;
+  } catch (_) { /* geen hub-sessie */ }
+  return null;
+}
+async function signIn(email, password) {
+  const j = await sbToken({ email, password }, 'password');
+  localStorage.setItem(AUTH_KEY, JSON.stringify({ access_token: j.access_token, refresh_token: j.refresh_token, email }));
+}
+
+/* ---------- netwerk ---------- */
 async function fetchOffers(ean) {
+  const token = await getToken();
   let r;
   try {
-    r = await fetch('/.netlify/functions/boodschappenwacht-offers?ean=' + encodeURIComponent(ean), { headers: hubAuthHeaders() });
+    r = await fetch('/.netlify/functions/boodschappenwacht-offers?ean=' + encodeURIComponent(ean), { headers: token ? { Authorization: 'Bearer ' + token } : {} });
   } catch (_) {
-    throw new Error('geen verbinding met de server. Start de hub via "Start lokale server.command" en open http://localhost:8888/boodschappenwacht/');
+    throw new Error('geen verbinding met de server');
   }
   if (!r.ok) {
-    let msg = r.status === 404 ? 'de server heeft geen boodschappenwacht-offers functie' : r.status === 401 || r.status === 403 ? 'niet ingelogd in de hub (log eerst in op robertbrugman.nl)' : 'status ' + r.status;
+    let msg = r.status === 404 ? 'de server heeft geen boodschappenwacht-offers functie' : 'status ' + r.status;
     try { msg = (await r.json()).error || msg; } catch (_) { /* geen json */ }
-    throw new Error(msg);
+    const e = new Error(msg);
+    if (r.status === 401 || r.status === 403) { e.code = 'auth'; authNeeded = true; renderAuth(); }
+    throw e;
   }
+  authNeeded = false; renderAuth();
   const j = await r.json();
   serverKeyed = Boolean(j.keyed);
   return j;
@@ -442,9 +627,7 @@ async function fetchProduct(ean) {
     const name = (p.product_name_nl || p.product_name || '').trim();
     if (!name) return null;
     return { name, brand: (p.brands || '').split(',')[0].trim(), quantity: (p.quantity || '').trim(), image: safeUrl(p.image_front_small_url) };
-  } catch (_) {
-    return null;
-  }
+  } catch (_) { return null; }
 }
 
 function fillFromOffers(item, list) {
@@ -484,7 +667,7 @@ async function refresh(eans, force) {
 
 /* ---------- product toevoegen ---------- */
 function flash(ean) {
-  const card = els.list.querySelector('[data-ean="' + ean + '"]');
+  const card = els.basketList.querySelector('[data-ean="' + ean + '"]');
   if (!card) return;
   card.scrollIntoView({ block: 'center', behavior: 'smooth' });
   card.classList.add('flash');
@@ -494,7 +677,8 @@ async function addProduct(raw) {
   const ean = normalizeEan(raw);
   if (!ean13Valid(ean)) return { ok: false, error: 'Dit is geen geldige barcode. Controleer de cijfers.' };
   if (state.items.some((i) => i.ean === ean)) {
-    toast('Dit product staat al in je lijst.');
+    toast('Dit product staat al in je favorieten.');
+    showView('basket');
     flash(ean);
     return { ok: true };
   }
@@ -502,6 +686,7 @@ async function addProduct(raw) {
   state.items.unshift(item);
   pending.add(ean);
   save();
+  showView('basket');
   render();
 
   const [prod, offs] = await Promise.allSettled([fetchProduct(ean), fetchOffers(ean)]);
@@ -529,10 +714,14 @@ function renderChips() {
   els.chips.innerHTML = RETAILERS.map((r) =>
     '<button type="button" class="chip" data-retailer="' + r.id + '" aria-pressed="' + state.settings.retailers.includes(r.id) + '">' + esc(r.name) + '</button>').join('');
   els.minpct.value = String(state.settings.minPct);
+  els.otherpct.value = String(state.settings.otherPct);
 }
 
-function dealHtml(o, soon) {
-  const [eur, cts] = (typeof o.price === 'number' ? o.price : 0).toFixed(2).split('.');
+const MONO = { albert_heijn: 'AH', jumbo: 'J', plus: 'P', dirk: 'D', dekamarkt: 'DM', hoogvliet: 'H', poiesz: 'PZ', ekoplaza: 'E' };
+function monoOf(id) { return MONO[id] || retailerName(id).replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase() || '?'; }
+
+// Eén kortingskaart. Met "name" (Aanbiedingen-pagina) staat de productnaam bovenaan.
+function dealHtml(o, soon, foreign, name) {
   const multi = o.multi_buy_quantity > 1;
   const pct = effectivePct(o);
   const url = safeUrl(o.product_url);
@@ -542,20 +731,36 @@ function dealHtml(o, soon) {
   const when = soon
     ? 'vanaf ' + fmtDate(o.valid_from)
     : (o.valid_until ? 'tot ' + fmtDate(o.valid_until) + (o.valid_until_estimated ? ' (geschat)' : '') : '');
-  const extras = [when, o.loyalty_price ? 'met klantenkaart' : '', o.in_store_only ? 'alleen in de winkel' : ''].filter(Boolean).join(' · ');
-  return '<li class="deal' + (soon ? ' deal-soon' : '') + '">'
-    + '<div class="tag"><span class="price" role="img" aria-label="' + esc(money(o.price)) + (multi ? ' per stuk' : '') + '">'
-    + '<span class="cur" aria-hidden="true">€</span><span class="eur" aria-hidden="true">' + eur + '</span><span class="cts" aria-hidden="true">' + cts + '</span></span>'
-    + (multi ? '<span class="per">per stuk</span>' : '') + '</div>'
-    + '<div class="info"><div class="top"><strong>' + who + '</strong>' + (pct ? '<span class="pct">-' + Math.round(pct) + '%</span>' : '') + '</div>'
-    + '<div class="promo">' + esc(dealLabel(o)) + (o.original_price > o.price ? '<span class="was">was ' + esc(money(o.original_price)) + '</span>' : '') + '</div>'
-    + (extras ? '<div class="meta">' + esc(extras) + '</div>' : '')
-    + (o.name ? '<div class="rname">' + esc(o.name) + '</div>' : '')
+  const extras = [o.loyalty_price ? 'met klantenkaart' : '', o.in_store_only ? 'alleen in de winkel' : ''].filter(Boolean).join(' · ');
+  const label = dealLabel(o);
+  const block = pct ? '-' + Math.round(pct) + '%' : (o.promotion_type === 'one_plus_one' ? '1+1' : 'Actie');
+  const showLabel = label && !(pct && label === Math.round(pct) + '% korting');
+  return '<li class="dcard' + (soon ? ' soon' : '') + '">'
+    + '<div class="pcb' + (block.length > 4 ? ' sm' : '') + '">' + esc(block) + '</div>'
+    + '<div class="dbody">'
+    + (name ? '<div class="dname">' + esc(name) + '</div>' : '')
+    + '<div class="dstore"><span class="mono" aria-hidden="true">' + esc(monoOf(o.retailer)) + '</span><span>' + who + (when ? ' · ' + esc(when) : '') + '</span></div>'
+    + '<div class="dprice"><b>' + esc(money(o.price)) + '</b>' + (multi ? '<span>per stuk</span>' : '') + (o.original_price > o.price ? '<s>' + esc(money(o.original_price)) + '</s>' : '') + '</div>'
+    + (showLabel ? '<div class="dlabel">' + esc(label) + '</div>' : '')
+    + (extras ? '<div class="dmeta">' + esc(extras) + '</div>' : '')
+    + (foreign ? '<div class="dforeign">Niet jouw winkel, wel hoge korting</div>' : '')
     + '</div></li>';
 }
 
-function itemHtml(row) {
-  const { item, od, sum, tier } = row;
+function headHtml(item, badge) {
+  const sub = [item.brand, item.quantity].filter(Boolean).join(' · ');
+  const thumb = item.image
+    ? '<img src="' + esc(item.image) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+    : esc((item.name || '?').charAt(0).toUpperCase());
+  return '<div class="head"><div class="thumb">' + thumb + '</div>'
+    + '<div><h3 class="name">' + esc(item.name || 'Onbekend product') + '</h3>'
+    + (sub ? '<p class="sub">' + esc(sub) + '</p>' : '')
+    + '<p class="eanline">EAN ' + esc(item.ean) + '</p></div>' + badge + '</div>';
+}
+
+// Kaart voor Mijn favorieten: alles, met de stand van zaken.
+function basketCardHtml(row) {
+  const { item, od, sum, tier, high } = row;
   const busy = pending.has(item.ean);
   const names = state.settings.retailers.map(retailerName);
   let badge = '';
@@ -566,7 +771,7 @@ function itemHtml(row) {
 
   let body = '';
   if (sum.chosen.length) {
-    body += '<ul class="deals">' + limitPerRetailer(sum.chosen, 2).map((o) => dealHtml(o, false)).join('') + '</ul>';
+    body += '<ul class="deals">' + limitPerRetailer(sum.chosen, 2).map((o) => dealHtml(o, false, false)).join('') + '</ul>';
   } else if (busy && !od) {
     body += '<div class="skeleton" aria-hidden="true"></div>';
   } else if (od && od.error && !od.list.length) {
@@ -576,40 +781,68 @@ function itemHtml(row) {
   }
   if (od && od.error && od.list.length) body += '<p class="note note-err">Vernieuwen mislukt, dit is de laatst bekende stand.</p>';
   if (sum.upcoming.length) {
-    body += '<p class="sub-title">Volgende week</p><ul class="deals">' + limitPerRetailer(sum.upcoming, 1).map((o) => dealHtml(o, true)).join('') + '</ul>';
+    body += '<p class="sub-title">Volgende week</p><ul class="deals">' + limitPerRetailer(sum.upcoming, 1).map((o) => dealHtml(o, true, false)).join('') + '</ul>';
   }
-  if (sum.elsewhere.length) {
+  if (high.length) {
+    body += '<p class="sub-title">Hoge korting elders</p><ul class="deals">' + high.map((o) => dealHtml(o, false, true)).join('') + '</ul>';
+  } else if (sum.elsewhere.length) {
     const other = limitPerRetailer(sum.elsewhere, 1).slice(0, 3).map((o) => retailerName(o.retailer) + ' (' + money(o.price) + ')');
     body += '<p class="note">' + (sum.chosen.length ? 'Ook' : 'Wel') + ' in de aanbieding bij ' + esc(joinNl(other)) + '.</p>';
   }
-
-  const sub = [item.brand, item.quantity].filter(Boolean).join(' · ');
-  const thumb = item.image
-    ? '<img src="' + esc(item.image) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
-    : esc((item.name || '?').charAt(0).toUpperCase());
-  return '<li class="item" data-ean="' + esc(item.ean) + '">'
-    + '<div class="head"><div class="thumb">' + thumb + '</div>'
-    + '<div><h3 class="name">' + esc(item.name || 'Onbekend product') + '</h3>'
-    + (sub ? '<p class="sub">' + esc(sub) + '</p>' : '')
-    + '<p class="eanline">EAN ' + esc(item.ean) + '</p></div>' + badge + '</div>'
-    + body
-    + '<div class="actions"><button type="button" class="link" data-action="rename">Naam wijzigen</button><button type="button" class="link" data-action="remove">Verwijderen</button></div>'
-    + '</li>';
+  return '<li class="item" data-ean="' + esc(item.ean) + '">' + headHtml(item, badge) + body
+    + '<div class="actions"><button type="button" class="link" data-action="rename">Naam wijzigen</button><button type="button" class="link" data-action="remove">Verwijderen</button></div></li>';
 }
 
-function renderList() {
-  if (renaming) return;
+function buildRows() {
   const today = todayISO();
-  const minPct = state.settings.minPct;
-  const rows = state.items.map((item) => {
+  const { minPct, otherPct, retailers } = state.settings;
+  return state.items.map((item) => {
     const od = state.offers[item.ean];
-    const sum = summarize(od ? od.list : [], state.settings.retailers, today);
-    return { item, od, sum, tier: tierOf(sum, minPct) };
+    const sum = summarize(od ? od.list : [], retailers, today);
+    const high = otherPct
+      ? limitPerRetailer(sum.elsewhere.filter((o) => { const p = effectivePct(o); return p !== null && p >= otherPct; }), 1)
+      : [];
+    const tier = tierOf(sum, minPct);
+    const best = Math.max(tier === 0 && sum.best !== null ? sum.best : -1, ...high.map((o) => effectivePct(o)));
+    return { item, od, sum, high, tier, best, onDeals: tier === 0 || high.length > 0 };
   });
-  rows.sort((a, b) => a.tier - b.tier || (b.sum.best ?? -1) - (a.sum.best ?? -1) || b.item.addedAt - a.item.addedAt);
-  els.list.innerHTML = rows.map(itemHtml).join('');
-  els.empty.hidden = rows.length > 0;
-  els.count.textContent = rows.length ? '(' + rows.length + ')' : '';
+}
+
+function renderDeals(rows) {
+  const list = rows.filter((r) => r.onDeals);
+  const entries = [];
+  list.forEach((r) => {
+    (r.tier === 0 ? limitPerRetailer(r.sum.chosen, 2) : []).forEach((o) => entries.push({ r, o, foreign: false }));
+    r.high.forEach((o) => entries.push({ r, o, foreign: true }));
+  });
+  entries.sort((a, b) => (effectivePct(b.o) ?? -1) - (effectivePct(a.o) ?? -1));
+  els.dealsList.innerHTML = entries.map((e) => dealHtml(e.o, false, e.foreign, e.r.item.name || 'Onbekend product')).join('');
+  const names = joinNl(state.settings.retailers.map(retailerName));
+  els.dealsSub.textContent = rows.length
+    ? list.length + ' van je ' + rows.length + ' ' + (rows.length === 1 ? 'product is' : 'producten zijn') + ' nu in de aanbieding bij ' + names
+    : 'Voeg producten toe met de scanknop.';
+  const loading = rows.some((r) => pending.has(r.item.ean));
+  if (list.length) { els.dealsEmpty.hidden = true; return; }
+  els.dealsEmpty.hidden = false;
+  if (!rows.length) els.dealsEmpty.innerHTML = '<p>Je favorieten zijn nog leeg. Tik op de scanknop onderin om een product toe te voegen.</p>';
+  else if (loading) els.dealsEmpty.innerHTML = '<p>Aanbiedingen ophalen.</p>';
+  else els.dealsEmpty.innerHTML = '<p>Op dit moment is geen van je producten in de aanbieding.</p>';
+}
+
+function renderBasket(rows) {
+  if (renaming) return;
+  const nOffer = rows.filter((r) => r.onDeals).length;
+  els.basketSub.textContent = rows.length ? rows.length + ' ' + (rows.length === 1 ? 'product' : 'producten') + ' opgeslagen' : '';
+  document.querySelectorAll('[data-filter]').forEach((b) => {
+    b.setAttribute('aria-pressed', String(b.dataset.filter === basketFilter));
+    if (b.dataset.filter === 'offer') b.textContent = 'In aanbieding' + (rows.length ? ' · ' + nOffer : '');
+    else b.textContent = 'Alles' + (rows.length ? ' · ' + rows.length : '');
+  });
+  const list = rows
+    .filter((r) => basketFilter === 'all' || r.onDeals)
+    .sort((a, b) => a.tier - b.tier || (b.sum.best ?? -1) - (a.sum.best ?? -1) || b.item.addedAt - a.item.addedAt);
+  els.basketList.innerHTML = list.map(basketCardHtml).join('');
+  els.basketEmpty.hidden = rows.length > 0;
 }
 
 function renderMeta() {
@@ -625,12 +858,60 @@ function renderMeta() {
   els.keyed.textContent = serverKeyed === null ? '' : (serverKeyed ? 'De server gebruikt een API-key.' : 'De server gebruikt geen API-key (lagere limieten).');
 }
 
-function render() { renderList(); renderMeta(); }
+function renderAuth() {
+  document.querySelectorAll('.auth-banner').forEach((b) => { b.hidden = !authNeeded; });
+  const a = readAuth();
+  const signedIn = Boolean(a && a.access_token);
+  els.login.hidden = signedIn;
+  els.logout.hidden = !signedIn;
+  els.accStatus.textContent = signedIn
+    ? 'Ingelogd als ' + (a.email || 'jouw account') + '.'
+    : 'Log in met je hub-account om aanbiedingen op te halen. Op de lokale testserver is dit niet nodig.';
+}
+
+function renderApp() {
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  els.appStatus.textContent = standalone
+    ? 'Je gebruikt de app vanaf het beginscherm. Let op: je lijst staat los van die in Safari.'
+    : ios
+      ? 'Installeren: tik in Safari op Deel en kies Zet op beginscherm. Daarna opent de scanner sneller en vraagt hij minder vaak om de camera.'
+      : 'Installeer de app op je beginscherm voor sneller scannen.';
+}
+
+function render() {
+  const rows = buildRows();
+  renderDeals(rows);
+  renderBasket(rows);
+  renderMeta();
+}
+
+/* ---------- pagina's (hash, geen herladen) ---------- */
+let currentView = 'deals';
+function showView(name) {
+  const hash = name === 'basket' ? '#favorieten' : name === 'settings' ? '#instellingen' : '#';
+  if (location.hash !== hash && !(hash === '#' && !location.hash)) location.hash = hash;
+  applyView(name);
+}
+function applyView(name) {
+  currentView = name;
+  $('view-deals').hidden = name !== 'deals';
+  $('view-basket').hidden = name !== 'basket';
+  $('view-settings').hidden = name !== 'settings';
+  $('tab-deals').setAttribute('aria-current', name === 'deals' ? 'page' : 'false');
+  $('tab-basket').setAttribute('aria-current', name === 'basket' ? 'page' : 'false');
+  window.scrollTo(0, 0);
+}
+function viewFromHash() {
+  const h = location.hash;
+  return h === '#favorieten' ? 'basket' : h === '#instellingen' ? 'settings' : 'deals';
+}
+window.addEventListener('hashchange', () => applyView(viewFromHash()));
 
 /* ---------- scanner ---------- */
 let scanSession = 0;
-let activeStream = null;
 let zxingPromise = null;
+const cam = { stream: null, track: null, idle: null };
 
 function loadZxing() {
   if (window.ZXing) return Promise.resolve();
@@ -644,6 +925,26 @@ function loadZxing() {
     });
   }
   return zxingPromise;
+}
+
+const grab = document.createElement('canvas');
+const grabCtx = grab.getContext('2d', { willReadFrequently: true });
+// Tekent (een deel van) het videobeeld op een canvas. region = [x, y, b, h] als fractie van het beeld.
+function draw(video, region, maxSide) {
+  const vw = video.videoWidth, vh = video.videoHeight;
+  const sx = Math.round(vw * region[0]), sy = Math.round(vh * region[1]);
+  const sw = Math.round(vw * region[2]), sh = Math.round(vh * region[3]);
+  const k = Math.min(1, maxSide / Math.max(sw, sh));
+  grab.width = Math.max(1, Math.round(sw * k)); grab.height = Math.max(1, Math.round(sh * k));
+  grabCtx.drawImage(video, sx, sy, sw, sh, 0, 0, grab.width, grab.height);
+  return grab;
+}
+function brightness(video) {
+  const c = draw(video, [0, 0, 1, 1], 24);
+  const d = grabCtx.getImageData(0, 0, c.width, c.height).data;
+  let sum = 0;
+  for (let i = 0; i < d.length; i += 4) sum += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+  return sum / (d.length / 4);
 }
 
 async function makeDecoder() {
@@ -661,58 +962,129 @@ async function makeDecoder() {
   const hints = new Map();
   hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8, ZXing.BarcodeFormat.UPC_A]);
   hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-  const reader = new ZXing.BrowserMultiFormatReader(hints);
-  return async (video) => {
-    try { return reader.decodeBitmap(reader.createBinaryBitmap(video)).getText(); }
-    catch (_) { return null; } // geen barcode in dit beeld
+  const reader = new ZXing.MultiFormatReader();
+  reader.setHints(hints);
+  const tryCanvas = (c) => {
+    try {
+      const bmp = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(new ZXing.HTMLCanvasElementLuminanceSource(c)));
+      return reader.decode(bmp).getText();
+    } catch (_) { return null; }
   };
+  let n = 0;
+  // Wisselt tussen het hele beeld en het midden op volle resolutie. Zo worden kleine codes ook gelezen.
+  return async (video) => (n++ % 2 === 0
+    ? tryCanvas(draw(video, [0, 0, 1, 1], 1280))
+    : tryCanvas(draw(video, [0.1, 0.25, 0.8, 0.5], 1600)));
+}
+
+function releaseCamera() {
+  clearTimeout(cam.idle);
+  if (cam.stream) cam.stream.getTracks().forEach((t) => t.stop());
+  cam.stream = null; cam.track = null;
+  els.video.srcObject = null;
+}
+function cameraAlive() { return Boolean(cam.stream && cam.stream.getVideoTracks().some((t) => t.readyState === 'live')); }
+
+// De camera blijft aan zolang de app zichtbaar is (max. 5 minuten ongebruikt). Safari vraagt dan niet opnieuw om toestemming.
+async function acquireCamera() {
+  clearTimeout(cam.idle);
+  if (cameraAlive()) return cam.stream;
+  releaseCamera();
+  const get = () => navigator.mediaDevices.getUserMedia({
+    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false,
+  });
+  let s;
+  try { s = await get(); }
+  catch (err) {
+    if (err && (err.name === 'NotAllowedError' || err.name === 'NotFoundError' || err.name === 'SecurityError')) throw err;
+    await sleep(500);
+    s = await get();
+  }
+  cam.stream = s; cam.track = s.getVideoTracks()[0];
+  cam.track.addEventListener('ended', () => { if (cam.stream === s) { cam.stream = null; cam.track = null; } });
+  return s;
 }
 
 function cameraError(err) {
-  if (err && err.name === 'NotAllowedError') return 'Geen toegang tot de camera. Sta camera-toegang toe in je browser en probeer opnieuw.';
-  if (err && err.name === 'NotFoundError') return 'Er is geen camera gevonden. Typ de barcode in.';
-  return 'De camera kon niet starten. Typ de barcode in.';
+  const n = err && err.name;
+  if (n === 'NotAllowedError') return 'Geen toegang tot de camera. Zet camera-toegang aan voor deze site (op iPhone: Instellingen, Safari, Camera) en probeer opnieuw.';
+  if (n === 'NotFoundError') return 'Er is geen camera gevonden. Typ de barcode in.';
+  if (n === 'NotReadableError') return 'De camera is in gebruik door een andere app. Sluit die en probeer opnieuw.';
+  return 'De camera kon niet starten. Probeer opnieuw of typ de barcode in.';
+}
+
+function setHint(text, kind) {
+  els.hint.textContent = text;
+  els.hint.className = 'scan-hint' + (kind ? ' ' + kind : '');
+}
+function showManual(on) {
+  els.form.hidden = !on;
+  els.type.setAttribute('aria-expanded', String(on));
+  if (on) els.ean.focus();
 }
 
 function closeScanner() {
   scanSession++;
-  if (activeStream) { activeStream.getTracks().forEach((t) => t.stop()); activeStream = null; }
-  els.video.srcObject = null;
   els.scanner.hidden = true;
+  els.frame.classList.remove('ok');
+  showManual(false);
+  els.video.pause();
+  clearTimeout(cam.idle);
+  cam.idle = setTimeout(releaseCamera, CAMERA_IDLE_MS);
 }
 
 async function openScanner() {
+  els.scanner.hidden = false;
+  els.camErr.hidden = true;
+  els.frame.classList.remove('ok');
+  els.torch.hidden = true;
+  els.instr.textContent = 'Houd de barcode in het kader';
   if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    toast('De camera werkt alleen via https of localhost. Typ de barcode in.');
-    els.ean.focus();
+    setHint('Camera niet beschikbaar', 'warn');
+    els.camErrMsg.textContent = 'De camera werkt alleen via https of localhost. Typ de barcode in.';
+    els.camErrTech.textContent = '';
+    els.camRetry.hidden = true;
+    els.camErr.hidden = false;
+    showManual(true);
     return;
   }
+  els.camRetry.hidden = false;
   const session = ++scanSession;
-  els.scanner.hidden = false;
-  els.hint.textContent = 'Camera starten';
+  setHint('Camera starten');
 
   let stream;
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: false,
-    });
-  } catch (err) {
-    if (session === scanSession) { closeScanner(); toast(cameraError(err)); }
+  try { stream = await acquireCamera(); }
+  catch (err) {
+    if (session !== scanSession) return;
+    setHint('Camera niet beschikbaar', 'warn');
+    els.camErrMsg.textContent = cameraError(err);
+    els.camErrTech.textContent = 'Technisch: ' + (err && err.name) + (err && err.message ? ' (' + err.message + ')' : '');
+    els.camErr.hidden = false;
+    showManual(true);
     return;
   }
-  if (session !== scanSession) { stream.getTracks().forEach((t) => t.stop()); return; }
-  activeStream = stream;
-  els.video.srcObject = stream;
+  if (session !== scanSession) return;
+  if (els.video.srcObject !== stream) els.video.srcObject = stream;
   try { await els.video.play(); } catch (_) { /* autoplay geblokkeerd, beeld start alsnog */ }
 
-  els.hint.textContent = 'Scanner laden';
+  const caps = cam.track && cam.track.getCapabilities ? cam.track.getCapabilities() : {};
+  els.torch.hidden = !caps.torch;
+  els.torch.setAttribute('aria-pressed', 'false');
+
+  setHint('Scanner laden');
   let decode;
   try { decode = await makeDecoder(); }
-  catch (_) { if (session === scanSession) { closeScanner(); toast('De scanner kon niet laden. Typ de barcode in.'); } return; }
+  catch (_) {
+    if (session === scanSession) { setHint('Scanner kon niet laden', 'warn'); showManual(true); }
+    return;
+  }
   if (session !== scanSession) return;
 
-  els.hint.textContent = 'Houd de barcode in het kader';
+  setHint('Zoeken naar barcode');
+  const t0 = Date.now();
+  let lastBad = 0;
+  let dark = false;
+  let tickN = 0;
   const tick = async () => {
     if (session !== scanSession) return;
     let code = null;
@@ -722,12 +1094,26 @@ async function openScanner() {
       const ean = normalizeEan(code);
       if (ean13Valid(ean)) {
         if (navigator.vibrate) navigator.vibrate(60);
+        els.frame.classList.add('ok');
+        setHint('Gelezen: ' + ean, 'good');
+        scanSession++; // stopt de lus
+        await sleep(450);
         closeScanner();
         addProduct(ean);
         return;
       }
+      lastBad = Date.now();
     }
-    setTimeout(tick, 140);
+    if (++tickN % 6 === 0 && els.video.videoWidth) {
+      try { dark = brightness(els.video) < 45; } catch (_) { /* geen meting */ }
+    }
+    const waited = Date.now() - t0;
+    if (Date.now() - lastBad < 2500) setHint('Niet goed gelezen. Houd de code stil en recht voor de camera.', 'warn');
+    else if (dark) setHint(caps.torch ? 'Te donker. Zet de zaklamp aan.' : 'Te donker. Zoek meer licht.', 'warn');
+    else if (waited > 12000) setHint('Lukt het niet? Typ de code zelf in.', 'warn');
+    else if (waited > 4000) setHint('Kom iets dichterbij en houd stil.', 'warn');
+    else setHint('Zoeken naar barcode');
+    setTimeout(tick, 120);
   };
   tick();
 }
@@ -768,38 +1154,47 @@ els.chips.addEventListener('click', (e) => {
   }
   save(); renderChips(); render();
 });
+els.minpct.addEventListener('change', () => { state.settings.minPct = Number(els.minpct.value) || 0; save(); render(); });
+els.otherpct.addEventListener('change', () => { state.settings.otherPct = Number(els.otherpct.value) || 0; save(); render(); });
 
-els.minpct.addEventListener('change', () => {
-  state.settings.minPct = Number(els.minpct.value) || 0;
-  save(); render();
-});
+document.querySelectorAll('[data-filter]').forEach((b) => b.addEventListener('click', () => { basketFilter = b.dataset.filter; render(); }));
 
 els.scan.addEventListener('click', openScanner);
 els.close.addEventListener('click', closeScanner);
-els.type.addEventListener('click', () => { closeScanner(); els.ean.focus(); });
+els.camRetry.addEventListener('click', openScanner);
+els.type.addEventListener('click', () => showManual(els.form.hidden));
+els.torch.addEventListener('click', async () => {
+  const on = els.torch.getAttribute('aria-pressed') !== 'true';
+  try { await cam.track.applyConstraints({ advanced: [{ torch: on }] }); els.torch.setAttribute('aria-pressed', String(on)); }
+  catch (_) { toast('De zaklamp werkt niet op dit toestel.'); }
+});
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !els.scanner.hidden) closeScanner(); });
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden && !els.scanner.hidden) closeScanner();
-  else if (!document.hidden) refresh(state.items.map((i) => i.ean), false);
+  if (document.hidden) {
+    if (!els.scanner.hidden) closeScanner();
+    releaseCamera(); // app staat op de achtergrond: camera uit
+  } else {
+    refresh(state.items.map((i) => i.ean), false);
+  }
 });
 
 els.form.addEventListener('submit', async (e) => {
   e.preventDefault();
   els.eanErr.hidden = true;
   const res = await addProduct(els.ean.value);
-  if (res.ok) { els.ean.value = ''; }
+  if (res.ok) { els.ean.value = ''; closeScanner(); }
   else { els.eanErr.textContent = res.error; els.eanErr.hidden = false; els.ean.focus(); }
 });
 els.ean.addEventListener('input', () => { els.eanErr.hidden = true; });
 
 els.sample.addEventListener('click', () => addProduct(SAMPLE_EAN));
 els.refresh.addEventListener('click', async () => {
-  if (!state.items.length) { toast('Je lijst is nog leeg.'); return; }
+  if (!state.items.length) { toast('Je favorieten zijn nog leeg.'); return; }
   await refresh(state.items.map((i) => i.ean), true);
   toast('Aanbiedingen bijgewerkt.');
 });
 
-els.list.addEventListener('click', (e) => {
+els.basketList.addEventListener('click', (e) => {
   const btn = e.target.closest('[data-action]');
   if (!btn) return;
   const card = btn.closest('.item');
@@ -809,7 +1204,7 @@ els.list.addEventListener('click', (e) => {
     state.items = state.items.filter((i) => i.ean !== ean);
     delete state.offers[ean];
     save(); render();
-    toast('Verwijderd uit je lijst.');
+    toast('Verwijderd uit je favorieten.');
   } else if (btn.dataset.action === 'rename') {
     startRename(card, ean);
   } else if (btn.dataset.action === 'retry') {
@@ -817,8 +1212,39 @@ els.list.addEventListener('click', (e) => {
   }
 });
 
+els.login.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  els.lErr.hidden = true;
+  const email = els.lEmail.value.trim();
+  if (!email || !els.lPass.value) { els.lErr.textContent = 'Vul je e-mailadres en wachtwoord in.'; els.lErr.hidden = false; return; }
+  try {
+    await signIn(email, els.lPass.value);
+    els.lPass.value = '';
+    authNeeded = false; renderAuth();
+    toast('Ingelogd.');
+    refresh(state.items.map((i) => i.ean), true);
+  } catch (err) { els.lErr.textContent = err.message; els.lErr.hidden = false; }
+});
+els.lShow.addEventListener('click', () => {
+  const show = els.lPass.type === 'password';
+  els.lPass.type = show ? 'text' : 'password';
+  els.lShow.textContent = show ? 'Verberg' : 'Toon';
+  els.lShow.setAttribute('aria-pressed', String(show));
+});
+els.logout.addEventListener('click', () => { try { localStorage.removeItem(AUTH_KEY); } catch (_) { /* niets */ } renderAuth(); toast('Uitgelogd.'); });
+
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; els.install.hidden = false; });
+els.install.addEventListener('click', async () => { if (installEvt) { installEvt.prompt(); installEvt = null; els.install.hidden = true; } });
+
 /* ---------- start ---------- */
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+  navigator.serviceWorker.register('sw.js').catch(() => { /* geen offline-schil, de app werkt gewoon */ });
+}
 renderChips();
+renderAuth();
+renderApp();
+applyView(viewFromHash());
 render();
 refresh(state.items.map((i) => i.ean), false);
 })();
