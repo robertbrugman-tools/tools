@@ -1,0 +1,20 @@
+{
+  "name": "Boodschappenwacht",
+  "short_name": "Wacht",
+  "description": "Scan een barcode en zie of het product in de aanbieding is.",
+  "lang": "nl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f6fb",
+  "theme_color": "#141f5e",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
