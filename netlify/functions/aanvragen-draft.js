@@ -14,6 +14,16 @@ const { OPMAAK, schoon, kopjesUitTekst, zonderIrrigatiekosten } = require('../li
 
 const APP_KEY = 'aanvragen'
 const MODEL = process.env.RESPYRE_MODEL || 'claude-sonnet-5-5'
+const ANTHROPIC_TIJDLIMIET_MS = 25000
+
+// Sonnet 5.5 en Haiku 5.5 denken standaard voordat ze antwoorden. Die denktokens tellen mee in max_tokens en kunnen
+// alle ruimte opmaken, zodat er geen mailtekst overblijft. Daarom zetten we het denken vooraf zo laag mogelijk.
+// Sonnet 5.5 weigert 'disabled' en accepteert 'between_tools'. Haiku 5.5 accepteert 'disabled'.
+function denkInstelling(model) {
+  if (/sonnet-5-5/.test(model)) return { type: 'between_tools' }
+  if (/haiku-5-5/.test(model)) return { type: 'disabled' }
+  return undefined
+}
 
 function json(statusCode, obj) {
   return { statusCode, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify(obj) }
@@ -89,17 +99,24 @@ exports.handler = async (event) => {
       'Geef eerst een regel "ONDERWERP: ..." met een korte onderwerpregel in dezelfde taal, dan een lege regel, dan de mailtekst. Gebruik de kopjes zoals beschreven in de opmaakregels. Geen handtekening en geen afsluitgroet.',
     ].filter(x => x !== '').join('\n')
 
+    const verzoek = { model: MODEL, max_tokens: 4000, system: systeem, messages: [{ role: 'user', content: gebruiker }] }
+    const denken = denkInstelling(MODEL)
+    if (denken) verzoek.thinking = denken
+
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: MODEL, max_tokens: 4000, system: systeem, messages: [{ role: 'user', content: gebruiker }] }),
+      body: JSON.stringify(verzoek),
+      signal: AbortSignal.timeout(ANTHROPIC_TIJDLIMIET_MS),
     })
     const data = await res.json()
     if (!res.ok) return json(res.status, { error: (data.error && data.error.message) || 'Fout ' + res.status })
 
+    const tekstBlok = (data.content || []).find(b => b.type === 'text')
+    if (data.stop_reason === 'max_tokens' && !tekstBlok) return json(502, { error: 'Het model gebruikte alle ruimte om na te denken en schreef nog geen mail. Klik opnieuw op Genereer.' })
     if (data.stop_reason === 'max_tokens') return json(502, { error: 'Het concept werd afgekapt omdat het te lang werd. Klik opnieuw op Genereer, eventueel met de extra instructie "houd het korter".' })
 
-    let tekst = zonderIrrigatiekosten(schoon(((data.content || []).find(b => b.type === 'text') || {}).text || '')).trim()
+    let tekst = zonderIrrigatiekosten(schoon((tekstBlok || {}).text || '')).trim()
     let onderwerp = ''
     const m = tekst.match(/^ONDERWERP:\s*(.+)\n+/i)
     if (m) { onderwerp = m[1].trim(); tekst = tekst.slice(m[0].length).trim() }
@@ -107,6 +124,9 @@ exports.handler = async (event) => {
     return json(200, { onderwerp, tekst: k.tekst, kopjes: k.kopjes, lang, bucket, model: MODEL })
   } catch (err) {
     console.error('aanvragen-draft fout:', err.message)
+    if (err && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
+      return json(504, { error: 'Het model reageerde niet binnen ' + ANTHROPIC_TIJDLIMIET_MS / 1000 + ' seconden. Klik opnieuw op Genereer.' })
+    }
     return json(err.code === 'NO_PIPEDRIVE_TOKEN' ? 500 : 502, { error: err.message, code: err.code || null })
   }
 }
