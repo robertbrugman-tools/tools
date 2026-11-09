@@ -20,8 +20,14 @@ function json(statusCode, obj) {
 }
 
 exports.handler = async (event) => {
+  // DIAGNOSE: tijdmeting per stap (tijdelijk, alleen logregels)
+  const t0 = Date.now()
+  const lap = (stap) => console.log('[draft-tijd] ' + stap + ': ' + (Date.now() - t0) + ' ms')
+  lap('start')
+
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' }
   const denied = await checkAccess(event, APP_KEY)
+  lap('toegangscontrole klaar')
   if (denied) return denied
 
   const key = process.env.RESPYRE_ANTHROPIC_KEY || process.env.ANTHROPIC_API_KEY
@@ -34,14 +40,18 @@ exports.handler = async (event) => {
 
   try {
     const deal = await fetchDeal(dealId)
+    lap('Pipedrive: deal opgehaald')
     const pid = deal.person_id && (deal.person_id.value || deal.person_id)
     const oid = deal.org_id && (deal.org_id.value || deal.org_id)
     const persons = pid ? await fetchByIds('persons', [pid]) : {}
     const orgs = oid ? await fetchByIds('organizations', [oid]) : {}
+    lap('Pipedrive: persoon en organisatie opgehaald')
     const person = persons[pid] || null
     const org = orgs[oid] || null
     const notesFull = await fetchNotesFull(dealId)
+    lap('Pipedrive: notities opgehaald')
     const files = await fetchAllFiles(dealId, pid)
+    lap('Pipedrive: bijlagen opgehaald')
 
     const c = classify(deal, person, org, F, notesFull.map(n => n.text).join(' '))
     const bucket = BUCKETS[payload.bucket] ? payload.bucket : c.bucket
@@ -67,10 +77,13 @@ exports.handler = async (event) => {
       ['Bijlagen die de aanvrager heeft meegestuurd (alleen de namen, de inhoud heb je niet gezien)', files.map(f => f.name || f.file_name).filter(Boolean).join(', ')],
     ].filter(([, v]) => v && String(v).trim()).map(([k, v]) => `${k}: ${v}`).join('\n')
 
+    const regelsActief = await actieveRegels()
+    lap('Supabase: leerregels opgehaald')
+
     const systeem = [
       'Je schrijft een CONCEPT van een e-mailantwoord namens Robert Brugman, Account Manager bij Respyre, op een binnengekomen aanvraag. Je bent niet Robert zelf en voegt niets toe wat niet in de kennis of aanvraag staat.',
       REGELS, STIJL, OPMAAK, BUCKET_REGELS[bucket], regioRegels(c.land.code),
-      regelsVoorPrompt(await actieveRegels(), bucket),
+      regelsVoorPrompt(regelsActief, bucket),
       `=== KENNIS ===\n${KENNIS}\n=== EINDE KENNIS ===`,
     ].filter(Boolean).join('\n\n')
 
@@ -89,12 +102,15 @@ exports.handler = async (event) => {
       'Geef eerst een regel "ONDERWERP: ..." met een korte onderwerpregel in dezelfde taal, dan een lege regel, dan de mailtekst. Gebruik de kopjes zoals beschreven in de opmaakregels. Geen handtekening en geen afsluitgroet.',
     ].filter(x => x !== '').join('\n')
 
+    lap('Anthropic: aanvraag verstuurd (model ' + MODEL + ', prompt ' + (systeem.length + gebruiker.length) + ' tekens)')
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({ model: MODEL, max_tokens: 4000, system: systeem, messages: [{ role: 'user', content: gebruiker }] }),
     })
+    lap('Anthropic: antwoord binnen, status ' + res.status)
     const data = await res.json()
+    lap('Anthropic: antwoord gelezen, uitvoer-tokens ' + ((data.usage && data.usage.output_tokens) || '?') + ', stop_reden ' + (data.stop_reason || '?'))
     if (!res.ok) return json(res.status, { error: (data.error && data.error.message) || 'Fout ' + res.status })
 
     if (data.stop_reason === 'max_tokens') return json(502, { error: 'Het concept werd afgekapt omdat het te lang werd. Klik opnieuw op Genereer, eventueel met de extra instructie "houd het korter".' })
@@ -104,6 +120,7 @@ exports.handler = async (event) => {
     const m = tekst.match(/^ONDERWERP:\s*(.+)\n+/i)
     if (m) { onderwerp = m[1].trim(); tekst = tekst.slice(m[0].length).trim() }
     const k = kopjesUitTekst(tekst)
+    lap('klaar')
     return json(200, { onderwerp, tekst: k.tekst, kopjes: k.kopjes, lang, bucket, model: MODEL })
   } catch (err) {
     console.error('aanvragen-draft fout:', err.message)
