@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>@media (pointer:coarse){input,select,textarea{font-size:16px!important}}</style>
 <title>Peugeot e208</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -282,6 +281,7 @@
       if (!res.ok) throw new Error('De server antwoordde met status ' + res.status + '.')
       state = await res.json()
       render()
+      refresh(true) // bij openen meteen vers ophalen; de server beschermt tegen te vaak opvragen
     } catch (err) {
       document.getElementById('heroBody').innerHTML = '<p class="empty"><b>Laden mislukt.</b><br>' + esc(err.message) + ' Ververs de pagina en probeer het opnieuw.</p>'
     }
@@ -293,7 +293,7 @@
     NO_CONNECTION: 'Er is geen auto verbonden. Open de Smartcar Connect-link en log in met je MyPeugeot-account.',
   }
 
-  async function refresh() {
+  async function refresh(auto) {
     const headers = await authHeader()
     if (!headers) return
     const btn = document.getElementById('btnRefresh')
@@ -304,7 +304,7 @@
       const body = await res.json().catch(() => ({}))
       if (body && body.latest !== undefined) state = { latest: body.latest, history: body.history || [] }
       if (!res.ok) setStatus(ERRORS[body.code] || body.error || ('Fout ' + res.status), true)
-      else if (body.cooldown) setStatus('Net al ververst. Probeer het over een minuut opnieuw.')
+      else if (body.cooldown) setStatus(auto ? '' : 'Net al ververst. Probeer het over een minuut opnieuw.')
       else setStatus('Ververst om ' + new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }) + '.')
       render()
     } catch (err) {
@@ -514,7 +514,7 @@
     tblWrap.style.display = ''
   }
 
-  /* ── Meer gegevens ─────────────────────────── */
+  /* ── Meer gegevens ───────────────────────── */
   const SHOWN = /stateofcharge|odometer|isonline$|isasleep$|(^|-)vin$|permissions|-role$/i
   function renderMore() {
     const wrap = document.getElementById('moreWrap')
